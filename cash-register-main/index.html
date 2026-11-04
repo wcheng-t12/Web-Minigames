@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Register Hero</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg:#0f0f1a; --surface:#1a1a2e; --panel:#16213e;
+    --accent:#e94560; --gold:#f5a623; --green:#00d4aa;
+    --blue:#4fc3f7; --purple:#b388ff; --text:#f0f0f5;
+    --muted:#8888aa; --border:#2a2a4a;
+    --receipt:#fffef0; --receipt-text:#1a1a1a;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden;position:relative;}
+
+  #bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+  /* ─── SCREENS ─── */
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;padding:20px;transition:opacity 0.4s ease;}
+  .screen.hidden{opacity:0;pointer-events:none;}
+
+  /* ─── START ─── */
+  #start-screen{background:radial-gradient(ellipse at 50% 30%,#1a1a3a 0%,#0f0f1a 70%);}
+  .logo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:36px;animation:floatY 3s ease-in-out infinite;}
+  .logo-icon{font-size:90px;filter:drop-shadow(0 0 30px rgba(245,166,35,.6));margin-bottom:10px;animation:wobble 8s ease-in-out infinite;}
+  @keyframes wobble{0%,100%{transform:rotate(-5deg) scale(1);}50%{transform:rotate(5deg) scale(1.05);}}
+  .logo-title{font-family:'Space Grotesk',sans-serif;font-size:clamp(2.2rem,6vw,3.5rem);font-weight:700;background:linear-gradient(135deg,#f5a623,#e94560,#b388ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;text-align:center;}
+  .logo-sub{font-size:1rem;color:var(--muted);margin-top:6px;letter-spacing:3px;text-transform:uppercase;font-weight:600;}
+  .btn{padding:14px 40px;border:none;border-radius:50px;font-family:'Nunito',sans-serif;font-size:1.1rem;font-weight:800;cursor:pointer;transition:all .2s ease;letter-spacing:.5px;}
+  .btn:active{transform:scale(.96);}
+  .btn-primary{background:linear-gradient(135deg,#f5a623,#e94560);color:#fff;box-shadow:0 6px 30px rgba(233,69,96,.4);}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 40px rgba(233,69,96,.5);}
+  .btn-secondary{background:transparent;color:var(--muted);border:2px solid var(--border);}
+  .btn-secondary:hover{border-color:var(--accent);color:var(--text);}
+  .start-btns{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;}
+  .stats-preview{display:flex;gap:24px;margin-top:36px;flex-wrap:wrap;justify-content:center;}
+  .stat-chip{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 20px;text-align:center;}
+  .stat-chip .val{font-size:1.5rem;font-weight:800;color:var(--gold);}
+  .stat-chip .lbl{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+  /* ═══════════════════════════════════════
+     HOW TO PLAY — ILLUSTRATED SLIDES
+  ═══════════════════════════════════════ */
+  #how-screen{background:radial-gradient(ellipse at 50% 20%,#1a2a3a 0%,#0f0f1a 70%);}
+
+  .slides-shell{
+    position:relative;
+    width:100%;
+    max-width:700px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:20px;
+  }
+
+  .slides-header{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:1.5rem;
+    font-weight:700;
+    color:var(--gold);
+    letter-spacing:-.5px;
+  }
+
+  .slides-viewport{
+    width:100%;
+    overflow:hidden;
+    border-radius:24px;
+    position:relative;
+  }
+
+  .slides-track{
+    display:flex;
+    transition:transform .45s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* Individual slide card */
+  .slide-card{
+    min-width:100%;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:24px;
+    padding:28px 24px 24px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+  }
+
+  /* SVG illustration area */
+  .slide-illustration{
+    width:100%;
+    max-width:480px;
+    border-radius:16px;
+    overflow:hidden;
+    background:var(--panel);
+    border:1px solid var(--border);
+  }
+
+  .slide-text-block{
+    text-align:center;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .slide-step-num{
+    font-size:.7rem;
+    font-weight:800;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .slide-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:1.25rem;
+    font-weight:700;
+    color:var(--text);
+  }
+  .slide-desc{
+    font-size:.92rem;
+    color:var(--muted);
+    line-height:1.55;
+    max-width:500px;
+    margin:0 auto;
+  }
+  .slide-desc strong{color:var(--green);}
+
+  /* Slide dots */
+  .slide-dots{display:flex;gap:8px;align-items:center;}
+  .sdot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s;}
+  .sdot.active{background:var(--gold);width:22px;border-radius:4px;}
+
+  /* Prev/Next */
+  .slides-nav{display:flex;gap:12px;align-items:center;}
+  .snav-btn{
+    width:42px;height:42px;border-radius:50%;border:2px solid var(--border);
+    background:transparent;color:var(--muted);font-size:1.1rem;cursor:pointer;
+    transition:all .2s;display:flex;align-items:center;justify-content:center;
+  }
+  .snav-btn:hover{border-color:var(--gold);color:var(--gold);}
+  .snav-btn:disabled{opacity:.25;cursor:default;}
+
+  .slide-start-btn{
+    padding:13px 36px;
+    background:linear-gradient(135deg,#f5a623,#e94560);
+    color:#fff;border:none;border-radius:50px;
+    font-family:'Nunito',sans-serif;font-size:1rem;font-weight:800;
+    cursor:pointer;transition:all .2s;
+    box-shadow:0 6px 24px rgba(233,69,96,.4);
+    display:none;
+  }
+  .slide-start-btn.visible{display:block;}
+  .slide-start-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(233,69,96,.5);}
+
+  /* ─── GAME SCREEN ─── */
+  #game-screen{padding:0;flex-direction:column;justify-content:flex-start;background:radial-gradient(ellipse at 50% 0%,#1a1a3a 0%,#0f0f1a 60%);}
+  .hud{width:100%;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;z-index:20;flex-shrink:0;}
+  .hud-group{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+  .hud-item{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:.85rem;font-weight:700;}
+  .hud-item .hud-icon{font-size:1.1rem;}
+  .hud-item .hud-val{color:var(--gold);font-size:1rem;}
+  .hud-item .hud-lbl{color:var(--muted);font-size:.72rem;text-transform:uppercase;}
+  .timer-bar-wrap{width:100%;height:4px;background:var(--border);flex-shrink:0;}
+  #timer-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--gold));transition:width 1s linear,background .5s;}
+  .game-body{display:flex;width:100%;flex:1;overflow:hidden;}
+
+  /* LEFT */
+  .left-panel{width:240px;flex-shrink:0;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:16px;gap:14px;}
+  .customer-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .customer-avatar{font-size:64px;animation:customer-idle 2s ease-in-out infinite;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5));}
+  @keyframes customer-idle{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+  .customer-name{font-weight:700;font-size:.9rem;color:var(--blue);}
+  .customer-says{font-size:.78rem;color:var(--muted);text-align:center;font-style:italic;max-width:200px;}
+  .receipt{background:var(--receipt);color:var(--receipt-text);border-radius:4px;padding:12px;font-family:'Courier New',monospace;font-size:.78rem;box-shadow:0 4px 20px rgba(0,0,0,.4);position:relative;}
+  .receipt::before{content:'';position:absolute;top:-8px;left:0;right:0;height:8px;background:repeating-linear-gradient(90deg,var(--receipt) 0,var(--receipt) 8px,transparent 8px,transparent 16px);}
+  .receipt::after{content:'';position:absolute;bottom:-8px;left:0;right:0;height:8px;background:repeating-linear-gradient(90deg,var(--receipt) 0,var(--receipt) 8px,transparent 8px,transparent 16px);}
+  .receipt-title{text-align:center;font-weight:700;font-size:.85rem;border-bottom:1px dashed #aaa;padding-bottom:6px;margin-bottom:8px;}
+  .receipt-items{display:flex;flex-direction:column;gap:3px;}
+  .receipt-row{display:flex;justify-content:space-between;gap:4px;}
+  .receipt-row .item-name{flex:1;}
+  .receipt-row .item-price{font-weight:600;}
+  .receipt-divider{border-top:1px dashed #aaa;margin:6px 0;}
+  .receipt-total-row{display:flex;justify-content:space-between;font-weight:700;font-size:.88rem;}
+  .receipt-paid-row{display:flex;justify-content:space-between;color:#555;margin-top:3px;font-size:.8rem;}
+  .receipt-change-row{display:flex;justify-content:space-between;font-weight:700;color:#c00;margin-top:2px;}
+
+  /* CENTER */
+  .center-panel{flex:1;display:flex;flex-direction:column;padding:16px;gap:12px;overflow-y:auto;min-width:0;}
+  .center-title{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .change-display{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:14px;min-height:80px;position:relative;transition:border-color .3s;}
+  .change-display.correct{border-color:var(--green);box-shadow:0 0 20px rgba(0,212,170,.3);}
+  .change-display.wrong{border-color:var(--accent);box-shadow:0 0 20px rgba(233,69,96,.3);}
+  .change-display-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .change-display-label{font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+  .change-amount{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--green);letter-spacing:-1px;}
+  .change-amount.over{color:var(--accent);}
+  .change-coins-bills{display:flex;flex-wrap:wrap;gap:6px;min-height:36px;}
+  .placed-item{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:4px;animation:pop-in .15s ease;cursor:pointer;}
+  .placed-item:hover{border-color:var(--accent);}
+  @keyframes pop-in{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .required-change{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;}
+  .required-change .lbl{font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase;}
+  .required-change .val{font-size:1.4rem;font-weight:800;color:var(--gold);}
+  .remaining-display{font-size:.9rem;font-weight:700;}
+  .denom-section{display:flex;flex-direction:column;gap:8px;}
+  .denom-label{font-size:.78rem;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+  .denom-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .denom-btn{position:relative;border:none;border-radius:12px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;transition:all .15s ease;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;user-select:none;}
+  .denom-btn:active{transform:scale(.92);}
+  .denom-btn:hover{transform:translateY(-2px);filter:brightness(1.15);}
+  .bill-btn{width:80px;height:40px;border-radius:6px;font-size:.85rem;gap:1px;box-shadow:2px 2px 8px rgba(0,0,0,.4);}
+  .bill-1{background:linear-gradient(135deg,#85bb65,#5a8a42);color:#fff;}
+  .bill-5{background:linear-gradient(135deg,#4a90d9,#2a6aaa);color:#fff;}
+  .bill-10{background:linear-gradient(135deg,#e8720c,#b55509);color:#fff;}
+  .bill-20{background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;}
+  .bill-50{background:linear-gradient(135deg,#e94560,#b5203c);color:#fff;}
+  .bill-100{background:linear-gradient(135deg,#f5a623,#c47c0a);color:#fff;}
+  .coin-btn{width:52px;height:52px;border-radius:50%;font-size:.75rem;box-shadow:2px 2px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.15);}
+  .coin-1c{background:radial-gradient(circle at 40% 35%,#d4956a,#a0522d);color:#fff;}
+  .coin-5c{background:radial-gradient(circle at 40% 35%,#c8c8c8,#888);color:#fff;}
+  .coin-10c{background:radial-gradient(circle at 40% 35%,#d4b87a,#a0803a);color:#fff;}
+  .coin-20c{background:radial-gradient(circle at 40% 35%,#d4b87a,#9a7530);color:#fff;}
+  .coin-50c{background:radial-gradient(circle at 40% 35%,#c0a060,#8a6520);color:#fff;}
+  .coin-1{background:radial-gradient(circle at 40% 35%,#e8c040,#b89010);color:#fff;}
+  .coin-2{background:radial-gradient(circle at 40% 35%,#aaaaff,#5555cc);color:#fff;}
+  .denom-value{font-size:.9rem;font-weight:800;}
+  .action-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn-submit{flex:1;padding:14px;background:linear-gradient(135deg,#00d4aa,#00a885);color:#fff;border:none;border-radius:14px;font-family:'Nunito',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(0,212,170,.3);}
+  .btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,170,.4);}
+  .btn-submit:active{transform:scale(.97);}
+  .btn-clear{padding:14px 18px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:14px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;}
+  .btn-clear:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* RIGHT */
+  .right-panel{width:180px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
+  .payment-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;}
+  .pp-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;}
+  .pp-val{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;font-weight:700;color:var(--gold);}
+  .pp-note{font-size:.75rem;color:var(--muted);}
+  .progress-section{display:flex;flex-direction:column;gap:6px;}
+  .progress-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;}
+  .progress-dots{display:flex;flex-wrap:wrap;gap:5px;}
+  .progress-dot{width:16px;height:16px;border-radius:50%;background:var(--border);border:1px solid var(--border);transition:all .3s;}
+  .progress-dot.done{background:var(--green);border-color:var(--green);box-shadow:0 0 8px rgba(0,212,170,.5);}
+  .progress-dot.current{background:var(--gold);border-color:var(--gold);animation:pulse 1s infinite;}
+  .progress-dot.wrong{background:var(--accent);border-color:var(--accent);}
+  @keyframes pulse{0%,100%{box-shadow:0 0 4px rgba(245,166,35,.5);}50%{box-shadow:0 0 12px rgba(245,166,35,.9);}}
+
+  /* FEEDBACK */
+  #feedback-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:opacity .3s;}
+  #feedback-overlay.hidden{opacity:0;}
+  .feedback-msg{font-family:'Space Grotesk',sans-serif;font-size:clamp(2rem,8vw,4rem);font-weight:700;padding:20px 40px;border-radius:20px;text-align:center;animation:feedback-pop .3s ease;backdrop-filter:blur(10px);}
+  .feedback-msg.correct{background:rgba(0,212,170,.2);border:3px solid var(--green);color:var(--green);box-shadow:0 0 60px rgba(0,212,170,.4);}
+  .feedback-msg.wrong{background:rgba(233,69,96,.2);border:3px solid var(--accent);color:var(--accent);box-shadow:0 0 60px rgba(233,69,96,.4);}
+  @keyframes feedback-pop{from{transform:scale(.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+  /* ═══════════════════════════════════════
+     END SCREEN — STAR RATING
+  ═══════════════════════════════════════ */
+  #end-screen{background:radial-gradient(ellipse at 50% 30%,#1a1a3a 0%,#0f0f1a 70%);}
+
+  .end-card{background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:32px 36px;max-width:520px;width:100%;text-align:center;position:relative;overflow:hidden;}
+
+  .end-trophy{font-size:72px;margin-bottom:12px;display:block;animation:trophy-bounce .6s ease;}
+  @keyframes trophy-bounce{0%{transform:scale(0) rotate(-20deg);}60%{transform:scale(1.2) rotate(5deg);}100%{transform:scale(1) rotate(0);}}
+
+  .end-title{font-family:'Space Grotesk',sans-serif;font-size:1.9rem;font-weight:700;margin-bottom:4px;background:linear-gradient(135deg,var(--gold),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .end-subtitle{color:var(--muted);margin-bottom:20px;font-size:.95rem;}
+
+  /* ── STAR DISPLAY ── */
+  .stars-wrap{display:flex;justify-content:center;gap:10px;margin-bottom:22px;}
+  .star-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .star-svg{width:60px;height:60px;filter:drop-shadow(0 0 0 transparent);transition:filter .4s;}
+  .star-svg.lit{filter:drop-shadow(0 0 12px rgba(245,166,35,.8));}
+  .star-label{font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+
+  .end-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;}
+  .end-stat{background:var(--panel);border-radius:14px;padding:14px;}
+  .end-stat .es-val{font-size:1.8rem;font-weight:800;color:var(--gold);}
+  .end-stat .es-lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+
+  .star-msg{font-size:.95rem;font-weight:700;margin-bottom:18px;padding:10px 18px;border-radius:12px;}
+  .star-msg.s3{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);color:var(--gold);}
+  .star-msg.s2{background:rgba(79,195,247,.1);border:1px solid rgba(79,195,247,.3);color:var(--blue);}
+  .star-msg.s1{background:rgba(179,136,255,.1);border:1px solid rgba(179,136,255,.3);color:var(--purple);}
+  .star-msg.s0{background:rgba(233,69,96,.1);border:1px solid rgba(233,69,96,.3);color:var(--accent);}
+
+  .confetti-piece{position:fixed;width:10px;height:10px;pointer-events:none;z-index:200;animation:confetti-fall linear forwards;}
+  @keyframes confetti-fall{to{transform:translateY(110vh) rotate(720deg);opacity:0;}}
+  @keyframes floatY{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+  /* RESPONSIVE */
+  @media(max-width:700px){
+    .left-panel{width:160px;padding:10px;}
+    .right-panel{width:130px;padding:10px;}
+    .bill-btn{width:64px;height:34px;font-size:.75rem;}
+    .coin-btn{width:44px;height:44px;font-size:.65rem;}
+    .customer-avatar{font-size:46px;}
+    .change-amount{font-size:1.5rem;}
+    .star-svg{width:48px;height:48px;}
+  }
+  @media(max-width:540px){
+    .game-body{flex-direction:column;}
+    .left-panel{width:100%;max-height:160px;flex-direction:row;align-items:flex-start;overflow-x:auto;}
+    .right-panel{width:100%;flex-direction:row;overflow-x:auto;max-height:120px;}
+    .receipt{min-width:180px;}
+  }
+
+  .shake{animation:shake .4s ease;}
+  @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-6px);}80%{transform:translateX(6px);}}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+
+<!-- ══════════ START ══════════ -->
+<div class="screen" id="start-screen">
+  <div class="logo-wrap">
+    <div class="logo-icon">🏪</div>
+    <div class="logo-title">Cash Register Hero</div>
+    <div class="logo-sub">Math · Money · Mastery</div>
+  </div>
+  <div class="start-btns">
+    <button class="btn btn-primary" onclick="showHow()">▶ Play Now</button>
+    <button class="btn btn-secondary" onclick="toggleMusic()">🎵 Music: <span id="music-toggle-label">ON</span></button>
+  </div>
+  <div class="stats-preview">
+    <div class="stat-chip"><div class="val">10</div><div class="lbl">Rounds</div></div>
+    <div class="stat-chip"><div class="val">3</div><div class="lbl">Lives</div></div>
+    <div class="stat-chip"><div class="val">⭐⭐⭐</div><div class="lbl">Star Rating</div></div>
+  </div>
+</div>
+
+<!-- ══════════ HOW TO PLAY — SLIDES ══════════ -->
+<div class="screen hidden" id="how-screen">
+  <div class="slides-shell">
+    <div class="slides-header">📖 How to Play</div>
+
+    <div class="slides-viewport">
+      <div class="slides-track" id="slides-track">
+
+        <!-- SLIDE 1: Customer arrives -->
+        <div class="slide-card">
+          <div class="slide-illustration">
+            <svg viewBox="0 0 480 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+              <rect width="480" height="220" fill="#16213e"/>
+              <!-- counter -->
+              <rect x="0" y="145" width="480" height="75" rx="0" fill="#1a1a2e"/>
+              <rect x="0" y="140" width="480" height="14" rx="0" fill="#2a2a4a"/>
+              <!-- receipt paper -->
+              <rect x="290" y="30" width="100" height="130" rx="4" fill="#fffef0"/>
+              <line x1="296" y1="50" x2="384" y2="50" stroke="#ccc" stroke-width="1"/>
+              <rect x="300" y="58" width="80" height="5" rx="2" fill="#ddd"/>
+              <rect x="300" y="68" width="60" height="5" rx="2" fill="#ddd"/>
+              <rect x="300" y="78" width="70" height="5" rx="2" fill="#ddd"/>
+              <rect x="300" y="88" width="55" height="5" rx="2" fill="#ddd"/>
+              <line x1="296" y1="100" x2="384" y2="100" stroke="#ccc" stroke-width="1" stroke-dasharray="4 2"/>
+              <rect x="300" y="108" width="80" height="6" rx="2" fill="#f5a623"/>
+              <text x="340" y="44" text-anchor="middle" font-family="monospace" font-size="9" fill="#333" font-weight="bold">🏪 MINI MART</text>
+              <!-- customer body -->
+              <circle cx="140" cy="60" r="34" fill="#f5c842"/>
+              <circle cx="127" cy="52" r="5" fill="#333"/>
+              <circle cx="153" cy="52" r="5" fill="#333"/>
+              <path d="M 128 72 Q 140 82 152 72" stroke="#333" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <!-- customer shirt -->
+              <path d="M 100 95 Q 100 155 180 155 Q 180 95 180 95 Q 165 85 140 88 Q 115 85 100 95 Z" fill="#4a90d9"/>
+              <!-- speech bubble -->
+              <rect x="175" y="20" width="115" height="44" rx="10" fill="#fff" stroke="#e94560" stroke-width="2"/>
+              <polygon points="175,40 162,48 178,52" fill="#fff"/>
+              <polygon points="177,41 163,49 179,52" fill="#fff" stroke="#e94560" stroke-width="1"/>
+              <text x="232" y="38" text-anchor="middle" font-family="Nunito,sans-serif" font-size="10" fill="#333" font-weight="bold">Here's my</text>
+              <text x="232" y="54" text-anchor="middle" font-family="Nunito,sans-serif" font-size="10" fill="#e94560" font-weight="bold">RM 10.00!</text>
+              <!-- bill -->
+              <rect x="155" y="90" width="60" height="30" rx="4" fill="#85bb65" stroke="#4a7a2a" stroke-width="1"/>
+              <text x="185" y="109" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#fff" font-weight="bold">RM 1</text>
+              <!-- arrow -->
+              <path d="M 260 105 L 285 105" stroke="#00d4aa" stroke-width="3" marker-end="url(#ah)"/>
+              <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#00d4aa"/></marker></defs>
+              <!-- register icon -->
+              <rect x="380" y="60" width="76" height="80" rx="8" fill="#2a2a4a" stroke="#4fc3f7" stroke-width="2"/>
+              <rect x="388" y="68" width="60" height="30" rx="4" fill="#1a1a2e"/>
+              <text x="418" y="88" text-anchor="middle" font-family="monospace" font-size="11" fill="#00d4aa">RM 7.50</text>
+              <rect x="388" y="104" width="12" height="12" rx="2" fill="#e94560"/>
+              <rect x="404" y="104" width="12" height="12" rx="2" fill="#f5a623"/>
+              <rect x="420" y="104" width="12" height="12" rx="2" fill="#00d4aa"/>
+              <rect x="436" y="104" width="12" height="12" rx="2" fill="#4fc3f7"/>
+              <text x="418" y="155" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#8888aa">You are here!</text>
+            </svg>
+          </div>
+          <div class="slide-text-block">
+            <div class="slide-step-num">Step 1 of 5</div>
+            <div class="slide-title">A Customer Walks In</div>
+            <div class="slide-desc">Each round a customer arrives with items to buy. Their <strong>receipt</strong> lists every item and the total cost. Check the left panel!</div>
+          </div>
+        </div>
+
+        <!-- SLIDE 2: Reading the receipt -->
+        <div class="slide-card">
+          <div class="slide-illustration">
+            <svg viewBox="0 0 480 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+              <rect width="480" height="220" fill="#16213e"/>
+              <!-- big receipt -->
+              <rect x="60" y="15" width="160" height="190" rx="6" fill="#fffef0" filter="url(#shadow)"/>
+              <defs>
+                <filter id="shadow"><feDropShadow dx="3" dy="3" stdDeviation="6" flood-opacity="0.4"/></filter>
+              </defs>
+              <!-- zigzag top -->
+              <polyline points="60,15 68,8 76,15 84,8 92,15 100,8 108,15 116,8 124,15 132,8 140,15 148,8 156,15 164,8 172,15 180,8 188,15 196,8 204,15 212,8 220,15" fill="none" stroke="#fffef0" stroke-width="2"/>
+              <text x="140" y="38" text-anchor="middle" font-family="monospace" font-size="10" fill="#333" font-weight="bold">🏪 MINI MART</text>
+              <line x1="68" y1="46" x2="212" y2="46" stroke="#ccc" stroke-width="1"/>
+              <text x="70" y="62" font-family="monospace" font-size="9" fill="#444">Nasi Lemak</text>
+              <text x="210" y="62" text-anchor="end" font-family="monospace" font-size="9" fill="#444">3.50</text>
+              <text x="70" y="76" font-family="monospace" font-size="9" fill="#444">Teh Tarik</text>
+              <text x="210" y="76" text-anchor="end" font-family="monospace" font-size="9" fill="#444">1.50</text>
+              <text x="70" y="90" font-family="monospace" font-size="9" fill="#444">Roti Canai</text>
+              <text x="210" y="90" text-anchor="end" font-family="monospace" font-size="9" fill="#444">1.00</text>
+              <line x1="68" y1="98" x2="212" y2="98" stroke="#ccc" stroke-width="1" stroke-dasharray="4 2"/>
+              <text x="70" y="112" font-family="monospace" font-size="9" fill="#333" font-weight="bold">TOTAL</text>
+              <text x="210" y="112" text-anchor="end" font-family="monospace" font-size="10" fill="#333" font-weight="bold">6.00</text>
+              <text x="70" y="126" font-family="monospace" font-size="9" fill="#888">PAID</text>
+              <text x="210" y="126" text-anchor="end" font-family="monospace" font-size="9" fill="#888">10.00</text>
+              <text x="70" y="141" font-family="monospace" font-size="9" fill="#c00" font-weight="bold">CHANGE</text>
+              <text x="210" y="141" text-anchor="end" font-family="monospace" font-size="10" fill="#c00" font-weight="bold">4.00</text>
+              <!-- highlight arrow to change -->
+              <rect x="62" y="132" width="156" height="18" rx="3" fill="rgba(233,69,96,.15)" stroke="#e94560" stroke-width="1.5"/>
+
+              <!-- calculation panel -->
+              <rect x="250" y="20" width="200" height="145" rx="14" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="1.5"/>
+              <text x="350" y="44" text-anchor="middle" font-family="Nunito,sans-serif" font-size="12" fill="#8888aa" font-weight="700">THE MATH</text>
+              <text x="260" y="70" font-family="Space Grotesk,sans-serif" font-size="15" fill="#4fc3f7" font-weight="700">Paid:</text>
+              <text x="440" y="70" text-anchor="end" font-family="Space Grotesk,sans-serif" font-size="15" fill="#4fc3f7" font-weight="700">RM 10.00</text>
+              <text x="260" y="92" font-family="Space Grotesk,sans-serif" font-size="15" fill="#e94560" font-weight="700">Total:</text>
+              <text x="440" y="92" text-anchor="end" font-family="Space Grotesk,sans-serif" font-size="15" fill="#e94560" font-weight="700">− RM 6.00</text>
+              <line x1="258" y1="100" x2="442" y2="100" stroke="#2a2a4a" stroke-width="2"/>
+              <text x="260" y="122" font-family="Space Grotesk,sans-serif" font-size="18" fill="#f5a623" font-weight="700">Change:</text>
+              <text x="440" y="122" text-anchor="end" font-family="Space Grotesk,sans-serif" font-size="20" fill="#f5a623" font-weight="800">RM 4.00</text>
+              <rect x="258" y="130" width="182" height="26" rx="6" fill="rgba(245,166,35,.12)" stroke="rgba(245,166,35,.4)" stroke-width="1.5"/>
+              <text x="349" y="148" text-anchor="middle" font-family="Nunito,sans-serif" font-size="10" fill="#f5a623" font-weight="700">This is what you must give back!</text>
+            </svg>
+          </div>
+          <div class="slide-text-block">
+            <div class="slide-step-num">Step 2 of 5</div>
+            <div class="slide-title">Read the Receipt</div>
+            <div class="slide-desc">The receipt shows the <strong>total</strong>, how much the customer <strong>paid</strong>, and the <strong>change due</strong>. Your job: make up that exact change amount!</div>
+          </div>
+        </div>
+
+        <!-- SLIDE 3: Coins & bills -->
+        <div class="slide-card">
+          <div class="slide-illustration">
+            <svg viewBox="0 0 480 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+              <rect width="480" height="220" fill="#16213e"/>
+              <!-- Section label bills -->
+              <text x="20" y="28" font-family="Nunito,sans-serif" font-size="10" fill="#8888aa" font-weight="700" letter-spacing="1">💵 BANKNOTES</text>
+              <!-- Bill cards -->
+              <rect x="20" y="36" width="58" height="30" rx="5" fill="#85bb65"/>
+              <text x="49" y="55" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#fff" font-weight="800">RM1</text>
+              <rect x="84" y="36" width="58" height="30" rx="5" fill="#4a90d9"/>
+              <text x="113" y="55" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#fff" font-weight="800">RM5</text>
+              <rect x="148" y="36" width="58" height="30" rx="5" fill="#e8720c"/>
+              <text x="177" y="55" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#fff" font-weight="800">RM10</text>
+              <rect x="212" y="36" width="58" height="30" rx="5" fill="#8b5cf6"/>
+              <text x="241" y="55" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#fff" font-weight="800">RM20</text>
+              <rect x="276" y="36" width="58" height="30" rx="5" fill="#e94560"/>
+              <text x="305" y="55" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#fff" font-weight="800">RM50</text>
+
+              <!-- Section label coins -->
+              <text x="20" y="92" font-family="Nunito,sans-serif" font-size="10" fill="#8888aa" font-weight="700" letter-spacing="1">🪙 COINS</text>
+              <!-- Coins -->
+              <circle cx="44" cy="120" r="20" fill="#d4956a"/>
+              <text x="44" y="124" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#fff" font-weight="800">1¢</text>
+              <circle cx="94" cy="120" r="20" fill="#c8c8c8"/>
+              <text x="94" y="124" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#fff" font-weight="800">5¢</text>
+              <circle cx="144" cy="120" r="20" fill="#d4b87a"/>
+              <text x="144" y="124" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#fff" font-weight="800">10¢</text>
+              <circle cx="194" cy="120" r="20" fill="#c0a060"/>
+              <text x="194" y="124" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#fff" font-weight="800">20¢</text>
+              <circle cx="244" cy="120" r="20" fill="#a08040"/>
+              <text x="244" y="124" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#fff" font-weight="800">50¢</text>
+              <circle cx="294" cy="120" r="22" fill="#e8c040"/>
+              <text x="294" y="124" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#fff" font-weight="800">RM1</text>
+
+              <!-- Tray -->
+              <rect x="20" y="155" width="440" height="50" rx="10" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="2"/>
+              <text x="30" y="174" font-family="Nunito,sans-serif" font-size="9" fill="#8888aa" font-weight="700">YOUR TRAY</text>
+              <!-- placed items in tray -->
+              <rect x="30" y="178" width="46" height="20" rx="5" fill="#2a2a4a" stroke="#4a90d9" stroke-width="1"/>
+              <text x="53" y="192" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#fff" font-weight="700">💵 RM5</text>
+              <rect x="82" y="178" width="46" height="20" rx="5" fill="#2a2a4a" stroke="#d4b87a" stroke-width="1"/>
+              <text x="105" y="192" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#fff" font-weight="700">🪙 50¢</text>
+              <rect x="134" y="178" width="46" height="20" rx="5" fill="#2a2a4a" stroke="#d4956a" stroke-width="1"/>
+              <text x="157" y="192" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#fff" font-weight="700">🪙 20¢</text>
+              <!-- running total -->
+              <text x="430" y="187" text-anchor="end" font-family="Space Grotesk,sans-serif" font-size="14" fill="#00d4aa" font-weight="700">RM 5.70</text>
+              <!-- click arrow -->
+              <path d="M 356 52 C 380 52 420 60 440 95" stroke="#f5a623" stroke-width="2" fill="none" stroke-dasharray="5 3"/>
+              <polygon points="436,104 446,94 444,107" fill="#f5a623"/>
+              <text x="390" y="46" font-family="Nunito,sans-serif" font-size="10" fill="#f5a623" font-weight="700">Click to add!</text>
+            </svg>
+          </div>
+          <div class="slide-text-block">
+            <div class="slide-step-num">Step 3 of 5</div>
+            <div class="slide-title">Pick Coins &amp; Bills</div>
+            <div class="slide-desc">Click any <strong>coin or banknote</strong> to add it to your tray. The running total updates as you go. Click a placed item to <strong>remove</strong> it.</div>
+          </div>
+        </div>
+
+        <!-- SLIDE 4: Timer & lives -->
+        <div class="slide-card">
+          <div class="slide-illustration">
+            <svg viewBox="0 0 480 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+              <rect width="480" height="220" fill="#16213e"/>
+              <!-- HUD mock -->
+              <rect x="20" y="20" width="440" height="50" rx="10" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="1.5"/>
+              <!-- round -->
+              <rect x="30" y="30" width="80" height="30" rx="8" fill="#16213e" stroke="#2a2a4a" stroke-width="1"/>
+              <text x="44" y="48" font-family="Nunito,sans-serif" font-size="14">🎯</text>
+              <text x="62" y="41" font-family="Nunito,sans-serif" font-size="8" fill="#8888aa" font-weight="700">ROUND</text>
+              <text x="62" y="54" font-family="Nunito,sans-serif" font-size="12" fill="#f5a623" font-weight="800">3/10</text>
+              <!-- score -->
+              <rect x="118" y="30" width="90" height="30" rx="8" fill="#16213e" stroke="#2a2a4a" stroke-width="1"/>
+              <text x="132" y="48" font-family="Nunito,sans-serif" font-size="14">⭐</text>
+              <text x="152" y="41" font-family="Nunito,sans-serif" font-size="8" fill="#8888aa" font-weight="700">SCORE</text>
+              <text x="152" y="54" font-family="Nunito,sans-serif" font-size="12" fill="#f5a623" font-weight="800">740</text>
+              <!-- lives -->
+              <rect x="290" y="30" width="90" height="30" rx="8" fill="#16213e" stroke="#e94560" stroke-width="1.5"/>
+              <text x="304" y="48" font-family="Nunito,sans-serif" font-size="14">❤️</text>
+              <text x="324" y="41" font-family="Nunito,sans-serif" font-size="8" fill="#e94560" font-weight="700">LIVES</text>
+              <text x="324" y="54" font-family="Nunito,sans-serif" font-size="11" fill="#e94560" font-weight="800">❤️❤️🖤</text>
+              <!-- timer -->
+              <rect x="388" y="30" width="64" height="30" rx="8" fill="#16213e" stroke="#f5a623" stroke-width="1.5"/>
+              <text x="402" y="48" font-family="Nunito,sans-serif" font-size="14">⏱️</text>
+              <text x="420" y="41" font-family="Nunito,sans-serif" font-size="8" fill="#f5a623" font-weight="700">TIME</text>
+              <text x="420" y="54" font-family="Nunito,sans-serif" font-size="11" fill="#f5a623" font-weight="800">18s</text>
+              <!-- timer bar -->
+              <rect x="20" y="74" width="440" height="8" rx="4" fill="#2a2a4a"/>
+              <rect x="20" y="74" width="200" height="8" rx="4" fill="#f5a623"/>
+
+              <!-- warning zone -->
+              <rect x="20" y="100" width="200" height="80" rx="12" fill="#1a1a2e" stroke="#e94560" stroke-width="1.5"/>
+              <text x="120" y="122" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#e94560" font-weight="700">⚠️ Wrong answer or</text>
+              <text x="120" y="137" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#e94560" font-weight="700">timeout = lose a life</text>
+              <text x="120" y="158" text-anchor="middle" font-family="Nunito,sans-serif" font-size="20">❤️ ❤️ ❤️</text>
+              <text x="120" y="175" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#8888aa">3 lives total</text>
+
+              <!-- game over zone -->
+              <rect x="250" y="100" width="210" height="80" rx="12" fill="#1a1a2e" stroke="#8b5cf6" stroke-width="1.5"/>
+              <text x="355" y="122" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#b388ff" font-weight="700">💀 Lose all 3 lives =</text>
+              <text x="355" y="138" text-anchor="middle" font-family="Nunito,sans-serif" font-size="13" fill="#e94560" font-weight="800">GAME OVER!</text>
+              <text x="355" y="155" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#8888aa">Score is graded 0–3 ⭐</text>
+              <text x="355" y="172" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#8888aa">Try to keep all lives!</text>
+            </svg>
+          </div>
+          <div class="slide-text-block">
+            <div class="slide-step-num">Step 4 of 5</div>
+            <div class="slide-title">Timer &amp; Lives</div>
+            <div class="slide-desc">You have <strong>3 lives</strong> and a countdown timer each round. Wrong change or running out of time costs a life. <strong>Lose all 3 — game over!</strong></div>
+          </div>
+        </div>
+
+        <!-- SLIDE 5: Stars -->
+        <div class="slide-card">
+          <div class="slide-illustration">
+            <svg viewBox="0 0 480 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+              <rect width="480" height="220" fill="#16213e"/>
+              <!-- 3 star columns -->
+              <!-- 0 stars -->
+              <rect x="20" y="20" width="100" height="180" rx="12" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="1.5"/>
+              <text x="70" y="48" text-anchor="middle" font-family="Nunito,sans-serif" font-size="24">💀</text>
+              <text x="70" y="72" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#e94560" font-weight="700">0 Stars</text>
+              <!-- empty stars -->
+              <text x="70" y="100" text-anchor="middle" font-family="Nunito,sans-serif" font-size="18">☆☆☆</text>
+              <text x="70" y="120" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8" fill="#8888aa">Lives gone before</text>
+              <text x="70" y="132" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8" fill="#8888aa">Round 5</text>
+              <text x="70" y="155" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#e94560" font-weight="700">Keep practising!</text>
+
+              <!-- 1 star -->
+              <rect x="130" y="20" width="100" height="180" rx="12" fill="#1a1a2e" stroke="#b388ff" stroke-width="1.5"/>
+              <text x="180" y="48" text-anchor="middle" font-family="Nunito,sans-serif" font-size="24">🥉</text>
+              <text x="180" y="72" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#b388ff" font-weight="700">1 Star</text>
+              <text x="180" y="100" text-anchor="middle" font-family="Nunito,sans-serif" font-size="18">⭐☆☆</text>
+              <text x="180" y="120" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8" fill="#8888aa">Reached Round 5+</text>
+              <text x="180" y="132" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8" fill="#8888aa">or ≥30% correct</text>
+              <text x="180" y="155" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#b388ff" font-weight="700">Getting there!</text>
+
+              <!-- 2 stars -->
+              <rect x="240" y="20" width="100" height="180" rx="12" fill="#1a1a2e" stroke="#4fc3f7" stroke-width="1.5"/>
+              <text x="290" y="48" text-anchor="middle" font-family="Nunito,sans-serif" font-size="24">🥈</text>
+              <text x="290" y="72" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="#4fc3f7" font-weight="700">2 Stars</text>
+              <text x="290" y="100" text-anchor="middle" font-family="Nunito,sans-serif" font-size="18">⭐⭐☆</text>
+              <text x="290" y="120" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8" fill="#8888aa">Finish 10 rounds</text>
+              <text x="290" y="132" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8" fill="#8888aa">≥60% correct</text>
+              <text x="290" y="155" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#4fc3f7" font-weight="700">Nice work!</text>
+
+              <!-- 3 stars -->
+              <rect x="350" y="10" width="110" height="200" rx="12" fill="#1a2240" stroke="#f5a623" stroke-width="2"/>
+              <text x="405" y="44" text-anchor="middle" font-family="Nunito,sans-serif" font-size="28">🏆</text>
+              <text x="405" y="72" text-anchor="middle" font-family="Nunito,sans-serif" font-size="12" fill="#f5a623" font-weight="700">3 Stars!</text>
+              <text x="405" y="100" text-anchor="middle" font-family="Nunito,sans-serif" font-size="20">⭐⭐⭐</text>
+              <text x="405" y="122" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#8888aa">Finish ALL 10 rounds</text>
+              <text x="405" y="136" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="#8888aa">≥80% correct</text>
+              <text x="405" y="158" text-anchor="middle" font-family="Nunito,sans-serif" font-size="10" fill="#f5a623" font-weight="700">CASHIER LEGEND!</text>
+              <!-- glow effect -->
+              <rect x="352" y="12" width="106" height="196" rx="11" fill="none" stroke="#f5a623" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+            </svg>
+          </div>
+          <div class="slide-text-block">
+            <div class="slide-step-num">Step 5 of 5</div>
+            <div class="slide-title">Earn Up to 3 Stars ⭐</div>
+            <div class="slide-desc">Your final score earns <strong>0 to 3 stars</strong>. Finish all 10 rounds with high accuracy to claim the full 3-star rating and become a Cashier Legend!</div>
+          </div>
+        </div>
+
+      </div><!-- /slides-track -->
+    </div><!-- /slides-viewport -->
+
+    <div class="slides-nav">
+      <button class="snav-btn" id="slide-prev" onclick="slideNav(-1)" disabled>◀</button>
+      <div class="slide-dots" id="slide-dots"></div>
+      <button class="snav-btn" id="slide-next" onclick="slideNav(1)">▶</button>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;">
+      <button class="btn btn-secondary" onclick="showScreen('start-screen')">← Back</button>
+      <button class="slide-start-btn" id="slide-start-btn" onclick="startGame()">🚀 Start Game!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ GAME SCREEN ══════════ -->
+<div class="screen hidden" id="game-screen">
+  <div class="hud">
+    <div class="hud-group">
+      <div class="hud-item"><span class="hud-icon">🎯</span><div><div class="hud-lbl">Round</div><div class="hud-val" id="hud-round">1/10</div></div></div>
+      <div class="hud-item"><span class="hud-icon">⭐</span><div><div class="hud-lbl">Score</div><div class="hud-val" id="hud-score">0</div></div></div>
+    </div>
+    <div class="hud-group">
+      <div class="hud-item"><span class="hud-icon">❤️</span><div><div class="hud-lbl">Lives</div><div class="hud-val" id="hud-lives">❤️❤️❤️</div></div></div>
+      <div class="hud-item"><span class="hud-icon">⏱️</span><div><div class="hud-lbl">Time</div><div class="hud-val" id="hud-time">30s</div></div></div>
+    </div>
+  </div>
+  <div class="timer-bar-wrap"><div id="timer-bar" style="width:100%"></div></div>
+  <div class="game-body">
+    <div class="left-panel">
+      <div class="customer-wrap">
+        <div class="customer-avatar" id="customer-avatar">😊</div>
+        <div class="customer-name" id="customer-name">Alex</div>
+        <div class="customer-says" id="customer-says">"Here's my money!"</div>
+      </div>
+      <div class="receipt" id="receipt">
+        <div class="receipt-title">🏪 MINI MART</div>
+        <div class="receipt-items" id="receipt-items"></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-total-row"><span>TOTAL</span><span id="receipt-total">RM 0.00</span></div>
+        <div class="receipt-paid-row"><span>PAID</span><span id="receipt-paid">RM 0.00</span></div>
+        <div class="receipt-change-row"><span>CHANGE</span><span id="receipt-change">RM 0.00</span></div>
+      </div>
+    </div>
+    <div class="center-panel">
+      <div class="center-title">💰 Build the Change</div>
+      <div class="required-change">
+        <div><div class="lbl">Change Due</div><div class="val" id="change-due-display">RM 0.00</div></div>
+        <div class="remaining-display"><span id="remaining-val">RM 0.00</span> left</div>
+      </div>
+      <div class="change-display" id="change-tray">
+        <div class="change-display-header">
+          <div class="change-display-label">Your Tray</div>
+          <div class="change-amount" id="tray-total">RM 0.00</div>
+        </div>
+        <div class="change-coins-bills" id="tray-items"></div>
+      </div>
+      <div class="denom-section">
+        <div class="denom-label">💵 Banknotes</div>
+        <div class="denom-grid" id="bills-grid"></div>
+      </div>
+      <div class="denom-section">
+        <div class="denom-label">🪙 Coins</div>
+        <div class="denom-grid" id="coins-grid"></div>
+      </div>
+      <div class="action-row">
+        <button class="btn-submit" id="submit-btn" onclick="submitChange()">✅ Give Change</button>
+        <button class="btn-clear" onclick="clearTray()">🗑 Clear</button>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="payment-panel">
+        <div class="pp-label">💸 Customer Paid</div>
+        <div class="pp-val" id="panel-paid">RM 0.00</div>
+        <div class="pp-note" id="panel-paid-note">with a RM10 note</div>
+      </div>
+      <div class="payment-panel">
+        <div class="pp-label">🧾 Bill Total</div>
+        <div class="pp-val" id="panel-total">RM 0.00</div>
+      </div>
+      <div class="progress-section">
+        <div class="progress-label">🎮 Progress</div>
+        <div class="progress-dots" id="progress-dots"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEEDBACK OVERLAY -->
+<div id="feedback-overlay" class="hidden">
+  <div class="feedback-msg" id="feedback-msg">✅ Correct!</div>
+</div>
+
+<!-- ══════════ END SCREEN ══════════ -->
+<div class="screen hidden" id="end-screen">
+  <div class="end-card">
+    <span class="end-trophy" id="end-trophy">🏆</span>
+    <div class="end-title" id="end-title">Shift Complete!</div>
+    <div class="end-subtitle" id="end-subtitle">You served all 10 customers!</div>
+
+    <!-- STAR RATING DISPLAY -->
+    <div class="stars-wrap" id="stars-wrap">
+      <div class="star-item">
+        <svg class="star-svg" id="star1" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="30,4 36,22 56,22 40,34 46,52 30,41 14,52 20,34 4,22 24,22" fill="#2a2a4a" stroke="#555" stroke-width="1.5"/>
+        </svg>
+        <span class="star-label">1 Star</span>
+      </div>
+      <div class="star-item">
+        <svg class="star-svg" id="star2" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="30,4 36,22 56,22 40,34 46,52 30,41 14,52 20,34 4,22 24,22" fill="#2a2a4a" stroke="#555" stroke-width="1.5"/>
+        </svg>
+        <span class="star-label">2 Stars</span>
+      </div>
+      <div class="star-item">
+        <svg class="star-svg" id="star3" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="30,4 36,22 56,22 40,34 46,52 30,41 14,52 20,34 4,22 24,22" fill="#2a2a4a" stroke="#555" stroke-width="1.5"/>
+        </svg>
+        <span class="star-label">3 Stars</span>
+      </div>
+    </div>
+
+    <div class="star-msg" id="star-msg">Amazing work!</div>
+
+    <div class="end-stats">
+      <div class="end-stat"><div class="es-val" id="end-score">0</div><div class="es-lbl">Final Score</div></div>
+      <div class="end-stat"><div class="es-val" id="end-correct">0/10</div><div class="es-lbl">Correct</div></div>
+      <div class="end-stat"><div class="es-val" id="end-round">10</div><div class="es-lbl">Rounds Reached</div></div>
+      <div class="end-stat"><div class="es-val" id="end-accuracy">0%</div><div class="es-lbl">Accuracy</div></div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="startGame()">🔄 Play Again</button>
+      <button class="btn btn-secondary" onclick="showScreen('start-screen')">🏠 Home</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  AUDIO (Web Audio API)
+// ═══════════════════════════════════════════
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+let musicOn = true, musicNodes = null;
+
+function beep(f,d,t='square',v=.15,dl=0){
+  try{const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  o.type=t;o.frequency.value=f;
+  g.gain.setValueAtTime(v,AC.currentTime+dl);
+  g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+dl+d);
+  o.start(AC.currentTime+dl);o.stop(AC.currentTime+dl+d+.05);}catch(e){}
+}
+const sfxCorrect=()=>{beep(523,.1,'sine',.2);beep(659,.1,'sine',.2,.1);beep(784,.2,'sine',.25,.2);};
+const sfxWrong=()=>{beep(220,.15,'sawtooth',.2);beep(180,.25,'sawtooth',.2,.15);};
+const sfxClick=()=>beep(1000,.05,'sine',.1);
+const sfxCoin=()=>{beep(1200,.04,'sine',.12);beep(1500,.04,'sine',.1,.04);};
+const sfxTick=()=>beep(800,.04,'square',.05);
+const sfxTimeout=()=>{beep(300,.3,'sawtooth',.2);beep(250,.4,'sawtooth',.15,.3);};
+const sfxGameOver=()=>{beep(400,.15,'sawtooth',.25);beep(300,.2,'sawtooth',.22,.2);beep(200,.5,'sawtooth',.2,.45);};
+const sfxComplete=()=>[523,587,659,784,880].forEach((f,i)=>beep(f,.15,'sine',.2,i*.1));
+const sfxStarPop=()=>{beep(880,.12,'sine',.2);beep(1100,.12,'sine',.18,.12);beep(1320,.18,'sine',.22,.25);};
+
+function startMusic(){
+  if(!musicOn)return; stopMusic();
+  const notes=[261,294,329,349,392,349,329,294], bass=[130,146,164,174];
+  let t=AC.currentTime+.1; const tempo=.25;
+  function loop(){
+    if(!musicOn)return;
+    notes.forEach((f,i)=>{
+      const o=AC.createOscillator(),g=AC.createGain();
+      o.type='triangle';o.frequency.value=f;
+      g.gain.setValueAtTime(.08,t+i*tempo);
+      g.gain.exponentialRampToValueAtTime(.0001,t+i*tempo+tempo*.8);
+      o.connect(g);g.connect(AC.destination);
+      o.start(t+i*tempo);o.stop(t+i*tempo+tempo);
+    });
+    bass.forEach((f,i)=>{
+      const o=AC.createOscillator(),g=AC.createGain();
+      o.type='square';o.frequency.value=f;
+      g.gain.setValueAtTime(.03,t+i*tempo*2);
+      g.gain.exponentialRampToValueAtTime(.0001,t+i*tempo*2+tempo*1.5);
+      o.connect(g);g.connect(AC.destination);
+      o.start(t+i*tempo*2);o.stop(t+i*tempo*2+tempo*2);
+    });
+    t+=notes.length*tempo;
+    musicNodes=setTimeout(loop,(notes.length*tempo-.1)*1000);
+  }
+  loop();
+}
+function stopMusic(){if(musicNodes){clearTimeout(musicNodes);musicNodes=null;}}
+function toggleMusic(){
+  musicOn=!musicOn;
+  document.getElementById('music-toggle-label').textContent=musicOn?'ON':'OFF';
+  if(musicOn)startMusic();else stopMusic();
+}
+document.addEventListener('click',()=>{if(AC.state==='suspended')AC.resume();},{once:true});
+
+// ═══════════════════════════════════════════
+//  BACKGROUND PARTICLES
+// ═══════════════════════════════════════════
+const bgCanvas=document.getElementById('bg-canvas');
+const bgCtx=bgCanvas.getContext('2d');
+const particles=[];
+function resizeBg(){bgCanvas.width=window.innerWidth;bgCanvas.height=window.innerHeight;}
+resizeBg();window.addEventListener('resize',resizeBg);
+for(let i=0;i<60;i++) particles.push({
+  x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,
+  r:Math.random()*2+.5,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,
+  a:Math.random()*.4+.05,col:['#f5a623','#e94560','#4fc3f7','#b388ff','#00d4aa'][Math.floor(Math.random()*5)]
+});
+(function animateBg(){
+  bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+  particles.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0)p.x=bgCanvas.width;if(p.x>bgCanvas.width)p.x=0;
+    if(p.y<0)p.y=bgCanvas.height;if(p.y>bgCanvas.height)p.y=0;
+    bgCtx.beginPath();bgCtx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    bgCtx.fillStyle=p.col;bgCtx.globalAlpha=p.a;bgCtx.fill();
+  });
+  bgCtx.globalAlpha=1;
+  requestAnimationFrame(animateBg);
+})();
+
+// ═══════════════════════════════════════════
+//  SLIDES
+// ═══════════════════════════════════════════
+let currentSlide=0;
+const TOTAL_SLIDES=5;
+
+function initSlides(){
+  currentSlide=0;
+  const dots=document.getElementById('slide-dots');
+  dots.innerHTML='';
+  for(let i=0;i<TOTAL_SLIDES;i++){
+    const d=document.createElement('div');
+    d.className='sdot'+(i===0?' active':'');
+    d.onclick=()=>goSlide(i);
+    dots.appendChild(d);
+  }
+  goSlide(0);
+}
+
+function goSlide(idx){
+  currentSlide=idx;
+  document.getElementById('slides-track').style.transform=`translateX(-${idx*100}%)`;
+  document.querySelectorAll('.sdot').forEach((d,i)=>d.className='sdot'+(i===idx?' active':''));
+  document.getElementById('slide-prev').disabled=(idx===0);
+  document.getElementById('slide-next').disabled=(idx===TOTAL_SLIDES-1);
+  const btn=document.getElementById('slide-start-btn');
+  if(idx===TOTAL_SLIDES-1) btn.classList.add('visible'); else btn.classList.remove('visible');
+}
+
+function slideNav(dir){
+  sfxClick();
+  const next=Math.max(0,Math.min(TOTAL_SLIDES-1,currentSlide+dir));
+  goSlide(next);
+}
+
+// ═══════════════════════════════════════════
+//  SCREEN HELPERS
+// ═══════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+function showHow(){sfxClick();initSlides();showScreen('how-screen');}
+
+// ═══════════════════════════════════════════
+//  GAME DATA
+// ═══════════════════════════════════════════
+const CUSTOMERS=[
+  {name:'Alex',avatar:'😊',says:'"Keep the change... oh wait, no!"'},
+  {name:'Mia',avatar:'🧒',says:'"Make sure it\'s exact!"'},
+  {name:'Jordan',avatar:'👦',says:'"I\'m in a hurry!"'},
+  {name:'Sofia',avatar:'👩',says:'"Here\'s my money!"'},
+  {name:'Leo',avatar:'👨',says:'"Nice place you got!"'},
+  {name:'Priya',avatar:'👩‍🦱',says:'"Don\'t shortchange me!"'},
+  {name:'Kai',avatar:'🧑',says:'"Quick quick quick!"'},
+  {name:'Emma',avatar:'👧',says:'"I counted it already!"'},
+  {name:'Zara',avatar:'👩‍🦰',says:'"Give me the right change!"'},
+  {name:'Omar',avatar:'👨‍🦳',says:'"I\'ve got all day... not really."'},
+];
+const FOOD_ITEMS=[
+  {name:'Nasi Lemak',prices:[3.50,4.00,4.50]},{name:'Teh Tarik',prices:[1.50,2.00,2.50]},
+  {name:'Roti Canai',prices:[1.00,1.50,2.00]},{name:'Milo Ice',prices:[2.00,2.50,3.00]},
+  {name:'Char Kway Teow',prices:[5.00,5.50,6.00]},{name:'Laksa',prices:[6.00,6.50,7.00]},
+  {name:'Curry Puff',prices:[1.00,1.20,1.50]},{name:'Cendol',prices:[2.50,3.00,3.50]},
+  {name:'Satay x5',prices:[5.00,5.50,6.00]},{name:'Bandung',prices:[2.00,2.50,3.00]},
+  {name:'Wonton Mee',prices:[4.50,5.00,5.50]},{name:'Fried Rice',prices:[5.00,5.50,6.00]},
+  {name:'Kuih Lapis',prices:[0.50,0.80,1.00]},{name:'Nescafe',prices:[1.50,2.00,2.50]},
+  {name:'Toast + Egg',prices:[3.00,3.50,4.00]},{name:'Popiah',prices:[1.50,2.00,2.50]},
+  {name:'Ais Kacang',prices:[3.00,3.50,4.00]},{name:'Chicken Rice',prices:[5.50,6.00,6.50]},
+  {name:'Bak Kut Teh',prices:[8.00,9.00,10.00]},{name:'Durian Crepe',prices:[4.00,4.50,5.00]},
+];
+const BILLS=[
+  {val:1,label:'RM1',cls:'bill-btn bill-1'},{val:5,label:'RM5',cls:'bill-btn bill-5'},
+  {val:10,label:'RM10',cls:'bill-btn bill-10'},{val:20,label:'RM20',cls:'bill-btn bill-20'},
+  {val:50,label:'RM50',cls:'bill-btn bill-50'},
+];
+const COINS=[
+  {val:.01,label:'1¢',cls:'coin-btn coin-1c'},{val:.05,label:'5¢',cls:'coin-btn coin-5c'},
+  {val:.10,label:'10¢',cls:'coin-btn coin-10c'},{val:.20,label:'20¢',cls:'coin-btn coin-20c'},
+  {val:.50,label:'50¢',cls:'coin-btn coin-50c'},{val:1.00,label:'RM1',cls:'coin-btn coin-1'},
+];
+
+// ═══════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════
+let G={
+  round:0,score:0,lives:3,
+  total:0,paid:0,change:0,
+  trayTotal:0,trayItems:[],
+  timer:30,timerInterval:null,
+  correctCount:0,roundResults:[],
+  locked:false,gameOver:false,
+  currentRound:null
+};
+
+// ═══════════════════════════════════════════
+//  DIFFICULTY
+// ═══════════════════════════════════════════
+function getDiff(r){
+  return{
+    numItems:Math.min(2+Math.floor(r/2),6),
+    timeLimit:Math.max(45-r*3,18),
+    priceLevel:Math.min(Math.floor((r-1)/3),2),
+    payAmounts:r<=2?[5,10]:r<=4?[5,10,20]:r<=6?[10,20,50]:[10,20,50,100],
+    scoreBase:100+r*20,
+    timeBonusPer:5+r,
+  };
+}
+
+function generateRound(r){
+  const diff=getDiff(r);
+  const items=[...FOOD_ITEMS].sort(()=>Math.random()-.5).slice(0,diff.numItems)
+    .map(i=>({name:i.name,price:i.prices[diff.priceLevel]}));
+  const total=Math.round(items.reduce((s,i)=>s+i.price,0)*100)/100;
+  const opts=diff.payAmounts.filter(p=>p>total);
+  const paid=opts.length?opts[Math.floor(Math.random()*opts.length)]:([5,10,20,50,100].find(p=>p>total)||100);
+  const change=Math.round((paid-total)*100)/100;
+  return{items,total,paid,change,customer:CUSTOMERS[(r-1)%CUSTOMERS.length],diff};
+}
+
+// ═══════════════════════════════════════════
+//  START GAME
+// ═══════════════════════════════════════════
+function startGame(){
+  sfxClick();
+  G={round:0,score:0,lives:3,total:0,paid:0,change:0,
+     trayTotal:0,trayItems:[],timer:30,timerInterval:null,
+     correctCount:0,roundResults:[],locked:false,gameOver:false,currentRound:null};
+  buildDenomButtons();
+  buildProgressDots();
+  showScreen('game-screen');
+  startMusic();
+  nextRound();
+}
+
+function buildDenomButtons(){
+  document.getElementById('bills-grid').innerHTML='';
+  document.getElementById('coins-grid').innerHTML='';
+  BILLS.forEach(b=>{
+    const btn=document.createElement('button');
+    btn.className='denom-btn '+b.cls;
+    btn.innerHTML=`<span class="denom-value">${b.label}</span>`;
+    btn.onclick=()=>addToTray(b.val,b.label,'bill');
+    document.getElementById('bills-grid').appendChild(btn);
+  });
+  COINS.forEach(c=>{
+    const btn=document.createElement('button');
+    btn.className='denom-btn '+c.cls;
+    btn.innerHTML=`<span class="denom-value">${c.label}</span>`;
+    btn.onclick=()=>addToTray(c.val,c.label,'coin');
+    document.getElementById('coins-grid').appendChild(btn);
+  });
+}
+
+function buildProgressDots(){
+  const wrap=document.getElementById('progress-dots');
+  wrap.innerHTML='';
+  for(let i=1;i<=10;i++){
+    const d=document.createElement('div');
+    d.className='progress-dot';d.id='dot-'+i;
+    wrap.appendChild(d);
+  }
+}
+
+// ═══════════════════════════════════════════
+//  ROUND FLOW
+// ═══════════════════════════════════════════
+function nextRound(){
+  G.round++;
+  if(G.round>10){endGame(false);return;}
+  G.locked=false;
+  clearInterval(G.timerInterval);
+  clearTrayInternal();
+  const data=generateRound(G.round);
+  G.currentRound=data;G.total=data.total;G.paid=data.paid;G.change=data.change;
+  renderReceipt(data);renderCustomer(data.customer);
+  updateHUD();updateProgressDots();
+  G.timer=data.diff.timeLimit;
+  updateTimerDisplay();
+  G.timerInterval=setInterval(tickTimer,1000);
+}
+
+function renderCustomer(c){
+  document.getElementById('customer-avatar').textContent=c.avatar;
+  document.getElementById('customer-name').textContent=c.name;
+  document.getElementById('customer-says').textContent=c.says;
+}
+
+function renderReceipt(data){
+  const el=document.getElementById('receipt-items');
+  el.innerHTML='';
+  data.items.forEach(i=>{
+    const row=document.createElement('div');
+    row.className='receipt-row';
+    row.innerHTML=`<span class="item-name">${i.name}</span><span class="item-price">RM${i.price.toFixed(2)}</span>`;
+    el.appendChild(row);
+  });
+  document.getElementById('receipt-total').textContent=`RM${data.total.toFixed(2)}`;
+  document.getElementById('receipt-paid').textContent=`RM${data.paid.toFixed(2)}`;
+  document.getElementById('receipt-change').textContent=`RM${data.change.toFixed(2)}`;
+  document.getElementById('panel-paid').textContent=`RM${data.paid.toFixed(2)}`;
+  document.getElementById('panel-paid-note').textContent=`with a RM${data.paid} ${data.paid<=2?'coin':'note'}`;
+  document.getElementById('panel-total').textContent=`RM${data.total.toFixed(2)}`;
+  document.getElementById('change-due-display').textContent=`RM${data.change.toFixed(2)}`;
+  updateRemainingDisplay();
+}
+
+// ═══════════════════════════════════════════
+//  TRAY
+// ═══════════════════════════════════════════
+function addToTray(val,label,type){
+  if(G.locked)return;
+  sfxCoin();
+  G.trayItems.push({val,label,type,id:Date.now()+Math.random()});
+  G.trayTotal=Math.round((G.trayTotal+val)*100)/100;
+  renderTray();updateRemainingDisplay();updateTrayBorder();
+}
+
+function updateTrayBorder(){
+  const tray=document.getElementById('change-tray');
+  if(G.trayTotal>G.change){tray.classList.add('wrong');tray.classList.remove('correct');}
+  else if(G.trayTotal===G.change){tray.classList.add('correct');tray.classList.remove('wrong');}
+  else{tray.classList.remove('correct','wrong');}
+}
+
+function renderTray(){
+  const el=document.getElementById('tray-items');
+  el.innerHTML='';
+  G.trayItems.forEach(item=>{
+    const d=document.createElement('div');
+    d.className='placed-item';
+    d.innerHTML=`${item.type==='coin'?'🪙':'💵'} ${item.label}`;
+    d.title='Click to remove';
+    d.onclick=()=>removeFromTray(item.id);
+    el.appendChild(d);
+  });
+  const tot=document.getElementById('tray-total');
+  tot.textContent=`RM${G.trayTotal.toFixed(2)}`;
+  tot.className='change-amount';
+  if(G.trayTotal>G.change)tot.classList.add('over');
+}
+
+function removeFromTray(id){
+  if(G.locked)return;
+  const idx=G.trayItems.findIndex(i=>i.id===id);
+  if(idx===-1)return;
+  sfxClick();
+  G.trayTotal=Math.round((G.trayTotal-G.trayItems[idx].val)*100)/100;
+  G.trayItems.splice(idx,1);
+  renderTray();updateRemainingDisplay();updateTrayBorder();
+}
+
+function clearTrayInternal(){
+  G.trayTotal=0;G.trayItems=[];
+  renderTray();updateRemainingDisplay();
+  document.getElementById('change-tray').classList.remove('correct','wrong');
+}
+
+function clearTray(){if(G.locked)return;clearTrayInternal();}
+
+function updateRemainingDisplay(){
+  const rem=Math.round((G.change-G.trayTotal)*100)/100;
+  const el=document.getElementById('remaining-val');
+  if(rem<0){el.textContent=`RM${Math.abs(rem).toFixed(2)} over!`;el.style.color='#e94560';}
+  else{el.textContent=`RM${rem.toFixed(2)}`;el.style.color='#4fc3f7';}
+}
+
+// ═══════════════════════════════════════════
+//  SUBMIT
+// ═══════════════════════════════════════════
+function submitChange(){
+  if(G.locked||G.trayItems.length===0)return;
+  const trayR=Math.round(G.trayTotal*100);
+  const changeR=Math.round(G.change*100);
+  if(trayR===changeR){
+    // CORRECT
+    sfxCorrect();clearInterval(G.timerInterval);G.locked=true;
+    G.correctCount++;
+    const bonus=G.timer*G.currentRound.diff.timeBonusPer;
+    const pts=G.currentRound.diff.scoreBase+bonus;
+    G.score+=pts;
+    G.roundResults.push('correct');
+    updateProgressDots();showFeedback(true,`+${pts} pts`);updateHUD();
+    setTimeout(nextRound,1800);
+  } else {
+    // WRONG
+    sfxWrong();
+    G.lives=Math.max(0,G.lives-1);
+    G.roundResults.push('wrong');
+    clearTrayInternal();
+    document.getElementById('change-tray').classList.add('shake');
+    setTimeout(()=>document.getElementById('change-tray').classList.remove('shake'),400);
+    showFeedback(false,G.trayTotal>G.change?'Too much!':'Not enough!');
+    updateHUD();updateProgressDots();
+    if(G.lives===0){
+      clearInterval(G.timerInterval);
+      G.locked=true;
+      setTimeout(()=>endGame(true),1500); // game over — lives depleted
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════
+function tickTimer(){
+  G.timer--;updateTimerDisplay();
+  if(G.timer<=5)sfxTick();
+  if(G.timer<=0){
+    clearInterval(G.timerInterval);
+    if(G.locked)return;
+    sfxTimeout();
+    G.lives=Math.max(0,G.lives-1);
+    G.roundResults.push('timeout');
+    updateProgressDots();showFeedback(false,'⏱ Time Up!');updateHUD();
+    if(G.lives===0){
+      G.locked=true;
+      setTimeout(()=>endGame(true),1500);
+    } else {
+      setTimeout(nextRound,1600);
+    }
+  }
+}
+
+function updateTimerDisplay(){
+  const pct=G.timer/(G.currentRound?.diff?.timeLimit||30);
+  document.getElementById('hud-time').textContent=`${G.timer}s`;
+  document.getElementById('timer-bar').style.width=`${pct*100}%`;
+  let c='#00d4aa';if(pct<.3)c='#e94560';else if(pct<.55)c='#f5a623';
+  document.getElementById('timer-bar').style.background=`linear-gradient(90deg,${c},${c}88)`;
+}
+
+// ═══════════════════════════════════════════
+//  HUD
+// ═══════════════════════════════════════════
+function updateHUD(){
+  document.getElementById('hud-round').textContent=`${G.round}/10`;
+  document.getElementById('hud-score').textContent=G.score;
+  document.getElementById('hud-lives').textContent='❤️'.repeat(G.lives)+'🖤'.repeat(3-G.lives)||'💀';
+}
+
+function updateProgressDots(){
+  for(let i=1;i<=10;i++){
+    const d=document.getElementById('dot-'+i);if(!d)continue;
+    if(i<G.round){const r=G.roundResults[i-1];d.className='progress-dot '+(r==='correct'?'done':'wrong');}
+    else if(i===G.round)d.className='progress-dot current';
+    else d.className='progress-dot';
+  }
+}
+
+// ═══════════════════════════════════════════
+//  FEEDBACK
+// ═══════════════════════════════════════════
+function showFeedback(ok,text){
+  const ov=document.getElementById('feedback-overlay'),msg=document.getElementById('feedback-msg');
+  msg.className='feedback-msg '+(ok?'correct':'wrong');
+  msg.textContent=ok?`✅ ${text}`:`❌ ${text}`;
+  ov.classList.remove('hidden');
+  setTimeout(()=>ov.classList.add('hidden'),1200);
+}
+
+// ═══════════════════════════════════════════
+//  END GAME — with 0–3 star rating
+// ═══════════════════════════════════════════
+function endGame(livesDepleted){
+  clearInterval(G.timerInterval);
+  stopMusic();
+
+  const roundsReached = G.round; // how far they got
+  const totalAttempted = Math.min(G.roundResults.length, 10);
+  const accuracy = totalAttempted > 0 ? Math.round((G.correctCount / totalAttempted) * 100) : 0;
+  const completedAll = !livesDepleted && G.round > 10;
+
+  // ── STAR LOGIC ──
+  // 3 stars: completed all 10 rounds AND accuracy ≥ 80%
+  // 2 stars: completed all 10 rounds AND accuracy ≥ 60%, OR lives gone but accuracy ≥ 70%
+  // 1 star:  reached at least round 5, OR accuracy ≥ 30%
+  // 0 stars: everything else
+  let stars = 0;
+  if(completedAll && accuracy >= 80) stars = 3;
+  else if((completedAll && accuracy >= 60) || (!livesDepleted && accuracy >= 70)) stars = 2;
+  else if(roundsReached >= 5 || accuracy >= 30) stars = 1;
+  else stars = 0;
+
+  // Trophy & title
+  let trophy, title, subtitle;
+  if(livesDepleted){
+    trophy='💀';title='Game Over!';subtitle=`You made it to Round ${roundsReached}. Try again!`;
+    sfxGameOver();
+  } else if(stars===3){
+    trophy='🏆';title='Cashier Legend!';subtitle='A perfect shift — incredible skills!';
+    sfxComplete();confetti();
+  } else if(stars===2){
+    trophy='🥈';title='Great Job!';subtitle='Solid cashier skills — well done!';
+    sfxComplete();
+  } else if(stars===1){
+    trophy='🥉';title='Keep Practising!';subtitle='You\'re improving — one more try!';
+  } else {
+    trophy='📉';title='Don\'t Give Up!';subtitle='Brush up on decimals and come back!';
+  }
+
+  document.getElementById('end-trophy').textContent=trophy;
+  document.getElementById('end-title').textContent=title;
+  document.getElementById('end-subtitle').textContent=subtitle;
+  document.getElementById('end-score').textContent=G.score;
+  document.getElementById('end-correct').textContent=`${G.correctCount}/${totalAttempted}`;
+  document.getElementById('end-round').textContent=livesDepleted?`${roundsReached}/10`:'10/10';
+  document.getElementById('end-accuracy').textContent=`${accuracy}%`;
+
+  // Render stars (animate in)
+  const starColors=['#f5a623','#f5a623','#f5a623'];
+  const starIds=['star1','star2','star3'];
+  const starLabels=['1 Star','2 Stars','3 Stars'];
+  starIds.forEach((id,i)=>{
+    const svg=document.getElementById(id);
+    const poly=svg.querySelector('polygon');
+    poly.setAttribute('fill','#2a2a4a');poly.setAttribute('stroke','#444');
+    svg.classList.remove('lit');
+  });
+
+  // Star message
+  const msgs=[
+    {cls:'s0',text:'💪 Lose all lives and you\'re done! Try again!'},
+    {cls:'s1',text:'🌱 Good start — keep practising your decimal skills!'},
+    {cls:'s2',text:'👍 Nice cashier skills — can you get the third star?'},
+    {cls:'s3',text:'⭐ Flawless change-making! You\'re a true Cashier Legend!'},
+  ];
+  const msgEl=document.getElementById('star-msg');
+  msgEl.className='star-msg '+msgs[stars].cls;
+  msgEl.textContent=msgs[stars].text;
+
+  showScreen('end-screen');
+
+  // Animate stars popping in after a short delay
+  for(let i=0;i<stars;i++){
+    setTimeout(()=>{
+      sfxStarPop();
+      const svg=document.getElementById(starIds[i]);
+      const poly=svg.querySelector('polygon');
+      poly.setAttribute('fill',starColors[i]);
+      poly.setAttribute('stroke','#ffcc44');
+      svg.classList.add('lit');
+      svg.style.animation='star-pop .4s ease';
+      setTimeout(()=>svg.style.animation='',500);
+    }, 400+i*350);
+  }
+}
+
+// ═══════════════════════════════════════════
+//  CONFETTI
+// ═══════════════════════════════════════════
+function confetti(){
+  const cols=['#f5a623','#e94560','#00d4aa','#b388ff','#4fc3f7','#fff'];
+  for(let i=0;i<70;i++){
+    const el=document.createElement('div');
+    el.className='confetti-piece';
+    el.style.cssText=`left:${Math.random()*100}%;top:-10px;background:${cols[Math.floor(Math.random()*cols.length)]};width:${Math.random()*10+5}px;height:${Math.random()*6+4}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${Math.random()*2+1.5}s;animation-delay:${Math.random()*.5}s;`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),3000);
+  }
+}
+
+// ═══════════════════════════════════════════
+//  STAR POP KEYFRAME (injected)
+// ═══════════════════════════════════════════
+const style=document.createElement('style');
+style.textContent=`@keyframes star-pop{0%{transform:scale(.4) rotate(-20deg);opacity:.5;}60%{transform:scale(1.4) rotate(8deg);}100%{transform:scale(1) rotate(0);opacity:1;}}`;
+document.head.appendChild(style);
+
+// ═══════════════════════════════════════════
+//  KEYBOARD
+// ═══════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter')submitChange();
+  if(e.key==='Escape'||e.key==='Backspace')clearTray();
+  if(e.key==='ArrowRight')slideNav(1);
+  if(e.key==='ArrowLeft')slideNav(-1);
+});
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+showScreen('start-screen');
+startMusic();
+</script>
+</body>
+</html>

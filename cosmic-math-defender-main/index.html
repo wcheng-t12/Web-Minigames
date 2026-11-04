@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cosmic Math Defender — Educational Math Game</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(ellipse at center,#050015 0%,#000008 70%);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Courier New',Courier,monospace;color:#fff;overflow:hidden}
+#wrap{position:relative;width:800px;height:600px;border:1px solid rgba(0,200,255,.45);box-shadow:0 0 40px rgba(0,180,255,.25),0 0 90px rgba(0,80,200,.12)}
+#gc{display:block;width:800px;height:600px}
+.scr{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:10}
+.scr.on{display:flex}
+
+/* ── START ── */
+#s0{background:linear-gradient(160deg,rgba(0,0,28,.92),rgba(0,4,18,.96))}
+.title{font-size:36px;font-weight:900;letter-spacing:3px;background:linear-gradient(90deg,#00aaff,#00ffcc,#00aaff);background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 3s linear infinite,tg 2.2s ease-in-out infinite alternate;text-align:center;margin-bottom:5px}
+@keyframes shimmer{to{background-position:200%}}
+@keyframes tg{from{filter:drop-shadow(0 0 7px rgba(0,170,255,.5))}to{filter:drop-shadow(0 0 18px rgba(0,255,200,.8))}}
+.sub{font-size:10px;letter-spacing:5px;color:#3a5570;text-transform:uppercase;margin-bottom:26px}
+.chips{display:flex;gap:12px;margin-bottom:26px;flex-wrap:wrap;justify-content:center}
+.chip{background:rgba(0,70,120,.25);border:1px solid rgba(0,170,255,.3);border-radius:6px;padding:7px 14px;font-size:14px;color:#55aadd;animation:fc 3s ease-in-out infinite}
+.chip:nth-child(2){animation-delay:.5s}.chip:nth-child(3){animation-delay:1s}.chip:nth-child(4){animation-delay:1.5s}
+@keyframes fc{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.bgrp{display:flex;flex-direction:column;align-items:center;gap:9px}
+.btn{padding:12px 42px;font-size:15px;font-family:'Courier New',monospace;font-weight:bold;letter-spacing:3px;text-transform:uppercase;border:none;border-radius:5px;cursor:pointer;transition:transform .15s,box-shadow .15s;min-width:210px}
+.btn:active{transform:scale(.97)!important}
+.bp{background:linear-gradient(135deg,#0066dd,#0044aa);color:#fff;box-shadow:0 4px 20px rgba(0,100,220,.4);animation:pb 2s ease-in-out infinite}
+.bp:hover{background:linear-gradient(135deg,#0088ff,#0055cc);box-shadow:0 4px 35px rgba(0,130,255,.7);transform:scale(1.04)}
+@keyframes pb{0%,100%{box-shadow:0 4px 20px rgba(0,100,220,.4)}50%{box-shadow:0 4px 40px rgba(0,150,255,.7)}}
+.bs{background:transparent;color:#00ccff;border:1.5px solid #00ccff}
+.bs:hover{background:rgba(0,200,255,.1);box-shadow:0 0 20px rgba(0,200,255,.3);transform:scale(1.04)}
+.footer{font-size:9px;letter-spacing:2px;color:#2a3a4a;margin-top:20px;text-transform:uppercase}
+
+/* ══════════════════════════════════════
+   HOW TO PLAY — SLIDES
+══════════════════════════════════════ */
+#s1{background:rgba(0,0,18,.97);flex-direction:column;padding:0}
+
+.slides-wrap{
+  position:relative;width:760px;height:480px;overflow:hidden;
+}
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;transform:translateX(40px);
+  transition:opacity .35s ease,transform .35s ease;
+  pointer-events:none;padding:30px 50px;gap:0;
+}
+.slide.active{opacity:1;transform:translateX(0);pointer-events:auto;}
+.slide.exit-left{opacity:0;transform:translateX(-40px);}
+
+/* slide visual area */
+.sl-visual{
+  width:100%;height:180px;
+  background:rgba(0,8,28,.7);
+  border:1px solid rgba(0,140,255,.2);
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:22px;
+  position:relative;overflow:hidden;
+  flex-shrink:0;
+}
+.sl-visual::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,100,200,.04) 3px,rgba(0,100,200,.04) 4px);
+  pointer-events:none;
+}
+
+.sl-step{font-size:9px;letter-spacing:4px;color:#224455;text-transform:uppercase;margin-bottom:6px;align-self:flex-start}
+.sl-title{font-size:20px;font-weight:900;letter-spacing:2px;color:#00ccff;text-shadow:0 0 12px rgba(0,170,255,.6);margin-bottom:10px;align-self:flex-start}
+.sl-body{font-size:12px;color:#8aabbb;line-height:1.8;align-self:flex-start;width:100%}
+.sl-body strong{color:#cce;}
+.sl-body .hl{color:#00ffaa;font-weight:bold;}
+.sl-body .hl-y{color:#ffcc00;font-weight:bold;}
+.sl-body .hl-r{color:#ff4455;font-weight:bold;}
+
+/* slide nav */
+.slide-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  width:760px;padding:0 4px;margin-top:6px;
+}
+.dot-row{display:flex;gap:8px;}
+.sdot{
+  width:8px;height:8px;border-radius:50%;
+  background:#1a3448;border:1px solid #254055;
+  cursor:pointer;transition:all .2s;
+}
+.sdot.on{background:#00ccff;border-color:#00ccff;box-shadow:0 0 8px #00ccff;transform:scale(1.35);}
+.nav-arrows{display:flex;gap:8px;}
+.narr{
+  background:rgba(0,30,60,.6);border:1px solid rgba(0,140,255,.3);
+  color:#5a8aaa;border-radius:5px;padding:9px 20px;
+  font-family:'Courier New',monospace;font-size:13px;font-weight:bold;
+  cursor:pointer;letter-spacing:2px;transition:all .15s;
+}
+.narr:hover{border-color:#00ccff;color:#00ccff;background:rgba(0,50,100,.4);}
+.narr.go{background:linear-gradient(135deg,#0066dd,#0044aa);color:#fff;border:none;box-shadow:0 4px 18px rgba(0,100,220,.4);}
+.narr.go:hover{background:linear-gradient(135deg,#0088ff,#0055cc);transform:scale(1.04);}
+
+/* ── GAME OVER ── */
+#s2{background:rgba(0,0,18,.94)}
+.got{font-size:42px;letter-spacing:5px;color:#ff3344;text-shadow:0 0 18px #ff0022,0 0 50px rgba(255,0,34,.4);margin-bottom:6px;animation:gp 1.5s ease-in-out infinite alternate}
+.got.v{color:#00ffaa;text-shadow:0 0 18px #00ffaa,0 0 50px rgba(0,255,170,.4)}
+@keyframes gp{from{opacity:.85;transform:scale(1)}to{opacity:1;transform:scale(1.02)}}
+.gomsg{font-size:12px;letter-spacing:2px;color:#556677;margin-bottom:14px}
+.sbox{background:rgba(0,28,58,.5);border:1px solid rgba(0,170,255,.3);border-radius:10px;padding:14px 55px;margin-bottom:12px;text-align:center}
+.slbl{font-size:10px;letter-spacing:4px;color:#446688;margin-bottom:3px}
+.sval{font-size:48px;letter-spacing:4px;color:#ffcc00;text-shadow:0 0 18px #ffaa00}
+
+/* ── STAR RATING ── */
+.stars-row{display:flex;gap:14px;align-items:center;justify-content:center;margin-bottom:10px;}
+.star-ico{font-size:40px;filter:grayscale(1) brightness(.3);transform:scale(.9);transition:all .15s;}
+.star-ico.lit{filter:none;transform:scale(1);animation:spop .5s cubic-bezier(.4,0,.2,1) both;}
+@keyframes spop{0%{transform:scale(0) rotate(-25deg);opacity:0}65%{transform:scale(1.45) rotate(6deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+.star-grade{font-size:11px;letter-spacing:3px;color:#ffcc00;text-transform:uppercase;text-shadow:0 0 10px rgba(255,200,0,.5);margin-bottom:12px;}
+
+.stats{display:flex;gap:30px;margin-bottom:16px}
+.st{text-align:center}.stv{font-size:24px;color:#00ccff}.stl{font-size:9px;letter-spacing:2px;color:#445566;margin-top:2px}
+
+/* ── SOUND BTN ── */
+#snd{position:absolute;top:11px;right:11px;z-index:20;width:34px;height:34px;background:rgba(0,38,75,.6);border:1px solid rgba(0,170,255,.3);border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;color:#00aaff;transition:background .2s}
+#snd:hover{background:rgba(0,75,150,.6)}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="gc" width="800" height="600"></canvas>
+  <button id="snd" title="Toggle Sound">🔊</button>
+
+  <!-- ══ START ══ -->
+  <div id="s0" class="scr on">
+    <div class="title">⚡ COSMIC MATH DEFENDER ⚡</div>
+    <div class="sub">Educational Mathematics · Action Game</div>
+    <div class="chips">
+      <div class="chip">3x + 5 = 17</div>
+      <div class="chip">x² = 49</div>
+      <div class="chip">8 × ☐ = 56</div>
+      <div class="chip">√64 = ?</div>
+    </div>
+    <div class="bgrp">
+      <button id="bplay" class="btn bp">▶ LAUNCH MISSION</button>
+      <button id="bhtp"  class="btn bs">📖 HOW TO PLAY</button>
+    </div>
+    <div class="footer">10 Rounds · Algebra &amp; Arithmetic · Secondary School</div>
+  </div>
+
+  <!-- ══ HOW TO PLAY — SLIDESHOW ══ -->
+  <div id="s1" class="scr">
+    <div class="slides-wrap">
+
+      <!-- SLIDE 1: Objective -->
+      <div class="slide active" data-i="0">
+        <div class="sl-visual">
+          <!-- SVG: meteor falling, problem above, ship below -->
+          <svg width="680" height="170" viewBox="0 0 680 170" xmlns="http://www.w3.org/2000/svg">
+            <!-- stars -->
+            <circle cx="60"  cy="30"  r="1.2" fill="rgba(200,220,255,.5)"/>
+            <circle cx="130" cy="55"  r=".8"  fill="rgba(200,220,255,.4)"/>
+            <circle cx="250" cy="18"  r="1"   fill="rgba(200,220,255,.5)"/>
+            <circle cx="420" cy="40"  r=".9"  fill="rgba(200,220,255,.4)"/>
+            <circle cx="580" cy="22"  r="1.1" fill="rgba(200,220,255,.5)"/>
+            <circle cx="640" cy="60"  r=".7"  fill="rgba(200,220,255,.3)"/>
+            <!-- problem box -->
+            <rect x="210" y="12" width="260" height="38" rx="7" fill="rgba(0,18,50,.8)" stroke="rgba(0,140,255,.4)" stroke-width="1"/>
+            <text x="340" y="36" text-anchor="middle" font-family="Courier New" font-size="16" font-weight="bold" fill="#ffffff">3x + 5 = 17  →  x = ?</text>
+            <!-- wrong meteor left -->
+            <polygon points="140,90 110,130 170,130" fill="#5a3820" stroke="#aa6633" stroke-width="1.5" opacity=".7"/>
+            <text x="140" y="117" text-anchor="middle" font-family="Courier New" font-size="14" font-weight="bold" fill="#ccaa88">8</text>
+            <!-- wrong meteor right -->
+            <polygon points="530,85 500,128 565,128" fill="#5a2828" stroke="#aa4444" stroke-width="1.5" opacity=".7"/>
+            <text x="530" y="113" text-anchor="middle" font-family="Courier New" font-size="14" font-weight="bold" fill="#cc8888">5</text>
+            <!-- correct meteor centre with glow -->
+            <polygon points="340,78 300,148 380,148" fill="#1a3828" stroke="#00ff88" stroke-width="2"/>
+            <text x="340" y="130" text-anchor="middle" font-family="Courier New" font-size="18" font-weight="bold" fill="#00ffaa">4</text>
+            <text x="340" y="160" text-anchor="middle" font-family="Courier New" font-size="9" letter-spacing="2" fill="#00ff88">CORRECT</text>
+            <!-- laser beam -->
+            <line x1="340" y1="170" x2="340" y2="148" stroke="#00ffcc" stroke-width="3" opacity=".9"/>
+            <!-- ship -->
+            <polygon points="340,170 315,165 340,155 365,165" fill="#0044aa" stroke="#4488cc" stroke-width="1"/>
+            <ellipse cx="340" cy="157" rx="6" ry="8" fill="#00eeff"/>
+          </svg>
+        </div>
+        <div class="sl-step">Step 1 of 5</div>
+        <div class="sl-title">Shoot the Correct Answer</div>
+        <div class="sl-body">
+          A <span class="hl">math problem</span> appears at the top of the screen. Meteors fall carrying different numbers — only one holds the <span class="hl">correct answer</span>. Move your ship left/right and fire your laser to destroy it before it reaches the bottom!
+        </div>
+      </div>
+
+      <!-- SLIDE 2: Controls -->
+      <div class="slide" data-i="1">
+        <div class="sl-visual">
+          <svg width="680" height="170" viewBox="0 0 680 170" xmlns="http://www.w3.org/2000/svg">
+            <!-- keyboard keys -->
+            <!-- Left / A -->
+            <rect x="80"  y="55" width="60" height="60" rx="8" fill="rgba(0,30,70,.7)" stroke="rgba(0,140,255,.4)" stroke-width="1.5"/>
+            <text x="110" y="91" text-anchor="middle" font-family="Courier New" font-size="22" fill="#00ccff">←</text>
+            <text x="110" y="108" text-anchor="middle" font-family="Courier New" font-size="9" fill="#336688">/ A</text>
+            <!-- Right / D -->
+            <rect x="155" y="55" width="60" height="60" rx="8" fill="rgba(0,30,70,.7)" stroke="rgba(0,140,255,.4)" stroke-width="1.5"/>
+            <text x="185" y="91" text-anchor="middle" font-family="Courier New" font-size="22" fill="#00ccff">→</text>
+            <text x="185" y="108" text-anchor="middle" font-family="Courier New" font-size="9" fill="#336688">/ D</text>
+            <text x="147" y="140" text-anchor="middle" font-family="Courier New" font-size="10" fill="#3a6680">MOVE SHIP</text>
+            <!-- divider -->
+            <line x1="270" y1="40" x2="270" y2="145" stroke="rgba(0,100,180,.2)" stroke-width="1"/>
+            <!-- Space bar -->
+            <rect x="300" y="55" width="160" height="60" rx="8" fill="rgba(0,30,70,.7)" stroke="rgba(0,200,255,.45)" stroke-width="1.5"/>
+            <text x="380" y="91" text-anchor="middle" font-family="Courier New" font-size="13" font-weight="bold" fill="#00ffcc">SPACE</text>
+            <text x="380" y="108" text-anchor="middle" font-family="Courier New" font-size="9" fill="#336688">or CLICK</text>
+            <text x="380" y="140" text-anchor="middle" font-family="Courier New" font-size="10" fill="#3a6680">FIRE LASER</text>
+            <!-- divider -->
+            <line x1="490" y1="40" x2="490" y2="145" stroke="rgba(0,100,180,.2)" stroke-width="1"/>
+            <!-- P key -->
+            <rect x="518" y="55" width="48" height="48" rx="7" fill="rgba(0,30,70,.5)" stroke="rgba(0,100,180,.3)" stroke-width="1"/>
+            <text x="542" y="86" text-anchor="middle" font-family="Courier New" font-size="18" fill="#557799">P</text>
+            <text x="542" y="119" text-anchor="middle" font-family="Courier New" font-size="9" fill="#2a5060">PAUSE</text>
+            <!-- M key -->
+            <rect x="578" y="55" width="48" height="48" rx="7" fill="rgba(0,30,70,.5)" stroke="rgba(0,100,180,.3)" stroke-width="1"/>
+            <text x="602" y="86" text-anchor="middle" font-family="Courier New" font-size="18" fill="#557799">M</text>
+            <text x="602" y="119" text-anchor="middle" font-family="Courier New" font-size="9" fill="#2a5060">MUTE</text>
+          </svg>
+        </div>
+        <div class="sl-step">Step 2 of 5</div>
+        <div class="sl-title">Controls</div>
+        <div class="sl-body">
+          Use <strong>← → Arrow Keys</strong> or <strong>A / D</strong> to pilot your ship. Press <span class="hl">SPACE</span> or <strong>click</strong> to fire your laser. Hit <strong>P</strong> to pause mid-game, or <strong>M</strong> to mute the music.
+        </div>
+      </div>
+
+      <!-- SLIDE 3: Lives & Scoring -->
+      <div class="slide" data-i="2">
+        <div class="sl-visual">
+          <svg width="680" height="170" viewBox="0 0 680 170" xmlns="http://www.w3.org/2000/svg">
+            <!-- lives bar left -->
+            <text x="90" y="36" text-anchor="middle" font-family="Courier New" font-size="9" letter-spacing="3" fill="#3a5060">LIVES</text>
+            <!-- 6 hearts, first 4 full, last 2 lost -->
+            <text x="30"  y="65" font-family="serif" font-size="22" fill="#ff3355">♥</text>
+            <text x="58"  y="65" font-family="serif" font-size="22" fill="#ff3355">♥</text>
+            <text x="86"  y="65" font-family="serif" font-size="22" fill="#ff3355">♥</text>
+            <text x="114" y="65" font-family="serif" font-size="22" fill="#ff3355">♥</text>
+            <text x="142" y="65" font-family="serif" font-size="22" fill="#222840">♡</text>
+            <text x="170" y="65" font-family="serif" font-size="22" fill="#222840">♡</text>
+            <!-- wrong shot arrow down -->
+            <text x="90" y="105" text-anchor="middle" font-family="Courier New" font-size="11" fill="#ff4455">✗ WRONG SHOT</text>
+            <text x="90" y="122" text-anchor="middle" font-family="Courier New" font-size="10" fill="#884455">−1 Life  −200 pts</text>
+            <!-- divider -->
+            <line x1="222" y1="20" x2="222" y2="155" stroke="rgba(0,100,180,.2)" stroke-width="1"/>
+            <!-- score right side -->
+            <text x="450" y="36" text-anchor="middle" font-family="Courier New" font-size="9" letter-spacing="3" fill="#3a5060">SCORING</text>
+            <!-- correct hit -->
+            <rect x="250" y="50" width="380" height="34" rx="6" fill="rgba(0,60,30,.4)" stroke="rgba(0,200,100,.25)" stroke-width="1"/>
+            <text x="255" y="72" font-family="Courier New" font-size="12" fill="#00ff88">✓  Correct Hit</text>
+            <text x="610" y="72" text-anchor="end" font-family="Courier New" font-size="12" fill="#ffcc00">+100 × Round × Combo</text>
+            <!-- wrong hit -->
+            <rect x="250" y="92" width="380" height="28" rx="6" fill="rgba(60,0,10,.4)" stroke="rgba(200,0,50,.2)" stroke-width="1"/>
+            <text x="255" y="111" font-family="Courier New" font-size="12" fill="#ff4455">✗  Wrong / Miss</text>
+            <text x="610" y="111" text-anchor="end" font-family="Courier New" font-size="12" fill="#ff8888">−1 Life  −200 pts</text>
+            <!-- combo note -->
+            <text x="450" y="145" text-anchor="middle" font-family="Courier New" font-size="10" fill="#446688">Chain correct answers to build a COMBO multiplier!</text>
+          </svg>
+        </div>
+        <div class="sl-step">Step 3 of 5</div>
+        <div class="sl-title">Lives &amp; Scoring</div>
+        <div class="sl-body">
+          You start with <span class="hl-r">6 lives</span>. Every wrong shot or missed meteor costs a life and <span class="hl-r">−200 points</span>. Hit the correct answer for <span class="hl-y">big points</span> — chain them together to build a <span class="hl">combo multiplier</span> for even bigger rewards!
+        </div>
+      </div>
+
+      <!-- SLIDE 4: Rounds & Topics -->
+      <div class="slide" data-i="3">
+        <div class="sl-visual">
+          <svg width="680" height="170" viewBox="0 0 680 170" xmlns="http://www.w3.org/2000/svg">
+            <!-- round timeline -->
+            <!-- line -->
+            <line x1="40" y1="80" x2="640" y2="80" stroke="rgba(0,120,200,.25)" stroke-width="2"/>
+            <!-- nodes + labels -->
+            <!-- R1-2 -->
+            <circle cx="80"  cy="80" r="18" fill="rgba(0,40,80,.6)" stroke="#00aaff" stroke-width="2"/>
+            <text x="80"  y="85" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#00ccff">1-2</text>
+            <text x="80"  y="110" text-anchor="middle" font-family="Courier New" font-size="8" fill="#336688">Add / Sub</text>
+            <!-- R3-4 -->
+            <circle cx="210" cy="80" r="18" fill="rgba(0,40,80,.6)" stroke="#00ccaa" stroke-width="2"/>
+            <text x="210" y="85" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#00ffcc">3-4</text>
+            <text x="210" y="110" text-anchor="middle" font-family="Courier New" font-size="8" fill="#336688">Mul / Div</text>
+            <!-- R5-6 -->
+            <circle cx="340" cy="80" r="18" fill="rgba(0,40,80,.6)" stroke="#ffaa00" stroke-width="2"/>
+            <text x="340" y="85" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#ffcc44">5-6</text>
+            <text x="340" y="110" text-anchor="middle" font-family="Courier New" font-size="8" fill="#336688">Linear Eq.</text>
+            <!-- R7-8 -->
+            <circle cx="470" cy="80" r="18" fill="rgba(0,40,80,.6)" stroke="#ff8800" stroke-width="2"/>
+            <text x="470" y="85" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#ffaa44">7-8</text>
+            <text x="470" y="110" text-anchor="middle" font-family="Courier New" font-size="8" fill="#336688">Powers / √</text>
+            <!-- R9-10 -->
+            <circle cx="600" cy="80" r="18" fill="rgba(60,0,100,.5)" stroke="#cc44ff" stroke-width="2"/>
+            <text x="600" y="85" text-anchor="middle" font-family="Courier New" font-size="10" font-weight="bold" fill="#dd88ff">9-10</text>
+            <text x="600" y="110" text-anchor="middle" font-family="Courier New" font-size="8" fill="#336688">Adv. Alg.</text>
+            <!-- difficulty arrow -->
+            <text x="360" y="45" text-anchor="middle" font-family="Courier New" font-size="9" letter-spacing="2" fill="#224455">INCREASING DIFFICULTY →</text>
+            <!-- speed note -->
+            <text x="360" y="148" text-anchor="middle" font-family="Courier New" font-size="9" fill="#224455">Meteors fall faster · More answers · Less time each round</text>
+          </svg>
+        </div>
+        <div class="sl-step">Step 4 of 5</div>
+        <div class="sl-title">10 Rounds, 3 Waves Each</div>
+        <div class="sl-body">
+          The game spans <span class="hl">10 rounds</span> of 3 waves each, covering topics from basic arithmetic up to advanced algebra. Meteors get <span class="hl-r">faster</span>, more answer choices appear, and the math gets harder. Clear all 3 waves to finish a round.
+        </div>
+      </div>
+
+      <!-- SLIDE 5: Star Rating -->
+      <div class="slide" data-i="4">
+        <div class="sl-visual">
+          <svg width="680" height="170" viewBox="0 0 680 170" xmlns="http://www.w3.org/2000/svg">
+            <!-- 3 tier boxes -->
+            <!-- 1 star -->
+            <rect x="30"  y="30" width="180" height="115" rx="9" fill="rgba(0,20,50,.6)" stroke="rgba(0,100,180,.3)" stroke-width="1"/>
+            <text x="120" y="62"  text-anchor="middle" font-family="serif" font-size="26" fill="#ffcc00">⭐</text>
+            <text x="120" y="88"  text-anchor="middle" font-family="Courier New" font-size="10" font-weight="bold" fill="#8899aa">1 STAR</text>
+            <text x="120" y="108" text-anchor="middle" font-family="Courier New" font-size="9" fill="#556677">Any correct answer</text>
+            <text x="120" y="126" text-anchor="middle" font-family="Courier New" font-size="9" fill="#556677">completed</text>
+            <!-- 2 star -->
+            <rect x="250" y="20" width="180" height="130" rx="9" fill="rgba(0,25,60,.7)" stroke="rgba(0,160,255,.35)" stroke-width="1.5"/>
+            <text x="340" y="58"  text-anchor="middle" font-family="serif" font-size="26" fill="#ffcc00">⭐⭐</text>
+            <text x="340" y="82"  text-anchor="middle" font-family="Courier New" font-size="10" font-weight="bold" fill="#aabbcc">2 STARS</text>
+            <text x="340" y="102" text-anchor="middle" font-family="Courier New" font-size="9" fill="#6688aa">6+ correct hits</text>
+            <text x="340" y="120" text-anchor="middle" font-family="Courier New" font-size="9" fill="#6688aa">across the game</text>
+            <text x="340" y="138" text-anchor="middle" font-family="Courier New" font-size="9" fill="#6688aa">Score ≥ 2000 pts</text>
+            <!-- 3 star -->
+            <rect x="470" y="10" width="180" height="150" rx="9" fill="rgba(0,30,70,.8)" stroke="rgba(0,220,255,.5)" stroke-width="2"/>
+            <text x="560" y="52"  text-anchor="middle" font-family="serif" font-size="26" fill="#ffcc00">⭐⭐⭐</text>
+            <text x="560" y="76"  text-anchor="middle" font-family="Courier New" font-size="10" font-weight="bold" fill="#00ffcc">3 STARS</text>
+            <text x="560" y="96"  text-anchor="middle" font-family="Courier New" font-size="9" fill="#44bbaa">12+ correct hits</text>
+            <text x="560" y="114" text-anchor="middle" font-family="Courier New" font-size="9" fill="#44bbaa">3+ lives remaining</text>
+            <text x="560" y="132" text-anchor="middle" font-family="Courier New" font-size="9" fill="#44bbaa">Score ≥ 5000 pts</text>
+            <text x="560" y="150" text-anchor="middle" font-family="Courier New" font-size="9" fill="#008877">MASTER DEFENDER</text>
+          </svg>
+        </div>
+        <div class="sl-step">Step 5 of 5</div>
+        <div class="sl-title">Star Rating at Game Over</div>
+        <div class="sl-body">
+          When your <span class="hl-r">6 lives run out</span> or all rounds are cleared, the mission ends and you earn <span class="hl-y">0 to 3 stars</span> based on correct hits, score, and lives remaining. Aim for 3 stars — the highest honour in Cosmic Math Defender!
+        </div>
+      </div>
+
+    </div><!-- /slides-wrap -->
+
+    <div class="slide-nav">
+      <div class="dot-row" id="sdots">
+        <div class="sdot on" onclick="goSlide(0)"></div>
+        <div class="sdot"    onclick="goSlide(1)"></div>
+        <div class="sdot"    onclick="goSlide(2)"></div>
+        <div class="sdot"    onclick="goSlide(3)"></div>
+        <div class="sdot"    onclick="goSlide(4)"></div>
+      </div>
+      <div class="nav-arrows">
+        <button class="narr" id="sback-btn" onclick="showScreen('s0')" style="opacity:.4;pointer-events:none;">← MENU</button>
+        <button class="narr" id="sprev-btn" onclick="prevSlide()" style="opacity:.35;pointer-events:none;">‹ PREV</button>
+        <button class="narr go" id="snext-btn" onclick="nextSlide()">NEXT ›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ GAME OVER ══ -->
+  <div id="s2" class="scr">
+    <div id="got" class="got">MISSION FAILED</div>
+    <div id="gomsg" class="gomsg">All lives lost!</div>
+
+    <!-- Stars -->
+    <div class="stars-row">
+      <span class="star-ico" id="st1">⭐</span>
+      <span class="star-ico" id="st2">⭐</span>
+      <span class="star-ico" id="st3">⭐</span>
+    </div>
+    <div class="star-grade" id="sgrade"></div>
+
+    <div class="sbox">
+      <div class="slbl">FINAL SCORE</div>
+      <div id="fscore" class="sval">000000</div>
+    </div>
+    <div class="stats">
+      <div class="st"><div id="stR" class="stv">0</div><div class="stl">ROUNDS CLEARED</div></div>
+      <div class="st"><div id="stC" class="stv">0</div><div class="stl">CORRECT HITS</div></div>
+      <div class="st"><div id="stL" class="stv">0</div><div class="stl">LIVES LEFT</div></div>
+      <div class="st"><div id="stM" class="stv">1x</div><div class="stl">BEST COMBO</div></div>
+    </div>
+    <div class="bgrp">
+      <button id="breplay" class="btn bp">↺ PLAY AGAIN</button>
+      <button id="bmenu"   class="btn bs" style="min-width:150px">⌂ MAIN MENU</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  COSMIC MATH DEFENDER  —  Complete Game Engine
+// ═══════════════════════════════════════════════════════
+const cv = document.getElementById('gc');
+const cx = cv.getContext('2d');
+const W = 800, H = 600;
+const ROUNDS = 10, WAVES = 3, LIVES = 6, GTIME = 150;
+
+// ── State ─────────────────────────────────────────────
+let G = {state:'menu'};
+
+function newGame(){
+  G={
+    state:'playing', round:1, wave:0, score:0, lives:LIVES,
+    time:GTIME, combo:0, mul:1, bestMul:1, correct:0,
+    livesAtRound:LIVES, phase:'wait', wTimer:1.8, rTimer:0,
+    rMsg:'', flash:0, fCol:'#fff', shake:0,
+    prob:null, meteors:[], bullets:[], parts:[], player:null
+  };
+  G.player = new Ship();
+  G.prob = mkProb(1,0);
+}
+
+// ── Audio ─────────────────────────────────────────────
+let AC=null,MG=null,SG=null,mOn=true,mTmr=null,mNxt=0;
+function initAC(){
+  if(AC)return;
+  AC=new(window.AudioContext||window.webkitAudioContext)();
+  SG=AC.createGain(); SG.gain.value=0.38; SG.connect(AC.destination);
+  MG=AC.createGain(); MG.gain.value=0.10; MG.connect(AC.destination);
+}
+function nt(f,d,tp,gn,v,t0=0){
+  if(!AC)return;
+  if(gn===MG&&!mOn)return;
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(gn);o.type=tp;o.frequency.value=f;
+  const t=AC.currentTime+t0;
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(v,t+.01);
+  g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  o.start(t);o.stop(t+d+.05);
+}
+const sfx={
+  shoot:()=>nt(900,.07,'square',SG,.18),
+  ok:()=>[523,659,784,1047].forEach((f,i)=>nt(f,.3,'sine',SG,.24,i*.07)),
+  bad:()=>[220,196,165].forEach((f,i)=>nt(f,.15,'sawtooth',SG,.24,i*.07)),
+  hit:()=>[80,100,60].forEach((f,i)=>nt(f+Math.random()*30,.2,'sawtooth',SG,.1,i*.02)),
+  die:()=>[300,250,200,160].forEach((f,i)=>nt(f,.18,'square',SG,.3,i*.08)),
+  rnd:()=>[523,659,784,1047,1319].forEach((f,i)=>nt(f,.5,'sine',SG,.28,i*.09)),
+  over:()=>[440,370,311,277,220,196].forEach((f,i)=>nt(f,.35,'sine',SG,.24,i*.14)),
+  star:(i)=>setTimeout(()=>nt([523,659,784][i],.3,'sine',SG,.28),i*250),
+};
+const MEL=[659,0,523,0,587,659,0,784,0,659,523,0,440,0,0,0,392,0,440,523,0,587,0,659,0,587,523,0,494,0,0,0];
+const BAS=[196,0,0,0,196,0,0,0,220,0,0,0,220,0,0,0,174,0,0,0,196,0,0,0,220,0,0,0,196,0,0,0];
+const BPS=.17;
+function sched(){
+  if(!AC||!mOn)return;
+  if(mNxt<AC.currentTime+1){
+    const t=mNxt;
+    MEL.forEach((f,i)=>{if(f)nt(f,BPS*.7,'sine',MG,.55,t+i*BPS-AC.currentTime)});
+    BAS.forEach((f,i)=>{if(f)nt(f,BPS*.8,'triangle',MG,.65,t+i*BPS-AC.currentTime)});
+    mNxt=t+MEL.length*BPS;
+  }
+  mTmr=setTimeout(sched,200);
+}
+function startM(){stopM();if(!AC)return;MG.gain.setValueAtTime(.1,AC.currentTime);mNxt=AC.currentTime+.1;sched();}
+function stopM(){clearTimeout(mTmr);mTmr=null;if(MG)MG.gain.linearRampToValueAtTime(.0001,AC.currentTime+.4);}
+
+// ── Input ─────────────────────────────────────────────
+const K={};
+let spaceH=false,clickFire=false;
+document.addEventListener('keydown',e=>{
+  K[e.key]=true;
+  if(e.key===' '){e.preventDefault();spaceH=true;}
+  if((e.key==='p'||e.key==='P')&&(G.state==='playing'||G.state==='paused')){
+    G.state=G.state==='playing'?'paused':'playing';
+    if(MG)MG.gain.setValueAtTime(G.state==='paused'?.02:.1,AC.currentTime);
+  }
+  if((e.key==='m'||e.key==='M')&&AC){
+    mOn=!mOn;
+    document.getElementById('snd').textContent=mOn?'🔊':'🔇';
+    if(!mOn)stopM(); else startM();
+  }
+});
+document.addEventListener('keyup',e=>{K[e.key]=false;if(e.key===' ')spaceH=false;});
+cv.addEventListener('click',()=>{if(G.state==='playing')clickFire=true;});
+
+// ── Ship ──────────────────────────────────────────────
+class Ship{
+  constructor(){this.w=48;this.h=56;this.x=W/2-24;this.y=H-71;this.cd=0;this.inv=0;this.ep=0;}
+  upd(dt){
+    const sp=6;
+    if(K['ArrowLeft']||K['a']||K['A'])this.x-=sp*dt;
+    if(K['ArrowRight']||K['d']||K['D'])this.x+=sp*dt;
+    this.x=Math.max(0,Math.min(W-this.w,this.x));
+    if(this.cd>0)this.cd-=dt;
+    if(this.inv>0)this.inv-=dt;
+    this.ep+=.15*dt;
+  }
+  fire(){
+    if(this.cd>0)return null;
+    this.cd=22/60;sfx.shoot();
+    return new Bolt(this.x+this.w/2,this.y+4);
+  }
+  isInv(){return this.inv>0;}
+  hurt(){this.inv=2.0;}
+  draw(){
+    const p=this,cx2=p.x+p.w/2,top=p.y,bot=p.y+p.h;
+    if(p.inv>0&&Math.floor(p.inv*8)%2===0){
+      cx.save();cx.globalAlpha=.4;cx.strokeStyle='#00ffff';cx.lineWidth=3;
+      cx.shadowBlur=18;cx.shadowColor='#00ffff';
+      cx.beginPath();cx.ellipse(cx2,top+p.h/2,p.w*.75,p.h*.65,0,0,Math.PI*2);cx.stroke();cx.restore();
+    }
+    cx.save();
+    const fl=.7+.3*Math.sin(p.ep);
+    const eg=cx.createRadialGradient(cx2,bot,0,cx2,bot,22*fl);
+    eg.addColorStop(0,`rgba(255,140,40,${fl})`);eg.addColorStop(.5,`rgba(255,70,0,${fl*.5})`);eg.addColorStop(1,'transparent');
+    cx.fillStyle=eg;cx.beginPath();cx.ellipse(cx2,bot,12,22*fl,0,0,Math.PI*2);cx.fill();
+    cx.shadowBlur=12;cx.shadowColor='#004488';
+    cx.fillStyle='#003388';
+    cx.beginPath();cx.moveTo(cx2,top);cx.lineTo(cx2-p.w*.5,bot-6);cx.lineTo(cx2-p.w*.28,bot-12);cx.lineTo(cx2,bot-4);cx.lineTo(cx2+p.w*.28,bot-12);cx.lineTo(cx2+p.w*.5,bot-6);cx.closePath();cx.fill();
+    cx.fillStyle='#0055cc';
+    cx.beginPath();cx.moveTo(cx2,top+8);cx.lineTo(cx2-p.w*.35,bot-12);cx.lineTo(cx2,bot-6);cx.closePath();cx.fill();
+    cx.beginPath();cx.moveTo(cx2,top+8);cx.lineTo(cx2+p.w*.35,bot-12);cx.lineTo(cx2,bot-6);cx.closePath();cx.fill();
+    cx.shadowBlur=8;cx.shadowColor='#00ffff';cx.fillStyle='#00eeff';
+    cx.beginPath();cx.ellipse(cx2,top+17,7,10,0,0,Math.PI*2);cx.fill();
+    cx.strokeStyle='#44aaff';cx.lineWidth=1.2;cx.shadowBlur=0;
+    cx.beginPath();cx.moveTo(cx2,top);cx.lineTo(cx2-p.w*.5,bot-6);cx.lineTo(cx2-p.w*.28,bot-12);cx.lineTo(cx2,bot-4);cx.lineTo(cx2+p.w*.28,bot-12);cx.lineTo(cx2+p.w*.5,bot-6);cx.closePath();cx.stroke();
+    cx.restore();
+  }
+}
+
+class Bolt{
+  constructor(x,y){this.x=x;this.y=y;this.alive=true;}
+  upd(dt){this.y-=14*dt;if(this.y<-20)this.alive=false;}
+  draw(){
+    cx.save();cx.shadowBlur=12;cx.shadowColor='#00ffcc';cx.fillStyle='#00ffee';
+    cx.fillRect(this.x-2,this.y-18,4,18);
+    const g=cx.createLinearGradient(0,this.y,0,this.y+22);
+    g.addColorStop(0,'rgba(0,255,200,.4)');g.addColorStop(1,'transparent');
+    cx.fillStyle=g;cx.fillRect(this.x-2,this.y,4,22);cx.restore();
+  }
+}
+
+class Rock{
+  constructor(x,num,ok,sp){
+    this.x=x;this.y=-60;this.num=num;this.ok=ok;this.sp=sp;
+    this.r=29+Math.random()*7;this.alive=true;this.shot=false;this.fell=false;
+    this.rot=Math.random()*Math.PI*2;this.rs=(Math.random()-.5)*.03;this.ph=Math.random()*Math.PI*2;
+    const n=7+Math.floor(Math.random()*4);
+    this.pts=Array.from({length:n},(_,i)=>{
+      const a=(i/n)*Math.PI*2,rr=this.r*(.72+Math.random()*.52);
+      return{x:Math.cos(a)*rr,y:Math.sin(a)*rr};
+    });
+    const h=8+Math.random()*25,s=50+Math.random()*22,l=24+Math.random()*14;
+    this.col=`hsl(${h},${s}%,${l}%)`;this.gc=`hsl(${h},80%,60%)`;
+  }
+  upd(dt){this.y+=this.sp*dt;this.rot+=this.rs*dt;this.ph+=.05*dt;if(this.y-this.r>H){this.alive=false;this.fell=true;}}
+  bnd(){return{l:this.x-this.r,r:this.x+this.r,t:this.y-this.r,b:this.y+this.r};}
+  draw(){
+    cx.save();cx.translate(this.x,this.y);cx.rotate(this.rot);
+    cx.shadowBlur=11+4*Math.sin(this.ph);cx.shadowColor=this.gc;
+    cx.fillStyle=this.col;cx.beginPath();
+    cx.moveTo(this.pts[0].x,this.pts[0].y);
+    this.pts.forEach(p=>cx.lineTo(p.x,p.y));cx.closePath();cx.fill();
+    cx.strokeStyle='rgba(0,0,0,.35)';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(-this.r*.25,-this.r*.1);cx.lineTo(this.r*.15,this.r*.3);
+    cx.moveTo(-this.r*.05,this.r*.2);cx.lineTo(this.r*.35,-this.r*.15);cx.stroke();
+    const hl=cx.createRadialGradient(-this.r*.2,-this.r*.2,0,0,0,this.r*.9);
+    hl.addColorStop(0,'rgba(255,230,200,.2)');hl.addColorStop(1,'transparent');
+    cx.fillStyle=hl;cx.beginPath();
+    this.pts.forEach((p,i)=>i?cx.lineTo(p.x,p.y):cx.moveTo(p.x,p.y));cx.closePath();cx.fill();
+    cx.restore();
+    const t=String(this.num),fs=t.length>2?14:19;
+    cx.save();cx.font=`bold ${fs}px 'Courier New'`;cx.textAlign='center';cx.textBaseline='middle';
+    cx.shadowBlur=8;cx.shadowColor='#fff';cx.fillStyle='#fff';cx.fillText(t,this.x,this.y);cx.restore();
+  }
+}
+
+class Dot{
+  constructor(x,y,c){
+    this.x=x;this.y=y;this.vx=(Math.random()-.5)*9;this.vy=(Math.random()-.5)*9-1;
+    this.c=c;this.life=1;this.dc=Math.random()*.04+.015;this.sz=Math.random()*5+2;
+  }
+  upd(dt){this.x+=this.vx*dt;this.y+=this.vy*dt;this.vy+=.08*dt;this.life-=this.dc*dt;}
+  draw(){
+    if(this.life<=0)return;
+    cx.save();cx.globalAlpha=this.life;cx.fillStyle=this.c;cx.shadowBlur=4;cx.shadowColor=this.c;
+    cx.fillRect(this.x-this.sz/2,this.y-this.sz/2,this.sz,this.sz);cx.restore();
+  }
+}
+function burst(x,y,c,n=15){for(let i=0;i<n;i++)G.parts.push(new Dot(x,y,c));}
+
+const STARS=Array.from({length:200},()=>({
+  x:Math.random()*W,y:Math.random()*H,sz:Math.random()*2.2+.2,
+  sp:Math.random()*.4+.05,br:Math.random(),ph:Math.random()*Math.PI*2,ps:Math.random()*.03+.01
+}));
+
+// ── Math Problems ─────────────────────────────────────
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function mkProb(round,wi){
+  let q,ans;
+  if(round<=2){
+    if(round===1||wi===0){const a=rnd(5,20),b=rnd(3,15);ans=a+b;q=`${a} + ${b} = ?`;}
+    else{const a=rnd(8,25),m=rnd(3,18);ans=m;q=`${a} + ☐ = ${a+m}`;}
+  }else if(round<=4){
+    if(round===3||wi===0){const a=rnd(2,12),b=rnd(2,12);ans=a*b;q=`${a} × ${b} = ?`;}
+    else{const f=rnd(2,12),m=rnd(2,12);ans=m;q=`${f} × ☐ = ${f*m}`;}
+  }else if(round<=6){
+    const a=rnd(2,5),x=rnd(1,10),b=rnd(1,15);ans=x;q=`${a}x + ${b} = ${a*x+b}  →  x = ?`;
+  }else if(round<=8){
+    if(wi<2){const x=rnd(2,10);ans=x;q=`x² = ${x*x}  →  x = ?`;}
+    else{const a=rnd(2,4),x=rnd(2,7),b=rnd(1,10);ans=x;q=`${a}x − ${b} = ${a*x-b}  →  x = ?`;}
+  }else{
+    const t=rnd(0,2);
+    if(t===0){const a=rnd(3,6),x=rnd(2,8),b=rnd(1,10),c=rnd(1,3),d=(a-c)*x+b;ans=x;q=`${a}x + ${b} = ${c}x + ${d}  →  x = ?`;}
+    else if(t===1){const x=rnd(3,9),a=rnd(1,15);ans=x;q=`x² + ${a} = ${x*x+a}  →  x = ?`;}
+    else{const x=rnd(2,9),m=rnd(2,8);ans=x;q=`${x*m} ÷ x = ${m}  →  x = ?`;}
+  }
+  const n=Math.min(4+Math.floor(round/2),7),opts=new Set([ans]);
+  let at=0;
+  while(opts.size<n&&at<300){
+    at++;let w;const p=Math.random();
+    if(p<.25)w=ans+rnd(1,5);else if(p<.5)w=ans-rnd(1,5);else if(p<.65)w=ans*2;
+    else if(p<.8)w=Math.max(1,ans-rnd(1,10));else w=ans+rnd(6,12);
+    if(w>0&&w!==ans&&w<=150)opts.add(w);
+  }
+  return{q,answer:ans,opts:[...opts].sort(()=>Math.random()-.5)};
+}
+function topic(r){
+  if(r<=2)return'ADDITION & SUBTRACTION';if(r<=4)return'MULTIPLICATION & DIVISION';
+  if(r<=6)return'LINEAR EQUATIONS';if(r<=8)return'POWERS & SQUARE ROOTS';return'ADVANCED ALGEBRA';
+}
+
+// ── Wave / Round Logic ────────────────────────────────
+function spawn(){
+  const sp=1.5+G.round*.28,n=G.prob.opts.length,sp2=W/(n+1);
+  G.meteors=G.prob.opts.sort(()=>Math.random()-.5).map((num,i)=>{
+    const x=Math.max(55,Math.min(W-55,sp2*(i+1)+(Math.random()-.5)*28));
+    const m=new Rock(x,num,num===G.prob.answer,sp);
+    m.y=-60-i*50;return m;
+  });
+  G.phase='active';
+}
+
+function endWave(ok){
+  if(G.state!=='playing')return;
+  if(ok){
+    const pts=Math.floor(100*G.round*G.mul);G.score+=pts;
+    G.correct++;G.combo++;G.mul=Math.min(4,1+(G.combo-1)*.5);
+    G.bestMul=Math.max(G.bestMul,G.mul);
+    sfx.ok();flash('#00ff88',.22);burst(W/2,H/2-30,'#00ff88',8);
+  }else{G.combo=0;G.mul=1;}
+  G.wave++;
+  if(G.wave>=WAVES){endRound(true);}
+  else{G.prob=mkProb(G.round,G.wave);G.phase='wait';G.wTimer=1.2;G.meteors=[];G.bullets=[];}
+}
+
+function endRound(success=true){
+  G.meteors=[];G.bullets=[];sfx.rnd();
+  if(success){
+    const rb=250*G.round,pb=G.lives===G.livesAtRound?500*G.round:0;
+    G.score+=rb+pb;
+    G.rMsg=pb>0?`ROUND ${G.round} COMPLETE!\n+${rb} BONUS   +${pb} PERFECT!`:`ROUND ${G.round} COMPLETE!\n+${rb} ROUND BONUS`;
+    burst(W/2,200,'#ffcc00',22);burst(W/2-140,200,'#ff6600',15);burst(W/2+140,200,'#ff6600',15);
+  }else{
+    G.rMsg=`ROUND ${G.round} FAILED...\nMOVING TO NEXT ROUND`;
+    burst(W/2,200,'#ff0033',22);
+  }
+  G.rTimer=3;G.phase='rEnd';
+}
+
+function nextRound(){
+  G.round++;
+  if(G.round>ROUNDS){endGame(true);return;}
+  G.wave=0;
+  G.livesAtRound=G.lives;   // lives carry over — no reset per round
+  G.prob=mkProb(G.round,0);
+  G.phase='wait';G.wTimer=1.8;G.rMsg='';
+}
+
+function loseLife(){
+  if(!G.player||G.player.isInv()||G.state!=='playing')return;
+  G.lives--;
+  G.score=Math.max(0,G.score-200);
+  G.player.hurt();sfx.die();flash('#ff0033',.32);shake(8);
+  updateHUDLives();
+  if(G.lives<=0){
+    G.lives=0;
+    // ── GAME ENDS IMMEDIATELY ──
+    endGame(false);
+  }
+}
+
+// keep HUD lives in sync even mid-frame (called outside render)
+function updateHUDLives(){/* lives shown via canvas drawHUD each frame */}
+
+function endGame(win){
+  if(G.state==='gameover')return;
+  G.state='gameover';stopM();sfx.over();
+  setTimeout(()=>showGO(win),1800);
+}
+
+// ── Star Rating ───────────────────────────────────────
+// 3 ⭐: 12+ correct, score ≥5000, 3+ lives left
+// 2 ⭐: 6+ correct OR score ≥2000
+// 1 ⭐: any correct answer
+// 0 ⭐: 0 correct
+function computeStars(correct, score, lives){
+  if(correct>=12 && score>=5000 && lives>=3) return 3;
+  if(correct>=6  || score>=2000)             return 2;
+  if(correct>=1)                             return 1;
+  return 0;
+}
+const STAR_LABELS=['','Keep Practicing!','Good Defender!','Master Defender! 🏆'];
+function animStars(n){
+  ['st1','st2','st3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.className='star-ico';
+    if(i<n){
+      setTimeout(()=>{
+        el.classList.add('lit');
+        sfx.star(i);
+      },500+i*300);
+    }
+  });
+}
+
+function showGO(win){
+  const stars=computeStars(G.correct,G.score,G.lives);
+  document.getElementById('got').textContent=win?'★ MISSION COMPLETE! ★':'MISSION FAILED';
+  document.getElementById('got').className='got'+(win?' v':'');
+  document.getElementById('gomsg').textContent=win
+    ?'You defended Earth from all math meteors!'
+    :'All lives lost — the meteors won this time!';
+  document.getElementById('fscore').textContent=String(Math.floor(G.score)).padStart(6,'0');
+  document.getElementById('stR').textContent=Math.max(0,G.round-(win?0:1));
+  document.getElementById('stC').textContent=G.correct;
+  document.getElementById('stL').textContent=G.lives;
+  document.getElementById('stM').textContent=(Math.round(G.bestMul*10)/10)+'x';
+  document.getElementById('sgrade').textContent=STAR_LABELS[stars];
+  showScreen('s2');
+  animStars(stars);
+}
+
+function flash(c,a){G.fCol=c;G.flash=a;}
+function shake(a){G.shake=Math.max(G.shake,a);}
+
+// ── Update ────────────────────────────────────────────
+let lastT=0;
+function update(dt){
+  STARS.forEach(s=>{s.y+=s.sp*dt;if(s.y>H){s.y=-3;s.x=Math.random()*W;}s.ph+=s.ps*dt;});
+  if(G.state==='paused')return;
+  if(G.state==='gameover'){G.parts.forEach(p=>p.upd(dt));G.parts=G.parts.filter(p=>p.life>0);return;}
+  if(G.state!=='playing')return;
+
+  G.time-=dt/60;if(G.time<=0){G.time=0;endGame(false);return;}
+  G.shake*=.82;if(G.flash>0)G.flash-=.025*dt;
+  G.player.upd(dt);
+  if((spaceH||clickFire)&&G.phase==='active'){const b=G.player.fire();if(b)G.bullets.push(b);}
+  clickFire=false;
+
+  if(G.phase==='wait'){
+    G.wTimer-=dt/60;if(G.wTimer<=0)spawn();
+  }else if(G.phase==='active'){
+    G.bullets.forEach(b=>b.upd(dt));G.bullets=G.bullets.filter(b=>b.alive);
+    G.meteors.forEach(m=>m.upd(dt));
+    G.parts.forEach(p=>p.upd(dt));G.parts=G.parts.filter(p=>p.life>0);
+
+    let hitOk=false;
+    outer:for(let bi=G.bullets.length-1;bi>=0;bi--){
+      const b=G.bullets[bi];if(!b.alive)continue;
+      for(let mi=0;mi<G.meteors.length;mi++){
+        const m=G.meteors[mi];if(!m.alive)continue;
+        const bd=m.bnd();
+        if(b.x>bd.l&&b.x<bd.r&&b.y>bd.t&&b.y<bd.b){
+          b.alive=false;m.alive=false;m.shot=true;
+          if(m.ok){
+            hitOk=true;G.meteors.forEach(o=>{o.alive=false;});
+            burst(m.x,m.y,'#00ff88',28);sfx.hit();
+          }else{
+            burst(m.x,m.y,'#ff6622',14);sfx.hit();
+            loseLife();
+            if(G.state==='gameover')return;
+          }
+          break outer;
+        }
+      }
+    }
+    G.bullets=G.bullets.filter(b=>b.alive);
+
+    if(hitOk){
+      G.phase='ending';setTimeout(()=>{if(G.state==='playing')endWave(true);},500);
+    }else if(G.meteors.length>0&&G.meteors.every(m=>!m.alive)){
+      const cf=G.meteors.some(m=>m.ok&&m.fell);
+      if(cf){
+        loseLife();
+        if(G.state==='gameover')return;
+      }
+      G.phase='ending';setTimeout(()=>{if(G.state==='playing')endWave(false);},300);
+    }
+  }else if(G.phase==='rEnd'){
+    G.rTimer-=dt/60;
+    G.parts.forEach(p=>p.upd(dt));G.parts=G.parts.filter(p=>p.life>0);
+    if(G.rTimer<=0)nextRound();
+  }else if(G.phase==='ending'){
+    G.parts.forEach(p=>p.upd(dt));G.parts=G.parts.filter(p=>p.life>0);
+  }
+}
+
+// ── Render ────────────────────────────────────────────
+function render(){
+  cx.clearRect(0,0,W,H);cx.save();
+  if(G.shake>.5){cx.translate((Math.random()-.5)*G.shake,(Math.random()-.5)*G.shake);}
+  const bg=cx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#000022');bg.addColorStop(1,'#000510');
+  cx.fillStyle=bg;cx.fillRect(0,0,W,H);
+  [[W*.7,H*.3,240,'rgba(18,0,55,.14)'],[W*.2,H*.7,190,'rgba(0,18,48,.11)']].forEach(([nx,ny,nr,nc])=>{
+    const ng=cx.createRadialGradient(nx,ny,0,nx,ny,nr);ng.addColorStop(0,nc);ng.addColorStop(1,'transparent');
+    cx.fillStyle=ng;cx.fillRect(0,0,W,H);
+  });
+  STARS.forEach(s=>{
+    const tw=.5+.5*Math.sin(s.ph),a=(.3+.7*tw*s.br).toFixed(2);
+    cx.fillStyle=`rgba(200,215,255,${a})`;
+    cx.beginPath();cx.arc(s.x,s.y,s.sz*(.8+.2*tw),0,Math.PI*2);cx.fill();
+  });
+  const active=G.state==='playing'||G.state==='paused'||G.state==='gameover';
+  if(active&&G.player){
+    if(G.phase==='active'||G.phase==='ending'){
+      G.bullets.forEach(b=>b.draw());
+      G.meteors.forEach(m=>{if(m.alive)m.draw();});
+    }
+    G.parts.forEach(p=>p.draw());
+    if(G.state!=='gameover')G.player.draw();
+    drawHUD();
+    if((G.phase==='active'||G.phase==='wait'||G.phase==='ending')&&G.prob)drawProb();
+    if(G.phase==='wait')drawCD();
+    if(G.phase==='rEnd'&&G.rMsg)drawRM();
+    if(G.state==='paused')drawPause();
+  }
+  if(G.flash>.005){cx.globalAlpha=Math.max(0,G.flash);cx.fillStyle=G.fCol;cx.fillRect(0,0,W,H);cx.globalAlpha=1;}
+  cx.restore();
+}
+
+function rr(x,y,w,h,r){
+  cx.beginPath();cx.moveTo(x+r,y);cx.lineTo(x+w-r,y);cx.arcTo(x+w,y,x+w,y+r,r);
+  cx.lineTo(x+w,y+h-r);cx.arcTo(x+w,y+h,x+w-r,y+h,r);cx.lineTo(x+r,y+h);
+  cx.arcTo(x,y+h,x,y+h-r,r);cx.lineTo(x,y+r);cx.arcTo(x,y,x+r,y,r);cx.closePath();
+}
+
+function drawHUD(){
+  cx.fillStyle='rgba(0,4,22,.8)';cx.fillRect(0,0,W,58);
+  cx.strokeStyle='rgba(0,170,255,.22)';cx.lineWidth=1;cx.beginPath();cx.moveTo(0,58);cx.lineTo(W,58);cx.stroke();
+  cx.font='bold 11px "Courier New"';cx.fillStyle='#3a5060';cx.textAlign='left';cx.fillText('ROUND',15,19);
+  cx.font='bold 21px "Courier New"';cx.fillStyle='#00ccff';cx.shadowBlur=6;cx.shadowColor='#00aaff';
+  cx.fillText(`${G.round} / ${ROUNDS}`,15,43);cx.shadowBlur=0;
+  cx.font='bold 11px "Courier New"';cx.fillStyle='#3a5060';cx.textAlign='center';cx.fillText('SCORE',210,19);
+  cx.font='bold 21px "Courier New"';cx.fillStyle='#ffcc00';cx.shadowBlur=7;cx.shadowColor='#ff9900';
+  cx.fillText(String(Math.floor(G.score)).padStart(6,'0'),210,43);cx.shadowBlur=0;
+  if(G.combo>=2){
+    cx.font='bold 12px "Courier New"';cx.textAlign='center';cx.fillStyle='#ff8800';
+    cx.shadowBlur=7;cx.shadowColor='#ff4400';
+    cx.fillText(`${Math.round(G.mul*10)/10}× COMBO`,330,31);cx.shadowBlur=0;
+  }
+  // Lives — 6 hearts displayed
+  cx.font='bold 11px "Courier New"';cx.fillStyle='#3a5060';cx.textAlign='center';cx.fillText('LIVES',W/2,19);
+  cx.font='bold 18px "Courier New"';cx.fillStyle='#ff3355';cx.shadowBlur=G.lives>0?7:0;cx.shadowColor='#ff0033';
+  cx.fillText('♥'.repeat(G.lives)+'♡'.repeat(Math.max(0,LIVES-G.lives)),W/2,43);cx.shadowBlur=0;
+
+  const ms=Math.floor(G.time/60),ss=Math.floor(G.time%60),ts=`${ms}:${String(ss).padStart(2,'0')}`;
+  cx.font='bold 11px "Courier New"';cx.fillStyle='#3a5060';cx.textAlign='right';cx.fillText('TIME',W-15,19);
+  cx.font='bold 21px "Courier New"';cx.fillStyle=G.time<30?'#ff4444':'#ffffff';
+  if(G.time<30){cx.shadowBlur=9;cx.shadowColor='#ff0000';}
+  cx.fillText(ts,W-15,43);cx.shadowBlur=0;
+  cx.font='10px "Courier New"';cx.fillStyle='#2a3a4a';cx.textAlign='left';
+  cx.fillText(`WAVE ${G.wave+1}/${WAVES}`,15,71);
+  cx.textAlign='right';cx.fillStyle='#2a3a50';cx.fillText(topic(G.round),W-15,71);
+}
+
+function drawProb(){
+  const py=99,txt=G.prob.q;
+  cx.fillStyle='rgba(0,18,48,.72)';rr(W/2-265,py-23,530,44,8);cx.fill();
+  cx.strokeStyle='rgba(0,150,255,.33)';cx.lineWidth=1;rr(W/2-265,py-23,530,44,8);cx.stroke();
+  cx.font='bold 21px "Courier New"';cx.textAlign='center';cx.textBaseline='middle';
+  cx.shadowBlur=13;cx.shadowColor='#0099ff';cx.fillStyle='#ffffff';cx.fillText(txt,W/2,py);
+  cx.shadowBlur=0;cx.textBaseline='alphabetic';
+}
+
+function drawCD(){
+  const n=G.wTimer;if(n<=0)return;
+  cx.save();
+  if(G.wave===0&&n>0.6){
+    cx.textAlign='center';cx.textBaseline='middle';
+    cx.font='bold 12px "Courier New"';cx.fillStyle='#334455';cx.fillText('ROUND',W/2,H/2-72);
+    cx.font='bold 58px "Courier New"';cx.shadowBlur=18;cx.shadowColor='#00aaff';cx.fillStyle='#00ccff';
+    cx.fillText(G.round,W/2,H/2-20);
+    cx.font='bold 12px "Courier New"';cx.fillStyle='#336677';cx.shadowBlur=0;cx.fillText(topic(G.round),W/2,H/2+22);
+  }else{
+    const disp=n>1?Math.ceil(n):'GO!',a=Math.min(1,n>1?1:n*1.5);
+    cx.globalAlpha=a;cx.font='bold 88px "Courier New"';cx.textAlign='center';cx.textBaseline='middle';
+    cx.shadowBlur=28;cx.shadowColor='#00aaff';cx.fillStyle='#00ffff';cx.fillText(disp,W/2,H/2);
+  }
+  cx.restore();
+}
+
+function drawRM(){
+  const lns=G.rMsg.split('\n'),fi=Math.min(1,(3-G.rTimer)*1.8),fo=G.rTimer<.8?G.rTimer/.8:1;
+  cx.save();cx.globalAlpha=Math.min(fi,fo);
+  cx.fillStyle='rgba(0,4,22,.78)';cx.fillRect(0,H/2-90,W,180);
+  cx.textAlign='center';cx.textBaseline='middle';
+  cx.font='bold 32px "Courier New"';cx.shadowBlur=18;cx.shadowColor='#00ffaa';cx.fillStyle='#00ffcc';
+  cx.fillText(lns[0],W/2,H/2-14);
+  if(lns[1]){cx.font='15px "Courier New"';cx.shadowColor='#ffcc00';cx.fillStyle='#ffdd00';cx.fillText(lns[1],W/2,H/2+28);}
+  cx.restore();
+}
+
+function drawPause(){
+  cx.fillStyle='rgba(0,0,28,.58)';cx.fillRect(0,0,W,H);
+  cx.font='bold 46px "Courier New"';cx.textAlign='center';cx.textBaseline='middle';
+  cx.shadowBlur=18;cx.shadowColor='#00aaff';cx.fillStyle='#00ccff';cx.fillText('⏸ PAUSED',W/2,H/2-16);
+  cx.font='14px "Courier New"';cx.fillStyle='#5a7888';cx.shadowBlur=0;cx.fillText('Press P to resume',W/2,H/2+28);
+  cx.textBaseline='alphabetic';
+}
+
+// ── Game Loop ─────────────────────────────────────────
+function loop(t){
+  const dt=Math.min((t-lastT)/(1000/60),3);lastT=t;
+  update(dt);render();requestAnimationFrame(loop);
+}
+
+// ── Screens ───────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+
+// ── SLIDESHOW ─────────────────────────────────────────
+let curSlide=0;
+const NSLIDES=5;
+
+function goSlide(n){
+  const slides=document.querySelectorAll('.slide');
+  slides[curSlide].classList.remove('active');
+  curSlide=Math.max(0,Math.min(NSLIDES-1,n));
+  slides[curSlide].classList.add('active');
+  // dots
+  document.querySelectorAll('.sdot').forEach((d,i)=>d.classList.toggle('on',i===curSlide));
+  // prev btn
+  const pb=document.getElementById('sprev-btn');
+  pb.style.opacity=curSlide===0?'.35':'1';
+  pb.style.pointerEvents=curSlide===0?'none':'auto';
+  // back-to-menu btn fades out after slide 0
+  const mb=document.getElementById('sback-btn');
+  mb.style.opacity=curSlide===0?'.4':'1';
+  mb.style.pointerEvents=curSlide===0?'none':'auto';
+  // next btn
+  const nb=document.getElementById('snext-btn');
+  if(curSlide===NSLIDES-1){
+    nb.textContent='LAUNCH ▶';
+    nb.classList.add('go');
+  }else{
+    nb.textContent='NEXT ›';
+  }
+}
+function nextSlide(){
+  if(curSlide===NSLIDES-1){
+    // launch game from How-to-play last slide
+    initAC();if(AC&&AC.state==='suspended')AC.resume();
+    showScreen(null);newGame();startM();
+  }else{
+    goSlide(curSlide+1);
+  }
+}
+function prevSlide(){ goSlide(curSlide-1); }
+
+// keyboard nav on HTP screen
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('s1').classList.contains('on'))return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();nextSlide();}
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();prevSlide();}
+});
+
+// ── Buttons ───────────────────────────────────────────
+document.getElementById('bplay').addEventListener('click',()=>{
+  initAC();if(AC&&AC.state==='suspended')AC.resume();
+  showScreen(null);newGame();startM();
+});
+document.getElementById('bhtp').addEventListener('click',()=>{
+  curSlide=0;
+  document.querySelectorAll('.slide').forEach((s,i)=>s.classList.toggle('active',i===0));
+  document.querySelectorAll('.sdot').forEach((d,i)=>d.classList.toggle('on',i===0));
+  document.getElementById('sprev-btn').style.opacity='.35';
+  document.getElementById('sprev-btn').style.pointerEvents='none';
+  document.getElementById('snext-btn').textContent='NEXT ›';
+  document.getElementById('snext-btn').classList.remove('go');
+  showScreen('s1');
+});
+document.getElementById('breplay').addEventListener('click',()=>{
+  initAC();if(AC&&AC.state==='suspended')AC.resume();
+  showScreen(null);newGame();startM();
+});
+document.getElementById('bmenu').addEventListener('click',()=>{stopM();G.state='menu';showScreen('s0');});
+document.getElementById('snd').addEventListener('click',()=>{
+  initAC();mOn=!mOn;
+  document.getElementById('snd').textContent=mOn?'🔊':'🔇';
+  if(!mOn){stopM();if(SG)SG.gain.value=0;}
+  else{if(SG)SG.gain.value=.38;if(G.state==='playing')startM();}
+});
+
+// null-safe showScreen override
+const _showScreen=showScreen;
+function showScreen(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  if(id)document.getElementById(id).classList.add('on');
+}
+
+// ── Start ─────────────────────────────────────────────
+lastT=performance.now();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

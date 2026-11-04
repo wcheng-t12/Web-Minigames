@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Mass &amp; Temperature Lab</title>
+<style>
+  :root{
+    --bg:#0c1420;
+    --bg2:#101c2e;
+    --panel:#152238;
+    --panel2:#1b2c47;
+    --line:#2a3c5c;
+    --accent:#2dd4bf;
+    --accent-dim:#134e4a;
+    --heat:#f59e0b;
+    --cold:#38bdf8;
+    --text:#eef3fa;
+    --muted:#8fa2c2;
+    --danger:#ef4444;
+    --success:#34d399;
+    --gold:#fbbf24;
+    --lcd:#39ff88;
+    --display:'Trebuchet MS','Segoe UI',system-ui,sans-serif;
+    --mono:'Courier New',Courier,monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:var(--display); background:
+      radial-gradient(1200px 800px at 15% -10%, #17263f 0%, transparent 60%),
+      radial-gradient(1000px 700px at 110% 10%, #10233a 0%, transparent 55%),
+      linear-gradient(180deg,var(--bg),var(--bg2));
+    color:var(--text); min-height:100%; overflow-x:hidden;
+  }
+  #app{max-width:720px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative;}
+  .screen{display:none; flex-direction:column; flex:1; padding:18px; animation:fadeIn .4s ease;}
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ---------- floating lab bubbles bg ---------- */
+  .bubbles{position:fixed; inset:0; overflow:hidden; z-index:0; pointer-events:none;}
+  .bubble{position:absolute; bottom:-40px; border-radius:50%; background:radial-gradient(circle at 35% 30%, rgba(45,212,191,.35), rgba(45,212,191,.05)); animation:rise linear infinite;}
+  @keyframes rise{ to{ transform:translateY(-115vh) scale(1.2); opacity:0; } }
+
+  /* ---------- shared ui ---------- */
+  h1,h2,h3{margin:0 0 6px; font-weight:800; letter-spacing:.3px;}
+  .lockup{text-align:center; margin-top:6vh;}
+  .flask{font-size:56px; filter:drop-shadow(0 0 18px rgba(45,212,191,.5));}
+  .title{font-size:clamp(26px,7vw,38px); background:linear-gradient(90deg,var(--accent),var(--cold)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .subtitle{color:var(--muted); font-size:14px; margin-top:4px; max-width:38ch; margin-left:auto; margin-right:auto;}
+  .stack{display:flex; flex-direction:column; gap:12px; margin-top:auto; padding-bottom:6vh;}
+  .btn{
+    font-family:var(--display); font-weight:700; font-size:16px; padding:15px 20px; border-radius:14px;
+    border:1px solid var(--line); background:var(--panel2); color:var(--text); cursor:pointer;
+    min-height:50px; transition:transform .12s ease, box-shadow .12s ease; touch-action:manipulation;
+  }
+  .btn:active{transform:scale(.96);}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),#14b8a6); color:#04211d; border:none; box-shadow:0 8px 24px rgba(45,212,191,.25);}
+  .btn-ghost{background:transparent;}
+  .btn-block{width:100%;}
+  .row{display:flex; gap:10px;}
+  .pill{display:inline-flex; align-items:center; gap:6px; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:6px 12px; font-size:12px; color:var(--muted);}
+  .center{text-align:center;}
+  .lcd{font-family:var(--mono); color:var(--lcd); text-shadow:0 0 8px rgba(57,255,136,.6); letter-spacing:1px;}
+
+  /* ---------- start screen ---------- */
+  #screen-start .badges{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:14px;}
+
+  /* ---------- how to play ---------- */
+  .howto-wrap{flex:1; display:flex; flex-direction:column;}
+  .slide-viewport{position:relative; flex:1; min-height:290px; background:var(--panel); border:1px solid var(--line); border-radius:18px; overflow:hidden;}
+  .slide{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:18px; opacity:0; transform:translateX(24px); transition:opacity .35s ease, transform .35s ease; pointer-events:none;}
+  .slide.active{opacity:1; transform:translateX(0); pointer-events:auto;}
+  .slide svg{width:100%; max-width:340px; height:auto;}
+  .slide-caption{margin-top:14px; text-align:center; font-size:14.5px; color:var(--muted); max-width:34ch; line-height:1.5;}
+  .slide-caption b{color:var(--text);}
+  .dots{display:flex; justify-content:center; gap:8px; margin:14px 0;}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--line); transition:background .2s, transform .2s;}
+  .dot.active{background:var(--accent); transform:scale(1.3);}
+  .nav-row{display:flex; gap:10px;}
+  .nav-row .btn{flex:1;}
+
+  /* ---------- game hud ---------- */
+  #hud{display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px 14px; margin-bottom:12px; flex-wrap:wrap;}
+  .hud-item{display:flex; flex-direction:column; align-items:center; min-width:54px;}
+  .hud-label{font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--muted);}
+  .hud-value{font-family:var(--mono); font-weight:700; font-size:16px;}
+  #livesWrap{display:flex; gap:3px; font-size:16px;}
+  .heart{filter:grayscale(0); transition:transform .2s;}
+  .heart.lost{filter:grayscale(1) opacity(.35);}
+  #timerBarOuter{height:6px; background:var(--panel2); border-radius:4px; overflow:hidden; margin-top:12px;}
+  #timerBarInner{height:100%; width:100%; background:linear-gradient(90deg,var(--accent),var(--cold)); border-radius:4px; transition:width .1s linear;}
+  #segmentTag{font-size:11px; color:var(--accent); text-align:center; margin-bottom:8px; letter-spacing:.5px;}
+
+  #stageArea{flex:1; display:flex; flex-direction:column; gap:14px; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:16px; position:relative; overflow:hidden;}
+  .toast{position:absolute; left:50%; top:14px; transform:translate(-50%,-20px); background:var(--panel2); border:1px solid var(--line); padding:8px 16px; border-radius:999px; font-size:13px; opacity:0; transition:all .3s ease; pointer-events:none; z-index:5;}
+  .toast.show{opacity:1; transform:translate(-50%,0);}
+  .toast.ok{border-color:var(--success); color:var(--success);}
+  .toast.bad{border-color:var(--danger); color:var(--danger);}
+
+  .shake{animation:shake .4s;}
+  @keyframes shake{ 10%,90%{transform:translateX(-3px);} 20%,80%{transform:translateX(6px);} 30%,50%,70%{transform:translateX(-10px);} 40%,60%{transform:translateX(10px);} }
+  .flash-success{animation:flashOk .7s;}
+  @keyframes flashOk{ 0%{box-shadow:inset 0 0 0 0 rgba(52,211,153,0);} 30%{box-shadow:inset 0 0 40px 6px rgba(52,211,153,.5);} 100%{box-shadow:inset 0 0 0 0 rgba(52,211,153,0);} }
+  .flash-fail{animation:flashBad .7s;}
+  @keyframes flashBad{ 0%{box-shadow:inset 0 0 0 0 rgba(239,68,68,0);} 30%{box-shadow:inset 0 0 40px 6px rgba(239,68,68,.5);} 100%{box-shadow:inset 0 0 0 0 rgba(239,68,68,0);} }
+
+  /* ---------- balance stage ---------- */
+  .target-display{text-align:center; font-size:13px; color:var(--muted);}
+  .target-display span{font-size:20px;}
+  .scale-wrap{display:flex; justify-content:center;}
+  .balance-svg{width:100%; max-width:360px;}
+  #leftPanGroup,#rightPanGroup{transform-box:fill-box; transform-origin:50% 0%; transition:transform .25s ease;}
+  #beam{transform-box:fill-box; transform-origin:50% 50%; transition:transform .25s ease;}
+  .pan-sum{text-align:center; font-size:15px;}
+  .weight-tray{display:flex; flex-wrap:wrap; gap:8px; justify-content:center;}
+  .weight-btn{font-family:var(--mono); font-weight:700; background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:10px 12px; min-width:56px; cursor:pointer;}
+  .weight-btn:active{transform:scale(.94);}
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; min-height:26px;}
+  .chip{font-family:var(--mono); font-size:11px; background:var(--accent-dim); color:var(--accent); border-radius:6px; padding:3px 7px;}
+
+  /* ---------- thermo stage ---------- */
+  .beaker-thermo-row{display:flex; align-items:flex-end; justify-content:center; gap:26px;}
+  .beaker{width:78px; height:110px; border:3px solid #4a5f82; border-top:none; border-radius:0 0 14px 14px; position:relative; overflow:hidden; background:rgba(255,255,255,.03);}
+  .liquid{position:absolute; left:0; right:0; bottom:0; height:40%; background:linear-gradient(180deg,var(--cold),#1a7fb0); transition:height .2s linear, background .3s;}
+  .bubblesmall{position:absolute; width:5px; height:5px; background:rgba(255,255,255,.5); border-radius:50%; bottom:0; animation:bsm 1.6s linear infinite;}
+  @keyframes bsm{ to{ transform:translateY(-90px); opacity:0; } }
+  .thermometer{display:flex; align-items:flex-end; gap:6px;}
+  .therm-tube{width:22px; height:150px; border-radius:12px; background:var(--panel2); border:2px solid var(--line); position:relative; overflow:hidden;}
+  .zone-band{position:absolute; left:0; right:0; background:rgba(52,211,153,.28); border-top:1px dashed var(--success); border-bottom:1px dashed var(--success);}
+  .mercury{position:absolute; left:0; right:0; bottom:0; background:linear-gradient(0deg,var(--heat),#fca94a); border-radius:0 0 10px 10px; transition:height .15s linear;}
+  .therm-scale{display:flex; flex-direction:column-reverse; justify-content:space-between; height:150px; font-family:var(--mono); font-size:9px; color:var(--muted);}
+  .temp-reading{text-align:center; font-size:14px;}
+  .temp-reading .lcd{font-size:18px;}
+  .heat-controls{display:flex; gap:10px; justify-content:center;}
+  .ctrl-btn{flex:1; max-width:120px; padding:16px 8px; border-radius:14px; border:1px solid var(--line); font-weight:800; font-size:14px; cursor:pointer;}
+  .ctrl-btn.ice{background:linear-gradient(135deg,#0e3a52,#123a56); color:var(--cold);}
+  .ctrl-btn.heat{background:linear-gradient(135deg,#4a2c0c,#5a3510); color:var(--heat);}
+  .ctrl-btn.set{background:linear-gradient(135deg,var(--accent),#14b8a6); color:#04211d;}
+  .ctrl-btn:active{transform:scale(.94);}
+
+  /* ---------- sort stage ---------- */
+  .item-display{display:flex; flex-direction:column; align-items:center; gap:6px;}
+  .item-icon{font-size:44px;}
+  .item-readout{display:flex; gap:14px; font-family:var(--mono); font-size:15px;}
+  .item-readout .lcd{background:#04120c; border:1px solid var(--accent-dim); padding:4px 10px; border-radius:8px;}
+  .item-timer-bar{width:70%; max-width:220px; height:6px; background:var(--panel2); border-radius:4px; overflow:hidden;}
+  .item-timer-fill{height:100%; width:100%; background:linear-gradient(90deg,var(--heat),var(--danger));}
+  .bins{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+  .bin-btn{padding:14px 8px; border-radius:14px; border:1px solid var(--line); background:var(--panel2); color:var(--text); font-size:13px; font-weight:700; cursor:pointer; text-align:center; line-height:1.3;}
+  .bin-hint{display:block; margin-top:3px; font-family:var(--mono); font-size:10px; font-weight:400; color:var(--accent); letter-spacing:.2px;}
+  .bin-btn:active{transform:scale(.95);}
+  .sort-progress{text-align:center; font-size:12px; color:var(--muted);}
+
+  /* ---------- end screen ---------- */
+  .stars{font-size:44px; text-align:center; letter-spacing:6px; margin:10px 0;}
+  .star{color:#334155;}
+  .star.on{color:var(--gold); text-shadow:0 0 16px rgba(251,191,36,.6);}
+  .score-big{text-align:center; font-size:34px; font-family:var(--mono); color:var(--accent); margin:6px 0;}
+  .end-msg{text-align:center; color:var(--muted); font-size:14px; margin-bottom:10px;}
+
+  @media (max-width:380px){
+    .beaker-thermo-row{gap:14px;}
+    .ctrl-btn{font-size:12px; padding:14px 4px;}
+    .bins{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+<div class="bubbles" id="bubbles"></div>
+<div id="app">
+
+  <!-- START SCREEN -->
+  <div class="screen active" id="screen-start">
+    <div class="lockup">
+      <div class="flask">🧪</div>
+      <h1 class="title">MASS &amp; TEMPERATURE LAB</h1>
+      <p class="subtitle">Balance the scales, tame the thermometer, and sort the samples across 10 lab rounds.</p>
+      <div class="badges">
+        <span class="pill">⚖️ Mass</span>
+        <span class="pill">🌡️ Temperature</span>
+        <span class="pill">10 Rounds</span>
+      </div>
+    </div>
+    <div class="stack">
+      <button class="btn btn-primary btn-block" id="btnStart">▶ Start Game</button>
+      <button class="btn btn-block" id="btnHowTo">📖 How to Play</button>
+      <div class="row">
+        <button class="btn btn-ghost btn-block" id="btnMuteStart">🔊 Sound: On</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY SCREEN -->
+  <div class="screen" id="screen-howto">
+    <h2 class="center">How to Play</h2>
+    <div class="howto-wrap">
+      <div class="slide-viewport" id="slideViewport"></div>
+      <div class="dots" id="slideDots"></div>
+      <div class="nav-row">
+        <button class="btn" id="btnPrevSlide">◀ Prev</button>
+        <button class="btn" id="btnNextSlide">Next ▶</button>
+      </div>
+      <button class="btn btn-primary btn-block" id="btnCloseHowTo" style="margin-top:10px;">Got it — Back</button>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div class="screen" id="screen-game">
+    <div id="hud">
+      <div class="hud-item"><div class="hud-label">Round</div><div class="hud-value" id="hudRound">1/10</div></div>
+      <div class="hud-item"><div class="hud-label">Score</div><div class="hud-value" id="hudScore">0</div></div>
+      <div class="hud-item"><div class="hud-label">Lives</div><div id="livesWrap"></div></div>
+      <div class="hud-item"><div class="hud-label">Timer</div><div class="hud-value" id="hudTimer">--</div></div>
+    </div>
+    <div id="segmentTag">STATION: —</div>
+    <div id="timerBarOuter"><div id="timerBarInner"></div></div>
+    <div style="height:12px;"></div>
+    <div id="stageArea">
+      <div class="toast" id="toast"></div>
+      <!-- dynamic round content injected here -->
+    </div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div class="screen" id="screen-end">
+    <div class="lockup" style="margin-top:8vh;">
+      <div id="endEmoji" style="font-size:52px;">🏁</div>
+      <h1 class="title" id="endTitle">Lab Complete</h1>
+      <div class="stars" id="starsRow"></div>
+      <div class="score-big" id="finalScore">0 pts</div>
+      <div class="end-msg" id="endMsg"></div>
+    </div>
+    <div class="stack">
+      <button class="btn btn-primary btn-block" id="btnPlayAgain">🔁 Play Again</button>
+      <button class="btn btn-block" id="btnBackStart">🏠 Main Menu</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   AUDIO
+============================================================ */
+let actx = null;
+let soundOn = true;
+let musicOn = true;
+let musicTimer = null;
+
+function ensureAudio(){
+  if(!actx){
+    try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ actx = null; }
+  } else if(actx.state === 'suspended'){
+    actx.resume();
+  }
+}
+function tone(freq, dur, type, vol, delay){
+  if(!soundOn || !actx) return;
+  type = type || 'sine'; vol = vol==null?0.2:vol; delay = delay||0;
+  const t0 = actx.currentTime + delay;
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(vol, t0+0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+  osc.connect(gain).connect(actx.destination);
+  osc.start(t0); osc.stop(t0+dur+0.03);
+}
+function sfxClick(){ tone(600,0.07,'square',0.14); }
+function sfxSuccess(){ tone(523,0.12,'sine',0.22); tone(659,0.12,'sine',0.22,0.11); tone(784,0.22,'sine',0.26,0.22); }
+function sfxFail(){ tone(180,0.28,'sawtooth',0.18); tone(120,0.32,'sawtooth',0.16,0.09); }
+function sfxTick(){ tone(880,0.04,'square',0.06); }
+function sfxWhoosh(){ tone(300,0.2,'sine',0.1); tone(500,0.18,'sine',0.1,0.08); }
+
+const MUSIC_SCALE = [220.00,246.94,261.63,329.63,392.00,440.00];
+function startMusic(){
+  if(musicTimer) return;
+  let i = 0;
+  musicTimer = setInterval(function(){
+    if(musicOn) tone(MUSIC_SCALE[i % MUSIC_SCALE.length]/2, 0.6, 'sine', 0.045);
+    i++;
+  }, 950);
+}
+function stopMusic(){ if(musicTimer){ clearInterval(musicTimer); musicTimer = null; } }
+
+/* ============================================================
+   BACKGROUND BUBBLES (decorative)
+============================================================ */
+(function initBubbles(){
+  const wrap = document.getElementById('bubbles');
+  for(let i=0;i<14;i++){
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = 10 + Math.random()*40;
+    b.style.width = size+'px'; b.style.height = size+'px';
+    b.style.left = (Math.random()*100)+'%';
+    b.style.animationDuration = (10+Math.random()*14)+'s';
+    b.style.animationDelay = (Math.random()*14)+'s';
+    wrap.appendChild(b);
+  }
+})();
+
+/* ============================================================
+   SCREEN NAVIGATION
+============================================================ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById('screen-'+id).classList.add('active');
+}
+
+/* ============================================================
+   ROUND CONFIG
+============================================================ */
+const ROUNDS = [
+  { type:'balance', target:18,  weights:[1,2,5,10],           unit:'g',  time:35 },
+  { type:'balance', target:47,  weights:[1,2,5,10,20],        unit:'g',  time:35 },
+  { type:'balance', target:650, weights:[10,50,100,200,500],  unit:'kg', time:42 },
+  { type:'thermo', start:20, zone:[55,65], rate:2.2,  time:30, wind:false },
+  { type:'thermo', start:15, zone:[68,76], rate:2.6,  time:27, wind:false },
+  { type:'thermo', start:25, zone:[38,44], rate:3.0,  time:25, wind:true  },
+  { type:'sort', items:1, mode:'mass', perItemTime:9.0,
+    bins:[
+      {label:'Light',emoji:'🪶',massRange:[5,45],hint:'5\u201345g'},
+      {label:'Medium',emoji:'⚖️',massRange:[55,145],hint:'55\u2013145g'},
+      {label:'Heavy',emoji:'🏋️',massRange:[155,295],hint:'155\u2013295g'}
+    ] },
+  { type:'sort', items:1, mode:'both', perItemTime:8.0,
+    bins:[
+      {label:'Frozen & Light',emoji:'🧊',massRange:[5,60],tempRange:[-10,5],hint:'5\u201360g, -10\u20135\u00b0C'},
+      {label:'Warm & Light',emoji:'☀️',massRange:[5,60],tempRange:[35,60],hint:'5\u201360g, 35\u201360\u00b0C'},
+      {label:'Frozen & Heavy',emoji:'🥶',massRange:[100,200],tempRange:[-10,5],hint:'100\u2013200g, -10\u20135\u00b0C'},
+      {label:'Warm & Heavy',emoji:'🔥',massRange:[100,200],tempRange:[35,60],hint:'100\u2013200g, 35\u201360\u00b0C'}
+    ] },
+  { type:'sort', items:1, mode:'both', perItemTime:7.0,
+    bins:[
+      {label:'Icy & Light',emoji:'🧊',massRange:[5,50],tempRange:[-10,2],hint:'5\u201350g, -10\u20132\u00b0C'},
+      {label:'Icy & Heavy',emoji:'🥶',massRange:[120,220],tempRange:[-10,2],hint:'120\u2013220g, -10\u20132\u00b0C'},
+      {label:'Room & Medium',emoji:'🌤️',massRange:[55,115],tempRange:[18,28],hint:'55\u2013115g, 18\u201328\u00b0C'},
+      {label:'Hot & Light',emoji:'☀️',massRange:[5,50],tempRange:[55,75],hint:'5\u201350g, 55\u201375\u00b0C'},
+      {label:'Hot & Heavy',emoji:'🔥',massRange:[120,220],tempRange:[55,75],hint:'120\u2013220g, 55\u201375\u00b0C'}
+    ] },
+  { type:'mix',
+    balance:{ target:85, weights:[1,2,5,10,20,50], unit:'g', time:32 },
+    thermo:{ start:20, zone:[50,60], rate:2.6, time:26, wind:true } }
+];
+
+const ITEM_EMOJI = ['📦','🧃','🍫','🧴','🥤','🍎','🧀','🧊','🥫','🧺'];
+
+/* ============================================================
+   GAME STATE
+============================================================ */
+const state = {
+  round: 0,
+  score: 0,
+  lives: 3,
+  maxLives: 3,
+  segment: '',
+  timeLeft: 0,
+  timeMax: 0,
+  timerInterval: null,
+  windInterval: null,
+  heatInterval: null,
+  iceInterval: null,
+  itemTimerInterval: null,
+  restartFn: null,
+  resolving: false
+};
+
+function segmentFor(idx){
+  if(idx < 3) return 'balance';
+  if(idx < 6) return 'thermo';
+  if(idx < 9) return 'sort';
+  return 'mix';
+}
+function segmentLabel(seg){
+  return { balance:'Balance Bench (mass)', thermo:'Thermo Station (temperature)',
+    sort:'Sorting Conveyor', mix:'Final Challenge: Mix Lab' }[seg];
+}
+
+/* ============================================================
+   UTIL
+============================================================ */
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+function randInt(range){ return Math.round(range[0] + Math.random()*(range[1]-range[0])); }
+function $(id){ return document.getElementById(id); }
+
+function clearRoundIntervals(){
+  if(state.timerInterval){ clearInterval(state.timerInterval); state.timerInterval=null; }
+  if(state.windInterval){ clearInterval(state.windInterval); state.windInterval=null; }
+  if(state.heatInterval){ clearInterval(state.heatInterval); state.heatInterval=null; }
+  if(state.iceInterval){ clearInterval(state.iceInterval); state.iceInterval=null; }
+  if(state.itemTimerInterval){ clearInterval(state.itemTimerInterval); state.itemTimerInterval=null; }
+}
+
+function updateHUD(){
+  $('hudRound').textContent = (state.round+1)+'/10';
+  $('hudScore').textContent = state.score;
+  const wrap = $('livesWrap'); wrap.innerHTML='';
+  for(let i=0;i<state.maxLives;i++){
+    const s = document.createElement('span');
+    s.className = 'heart' + (i < state.lives ? '' : ' lost');
+    s.textContent = '❤️';
+    wrap.appendChild(s);
+  }
+  $('segmentTag').textContent = 'STATION: ' + segmentLabel(state.segment).toUpperCase();
+}
+
+function updateTimerDisplay(){
+  $('hudTimer').textContent = Math.ceil(Math.max(0,state.timeLeft)) + 's';
+  const pct = state.timeMax > 0 ? clamp((state.timeLeft/state.timeMax)*100,0,100) : 0;
+  $('timerBarInner').style.width = pct + '%';
+  if(pct < 25) $('timerBarInner').style.background = 'linear-gradient(90deg,var(--danger),#fca5a5)';
+  else $('timerBarInner').style.background = 'linear-gradient(90deg,var(--accent),var(--cold))';
+}
+
+function startTimer(seconds, onExpire){
+  clearInterval(state.timerInterval);
+  state.timeLeft = seconds; state.timeMax = seconds;
+  updateTimerDisplay();
+  state.timerInterval = setInterval(function(){
+    state.timeLeft -= 0.1;
+    if(state.timeLeft <= 3 && state.timeLeft > 2.9) sfxTick();
+    if(state.timeLeft <= 0){
+      clearInterval(state.timerInterval); state.timerInterval=null;
+      state.timeLeft = 0; updateTimerDisplay();
+      onExpire();
+    } else {
+      updateTimerDisplay();
+    }
+  }, 100);
+}
+
+function showToast(msg, kind){
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (kind||'');
+  clearTimeout(t._hideT);
+  t._hideT = setTimeout(function(){ t.className='toast '+(kind||''); }, 900);
+}
+
+function flashStage(kind){
+  const stage = $('stageArea');
+  stage.classList.remove('flash-success','flash-fail');
+  void stage.offsetWidth;
+  stage.classList.add(kind==='ok' ? 'flash-success' : 'flash-fail');
+}
+
+function clearStage(){
+  const area = $('stageArea');
+  Array.from(area.children).forEach(function(c){
+    if(c.id !== 'toast') c.remove();
+  });
+}
+
+/* ============================================================
+   ROUND FLOW
+============================================================ */
+function startGame(){
+  state.round = 0; state.score = 0; state.segment = '';
+  showScreen('game');
+  ensureAudio(); startMusic();
+  startRound(0);
+}
+
+function startRound(idx){
+  clearRoundIntervals();
+  state.resolving = false;
+  state.round = idx;
+  const cfg = ROUNDS[idx];
+  const seg = segmentFor(idx);
+
+  if(seg !== state.segment){
+    state.maxLives = (seg === 'mix') ? 2 : 3;
+    state.lives = state.maxLives;
+  } else if(seg === 'balance' || seg === 'sort'){
+    state.maxLives = 3; state.lives = 3;
+  }
+  state.segment = seg;
+  updateHUD();
+  clearStage();
+
+  if(cfg.type === 'balance'){
+    setupBalance(cfg, function(pts){ roundSuccess(pts); });
+  } else if(cfg.type === 'thermo'){
+    setupThermo(cfg, function(pts){ roundSuccess(pts); });
+  } else if(cfg.type === 'sort'){
+    setupSort(cfg, function(pts){ roundSuccess(pts); });
+  } else if(cfg.type === 'mix'){
+    startMixRound(cfg);
+  }
+}
+
+function advanceRound(){
+  if(state.round + 1 < ROUNDS.length){
+    startRound(state.round + 1);
+  } else {
+    endGame(true);
+  }
+}
+
+function roundSuccess(pts){
+  state.resolving = true;
+  state.score += pts;
+  updateHUD();
+  sfxSuccess();
+  flashStage('ok');
+  showToast('✅ Nice work! +' + pts, 'ok');
+  clearRoundIntervals();
+  setTimeout(advanceRound, 950);
+}
+
+function loseLife(){
+  if(state.resolving) return;
+  state.resolving = true;
+  clearRoundIntervals();
+  state.lives--;
+  updateHUD();
+  sfxFail();
+  flashStage('bad');
+  if(state.lives <= 0){
+    showToast('💥 Out of lives!', 'bad');
+    setTimeout(function(){ endGame(false); }, 800);
+  } else {
+    showToast('❌ Try again!', 'bad');
+    setTimeout(function(){
+      state.resolving = false;
+      if(state.restartFn) state.restartFn();
+    }, 800);
+  }
+}
+
+/* ============================================================
+   BALANCE STAGE
+============================================================ */
+function setupBalance(cfg, onDone){
+  clearRoundIntervals();
+  state.resolving = false;
+  state.restartFn = function(){ setupBalance(cfg, onDone); };
+
+  clearStage();
+  const area = $('stageArea');
+  const targetLabel = cfg.unit === 'kg' ? (cfg.target/1000) + ' kg' : cfg.target + ' g';
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML =
+    '<div class="target-display">Match this reading &rarr; <span class="lcd" id="targetReading">' + targetLabel + '</span></div>' +
+    '<div class="scale-wrap"><svg class="balance-svg" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">' +
+      '<polygon points="185,190 215,190 200,164" fill="#3a4f74"/>' +
+      '<rect x="170" y="188" width="60" height="8" rx="3" fill="#22314c"/>' +
+      '<line id="beam" x1="60" y1="100" x2="340" y2="100" stroke="#8ca3c9" stroke-width="8" stroke-linecap="round"/>' +
+      '<g id="leftPanGroup">' +
+        '<line x1="70" y1="100" x2="70" y2="142" stroke="#6b7fa3" stroke-width="3"/>' +
+        '<path d="M40,142 Q70,168 100,142 Z" fill="#22314c" stroke="#3a4f74"/>' +
+        '<text x="70" y="132" text-anchor="middle" font-size="26">📦</text>' +
+      '</g>' +
+      '<g id="rightPanGroup">' +
+        '<line x1="330" y1="100" x2="330" y2="142" stroke="#6b7fa3" stroke-width="3"/>' +
+        '<path d="M300,142 Q330,168 360,142 Z" fill="#22314c" stroke="#3a4f74"/>' +
+      '</g>' +
+    '</svg></div>' +
+    '<div class="pan-sum">On scale: <span class="lcd" id="panSum">0 g</span></div>' +
+    '<div class="chip-row" id="chipRow"></div>' +
+    '<div class="weight-tray" id="weightTray"></div>' +
+    '<div class="row" style="justify-content:center;"><button class="btn" id="resetPanBtn">↺ Reset Pan</button></div>';
+  area.appendChild(wrap);
+
+  const tray = $('weightTray');
+  cfg.weights.forEach(function(w){
+    const b = document.createElement('button');
+    b.className = 'weight-btn';
+    b.textContent = w + 'g';
+    b.onclick = function(){ addWeight(w, cfg, onDone); };
+    tray.appendChild(b);
+  });
+  $('resetPanBtn').onclick = function(){
+    if(state.resolving) return;
+    sfxClick();
+    balanceState.sum = 0; balanceState.chips = [];
+    renderBalancePan();
+  };
+
+  const balanceState = { sum:0, chips:[] };
+  window._balanceState = balanceState;
+  renderBalancePan();
+
+  function renderBalancePan(){
+    $('panSum').textContent = balanceState.sum + ' g';
+    const chipRow = $('chipRow'); chipRow.innerHTML = '';
+    balanceState.chips.forEach(function(w){
+      const c = document.createElement('span');
+      c.className = 'chip'; c.textContent = w+'g';
+      chipRow.appendChild(c);
+    });
+    const diff = balanceState.sum - cfg.target;
+    const mag = Math.min(Math.abs(diff) / (cfg.target || 1), 1);
+    const angle = diff === 0 ? 0 : Math.sign(diff) * mag * 18;
+    $('beam').style.transform = 'rotate(' + angle + 'deg)';
+    $('rightPanGroup').style.transform = 'translateY(' + (angle*1.6) + 'px)';
+    $('leftPanGroup').style.transform = 'translateY(' + (-angle*1.6) + 'px)';
+  }
+
+  function addWeight(w, cfg, onDone){
+    if(state.resolving) return;
+    sfxClick();
+    balanceState.sum += w;
+    balanceState.chips.push(w);
+    renderBalancePan();
+    if(balanceState.sum === cfg.target){
+      state.resolving = true;
+      clearInterval(state.timerInterval);
+      setTimeout(function(){
+        const pts = 100 + Math.round(state.timeLeft * 2);
+        onDone(pts);
+      }, 350);
+    } else if(balanceState.sum > cfg.target){
+      state.resolving = true;
+      clearInterval(state.timerInterval);
+      $('stageArea').classList.add('shake');
+      setTimeout(function(){ $('stageArea').classList.remove('shake'); }, 400);
+      setTimeout(function(){ loseLife(); }, 450);
+    }
+  }
+
+  startTimer(cfg.time, function(){ loseLife(); });
+}
+
+/* ============================================================
+   THERMOMETER STAGE
+============================================================ */
+function setupThermo(cfg, onDone){
+  clearRoundIntervals();
+  state.resolving = false;
+  state.restartFn = function(){ setupThermo(cfg, onDone); };
+
+  clearStage();
+  const area = $('stageArea');
+  const wrap = document.createElement('div');
+  wrap.innerHTML =
+    '<div class="beaker-thermo-row">' +
+      '<div class="beaker" id="beaker"><div class="liquid" id="liquidFill"></div></div>' +
+      '<div class="thermometer">' +
+        '<div class="therm-scale" id="thermScale"></div>' +
+        '<div class="therm-tube"><div class="zone-band" id="zoneBand"></div><div class="mercury" id="mercury"></div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="temp-reading">Reading: <span class="lcd" id="tempReading">--</span> &nbsp;|&nbsp; Target zone: <span class="lcd" id="zoneReading">--</span></div>' +
+    '<div class="heat-controls">' +
+      '<button class="ctrl-btn ice" id="iceBtn">❄️ Cool</button>' +
+      '<button class="ctrl-btn set" id="setBtn">✅ Set!</button>' +
+      '<button class="ctrl-btn heat" id="heatBtn">🔥 Heat</button>' +
+    '</div>';
+  area.appendChild(wrap);
+
+  const thermState = { temp: cfg.start };
+  const scaleMin = -10, scaleMax = 110, span = scaleMax - scaleMin;
+
+  const scaleDiv = $('thermScale');
+  for(let t = scaleMax; t >= scaleMin; t -= 30){
+    const s = document.createElement('div'); s.textContent = t;
+    scaleDiv.appendChild(s);
+  }
+
+  const zoneBand = $('zoneBand');
+  const zBottom = ((cfg.zone[0] - scaleMin) / span) * 100;
+  const zHeight = ((cfg.zone[1] - cfg.zone[0]) / span) * 100;
+  zoneBand.style.bottom = zBottom + '%';
+  zoneBand.style.height = zHeight + '%';
+  $('zoneReading').textContent = cfg.zone[0] + '\u2013' + cfg.zone[1] + '\u00b0C';
+
+  function updateVisual(){
+    thermState.temp = clamp(thermState.temp, scaleMin, scaleMax);
+    const pct = ((thermState.temp - scaleMin) / span) * 100;
+    $('mercury').style.height = pct + '%';
+    $('tempReading').textContent = Math.round(thermState.temp) + '\u00b0C';
+    const liquidPct = 25 + pct * 0.5;
+    $('liquidFill').style.height = liquidPct + '%';
+    const hue = thermState.temp < 20 ? 'var(--cold)' : thermState.temp > 60 ? 'var(--heat)' : '#a78bfa';
+    $('liquidFill').style.background = 'linear-gradient(180deg,' + hue + ',#1a3a5c)';
+  }
+  updateVisual();
+
+  function startHold(dir){
+    if(state.resolving) return;
+    clearInterval(state.heatInterval); clearInterval(state.iceInterval);
+    const iv = setInterval(function(){
+      thermState.temp += dir * (cfg.rate * 0.35);
+      updateVisual();
+    }, 90);
+    if(dir > 0) state.heatInterval = iv; else state.iceInterval = iv;
+  }
+  function stopHold(){
+    clearInterval(state.heatInterval); clearInterval(state.iceInterval);
+    state.heatInterval = null; state.iceInterval = null;
+  }
+
+  const heatBtn = $('heatBtn'), iceBtn = $('iceBtn');
+  ['pointerdown'].forEach(function(ev){
+    heatBtn.addEventListener(ev, function(e){ e.preventDefault(); startHold(1); });
+    iceBtn.addEventListener(ev, function(e){ e.preventDefault(); startHold(-1); });
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(function(ev){
+    heatBtn.addEventListener(ev, stopHold);
+    iceBtn.addEventListener(ev, stopHold);
+  });
+
+  if(cfg.wind){
+    state.windInterval = setInterval(function(){
+      if(state.resolving) return;
+      thermState.temp += (Math.random()*3.2 - 1.6);
+      updateVisual();
+    }, 900);
+  }
+
+  $('setBtn').onclick = function(){
+    if(state.resolving) return;
+    sfxClick();
+    if(thermState.temp >= cfg.zone[0] && thermState.temp <= cfg.zone[1]){
+      state.resolving = true;
+      stopHold();
+      const center = (cfg.zone[0]+cfg.zone[1])/2;
+      const dist = Math.abs(thermState.temp - center);
+      const zoneHalf = (cfg.zone[1]-cfg.zone[0])/2;
+      const precision = Math.round(30 * (1 - dist/(zoneHalf||1)));
+      const pts = 100 + Math.max(0,precision) + Math.round(state.timeLeft*2);
+      clearInterval(state.timerInterval);
+      onDone(pts);
+    } else {
+      loseLife();
+    }
+  };
+
+  startTimer(cfg.time, function(){ loseLife(); });
+}
+
+/* ============================================================
+   SORT STAGE
+============================================================ */
+function setupSort(cfg, onDone){
+  clearRoundIntervals();
+  state.resolving = false;
+  state.restartFn = function(){ setupSort(cfg, onDone); };
+
+  clearStage();
+  const area = $('stageArea');
+  const wrap = document.createElement('div');
+  wrap.innerHTML =
+    '<div class="item-display">' +
+      '<div class="item-icon" id="itemIcon">📦</div>' +
+      '<div class="item-readout">' +
+        '<div class="lcd" id="itemMassRow">-- g</div>' +
+        '<div class="lcd" id="itemTempRow" style="display:none;">-- \u00b0C</div>' +
+      '</div>' +
+      '<div class="item-timer-bar"><div class="item-timer-fill" id="itemTimerFill"></div></div>' +
+    '</div>' +
+    '<div class="bins" id="binsRow"></div>' +
+    '<div class="sort-progress">Sorted: <span id="sortedCount">0</span>/<span id="sortTotal">' + cfg.items + '</span></div>';
+  area.appendChild(wrap);
+
+  const binsRow = $('binsRow');
+  cfg.bins.forEach(function(bin, i){
+    const b = document.createElement('button');
+    b.className = 'bin-btn';
+    b.innerHTML = bin.emoji + '<br>' + bin.label + (bin.hint ? '<span class="bin-hint">' + bin.hint + '</span>' : '');
+    b.onclick = function(){ checkBin(i); };
+    binsRow.appendChild(b);
+  });
+
+  const sortState = { correct:0, current:null };
+
+  function spawnItem(){
+    if(state.resolving) return;
+    const binIndex = Math.floor(Math.random()*cfg.bins.length);
+    const bin = cfg.bins[binIndex];
+    const mass = randInt(bin.massRange);
+    const temp = cfg.mode === 'both' ? randInt(bin.tempRange) : null;
+    sortState.current = { binIndex: binIndex, mass: mass, temp: temp };
+
+    $('itemIcon').textContent = ITEM_EMOJI[Math.floor(Math.random()*ITEM_EMOJI.length)];
+    $('itemMassRow').textContent = mass + ' g';
+    if(cfg.mode === 'both'){
+      $('itemTempRow').style.display = '';
+      $('itemTempRow').textContent = temp + ' \u00b0C';
+    } else {
+      $('itemTempRow').style.display = 'none';
+    }
+
+    startTimer(cfg.perItemTime, function(){ registerMiss(); });
+  }
+
+  function checkBin(i){
+    if(state.resolving || !sortState.current) return;
+    sfxClick();
+    if(i === sortState.current.binIndex){
+      registerHit();
+    } else {
+      registerMiss();
+    }
+  }
+
+  function registerHit(){
+    state.resolving = true;
+    clearInterval(state.timerInterval);
+    state.score += 30;
+    sortState.correct++;
+    $('sortedCount').textContent = sortState.correct;
+    updateHUD();
+    flashStage('ok');
+    showToast('✅ Correct bin!', 'ok');
+    if(sortState.correct >= cfg.items){
+      setTimeout(function(){
+        const pts = 60 + Math.round(state.timeLeft*3);
+        onDone(pts);
+      }, 500);
+    } else {
+      setTimeout(function(){
+        state.resolving = false;
+        spawnItem();
+      }, 500);
+    }
+  }
+
+  function registerMiss(){
+    loseLife();
+  }
+
+  // override restartFn to reset sort progress on retry
+  state.restartFn = function(){ setupSort(cfg, onDone); };
+
+  spawnItem();
+}
+
+/* ============================================================
+   MIX (FINAL) ROUND
+============================================================ */
+function startMixRound(cfg){
+  showToast('🎯 Stage 1: Balance the mass', 'ok');
+  setupBalance(cfg.balance, function(pts1){
+    state.score += pts1; updateHUD(); sfxSuccess(); flashStage('ok');
+    showToast('✅ Mass matched! +' + pts1, 'ok');
+    clearRoundIntervals();
+    setTimeout(function(){
+      showToast('🎯 Stage 2: Hit the temperature', 'ok');
+      setupThermo(cfg.thermo, function(pts2){
+        state.score += pts2; updateHUD(); sfxSuccess(); flashStage('ok');
+        showToast('✅ Temperature locked! +' + pts2, 'ok');
+        clearRoundIntervals();
+        setTimeout(advanceRound, 950);
+      });
+    }, 1000);
+  });
+}
+
+/* ============================================================
+   END GAME
+============================================================ */
+function endGame(won){
+  clearRoundIntervals();
+  stopMusic();
+  showScreen('end');
+
+  const maxScoreApprox = 2100;
+  const pct = state.score / maxScoreApprox;
+  let stars = 0;
+  if(pct >= 0.72) stars = 3;
+  else if(pct >= 0.45) stars = 2;
+  else if(pct >= 0.18) stars = 1;
+
+  $('finalScore').textContent = state.score + ' pts';
+  const starsRow = $('starsRow'); starsRow.innerHTML = '';
+  for(let i=0;i<3;i++){
+    const s = document.createElement('span');
+    s.className = 'star' + (i < stars ? ' on' : '');
+    s.textContent = '★';
+    starsRow.appendChild(s);
+  }
+  $('endEmoji').textContent = won ? '🏆' : '🔬';
+  $('endTitle').textContent = won ? 'Lab Complete!' : 'Lab Session Ended';
+  $('endMsg').textContent = won
+    ? 'You balanced, calibrated, and sorted your way through the whole lab.'
+    : 'You ran out of lives, but every reading you took still counted toward your score.';
+
+  for(let i=0;i<stars;i++) sfxSuccess();
+  if(stars===0) sfxFail();
+}
+
+/* ============================================================
+   HOW TO PLAY SLIDES
+============================================================ */
+const SLIDES = [
+  {
+    caption: '<b>Balance Bench:</b> Tap weights to add them to the scale until the reading matches the target mass exactly.',
+    svg: '<svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">' +
+      '<polygon points="135,150 165,150 150,128" fill="#3a4f74"/>' +
+      '<line x1="40" y1="80" x2="260" y2="80" stroke="#8ca3c9" stroke-width="7" stroke-linecap="round"/>' +
+      '<path d="M20,110 Q50,132 80,110 Z" fill="#22314c" stroke="#3a4f74"/>' +
+      '<text x="50" y="102" text-anchor="middle" font-size="22">📦</text>' +
+      '<path d="M220,110 Q250,132 280,110 Z" fill="#22314c" stroke="#3a4f74"/>' +
+      '<text x="250" y="102" text-anchor="middle" font-size="16">10g 5g</text>' +
+      '<rect x="30" y="165" width="60" height="26" rx="6" fill="#1b2c47" stroke="#2dd4bf"/>' +
+      '<text x="60" y="182" text-anchor="middle" font-size="12" fill="#39ff88">TAP →</text>' +
+      '<rect x="210" y="165" width="60" height="26" rx="6" fill="#1b2c47" stroke="#2dd4bf"/>' +
+      '<text x="240" y="182" text-anchor="middle" font-size="12" fill="#39ff88">BALANCE</text>' +
+      '</svg>'
+  },
+  {
+    caption: '<b>Thermo Station:</b> Hold Heat or Cool to move the mercury. Release inside the green target zone, then tap Set!',
+    svg: '<svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="140" y="20" width="20" height="120" rx="10" fill="#1b2c47" stroke="#2a3c5c"/>' +
+      '<rect x="140" y="70" width="20" height="30" fill="rgba(52,211,153,.35)"/>' +
+      '<rect x="143" y="90" width="14" height="45" rx="6" fill="#f59e0b"/>' +
+      '<circle cx="150" cy="150" r="16" fill="#f59e0b"/>' +
+      '<rect x="40" y="150" width="70" height="34" rx="10" fill="#123a56" stroke="#38bdf8"/>' +
+      '<text x="75" y="172" text-anchor="middle" font-size="13" fill="#38bdf8">❄️ COOL</text>' +
+      '<rect x="190" y="150" width="70" height="34" rx="10" fill="#5a3510" stroke="#f59e0b"/>' +
+      '<text x="225" y="172" text-anchor="middle" font-size="13" fill="#f59e0b">🔥 HEAT</text>' +
+      '</svg>'
+  },
+  {
+    caption: '<b>Sorting Conveyor:</b> Read each item\'s mass (and temperature) on the digital display, then tap the matching bin before time runs out.',
+    svg: '<svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">' +
+      '<text x="150" y="60" text-anchor="middle" font-size="34">📦</text>' +
+      '<rect x="90" y="75" width="120" height="26" rx="6" fill="#04120c" stroke="#2dd4bf"/>' +
+      '<text x="150" y="93" text-anchor="middle" font-size="13" fill="#39ff88">85g  22°C</text>' +
+      '<rect x="30" y="140" width="100" height="40" rx="10" fill="#1b2c47" stroke="#2a3c5c"/>' +
+      '<text x="80" y="164" text-anchor="middle" font-size="12" fill="#eef3fa">🌤️ Room</text>' +
+      '<rect x="170" y="140" width="100" height="40" rx="10" fill="#1b2c47" stroke="#2dd4bf"/>' +
+      '<text x="220" y="164" text-anchor="middle" font-size="12" fill="#eef3fa">🔥 Hot</text>' +
+      '</svg>'
+  },
+  {
+    caption: '<b>Lives &amp; Timer:</b> Mistakes cost a ❤️ and replay the same round — you never lose progress from earlier rounds. Run out of hearts and the run ends.',
+    svg: '<svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">' +
+      '<text x="80" y="90" font-size="40">❤️</text>' +
+      '<text x="140" y="90" font-size="40">❤️</text>' +
+      '<text x="200" y="90" font-size="40" opacity="0.3">❤️</text>' +
+      '<rect x="60" y="120" width="180" height="10" rx="5" fill="#1b2c47"/>' +
+      '<rect x="60" y="120" width="110" height="10" rx="5" fill="#2dd4bf"/>' +
+      '<text x="150" y="155" text-anchor="middle" font-size="13" fill="#8fa2c2">Timer counts down each round</text>' +
+      '</svg>'
+  },
+  {
+    caption: '<b>Stars:</b> At the end of all 10 rounds, your total score (not your remaining lives) decides your star rating from 0 to 3.',
+    svg: '<svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">' +
+      '<text x="70" y="110" font-size="44" fill="#fbbf24">★</text>' +
+      '<text x="130" y="110" font-size="44" fill="#fbbf24">★</text>' +
+      '<text x="190" y="110" font-size="44" fill="#334155">★</text>' +
+      '<rect x="70" y="140" width="150" height="22" rx="8" fill="#04120c" stroke="#2dd4bf"/>' +
+      '<text x="145" y="156" text-anchor="middle" font-size="12" fill="#39ff88">SCORE: 1450 pts</text>' +
+      '</svg>'
+  }
+];
+
+let slideIndex = 0;
+function buildSlides(){
+  const vp = $('slideViewport'); vp.innerHTML = '';
+  const dots = $('slideDots'); dots.innerHTML = '';
+  SLIDES.forEach(function(s, i){
+    const el = document.createElement('div');
+    el.className = 'slide' + (i===0 ? ' active' : '');
+    el.innerHTML = s.svg + '<div class="slide-caption">' + s.caption + '</div>';
+    vp.appendChild(el);
+    const d = document.createElement('div');
+    d.className = 'dot' + (i===0 ? ' active' : '');
+    dots.appendChild(d);
+  });
+}
+function showSlide(i){
+  slideIndex = clamp(i, 0, SLIDES.length-1);
+  document.querySelectorAll('#slideViewport .slide').forEach(function(el,idx){
+    el.classList.toggle('active', idx===slideIndex);
+  });
+  document.querySelectorAll('#slideDots .dot').forEach(function(el,idx){
+    el.classList.toggle('active', idx===slideIndex);
+  });
+}
+
+/* ============================================================
+   EVENT WIRING
+============================================================ */
+document.getElementById('btnStart').onclick = function(){
+  ensureAudio(); sfxClick();
+  startGame();
+};
+document.getElementById('btnHowTo').onclick = function(){
+  ensureAudio(); sfxClick();
+  buildSlides(); showSlide(0);
+  showScreen('howto');
+};
+document.getElementById('btnCloseHowTo').onclick = function(){
+  sfxClick(); showScreen('start');
+};
+document.getElementById('btnPrevSlide').onclick = function(){ sfxClick(); showSlide(slideIndex-1); };
+document.getElementById('btnNextSlide').onclick = function(){ sfxClick(); showSlide(slideIndex+1); };
+document.getElementById('btnPlayAgain').onclick = function(){ sfxClick(); startGame(); };
+document.getElementById('btnBackStart').onclick = function(){ sfxClick(); stopMusic(); showScreen('start'); };
+document.getElementById('btnMuteStart').onclick = function(){
+  soundOn = !soundOn; musicOn = soundOn;
+  this.textContent = soundOn ? '🔊 Sound: On' : '🔇 Sound: Off';
+  if(soundOn){ ensureAudio(); }
+};
+
+})();
+</script>
+</body>
+</html>

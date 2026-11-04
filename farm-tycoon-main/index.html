@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farm Tycoon - Biology Minigame</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+
+  html, body { height: 100%; background: #1a2e12; overflow: hidden; }
+
+  #game-container {
+    position: relative; width: 100%; height: 100vh; background: #1a2e12; color: #fff;
+    display: flex; flex-direction: column;
+  }
+
+  .screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 20px;
+    background: radial-gradient(circle at 50% 25%, #355c1e, #1a2e12 70%);
+  }
+  .hidden { display: none !important; }
+
+  #start-screen h1, #end-screen h1, #instructions-screen h1 {
+    font-size: 2.6em; margin-bottom: 14px; color: #ffe066; text-shadow: 2px 2px 0 #1f3a10;
+  }
+  #start-screen p, #instructions-screen p { margin: 8px 0; font-size: 1.05em; max-width: 620px; line-height: 1.6; }
+
+  .btn {
+    margin-top: 20px; padding: 14px 36px; font-size: 1.1em; font-weight: bold; color: #fff;
+    background: linear-gradient(180deg, #ff8c42, #ff5e62); border: none; border-radius: 30px;
+    cursor: pointer; box-shadow: 0 5px 0 #b33a3a; transition: transform 0.1s;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #b33a3a; }
+  .btn-secondary { background: linear-gradient(180deg, #4fb0ff, #2378d6); box-shadow: 0 5px 0 #1a5599; }
+  .btn-secondary:active { box-shadow: 0 1px 0 #1a5599; }
+
+  #instructions-screen ul { text-align: left; margin: 14px 0; line-height: 1.8; max-width: 640px; font-size: 1.02em; }
+  #instructions-screen li { margin-bottom: 8px; }
+
+  /* GAME SCREEN */
+  #game-screen { display: flex; flex-direction: row; padding: 0; background: #1a2e12; align-items: stretch; }
+
+  #sidebar {
+    width: 290px; min-width: 230px;
+    background: linear-gradient(180deg, #35501f, #1a2e12);
+    padding: 18px; display: flex; flex-direction: column; gap: 12px;
+    border-right: 3px solid #4a6b2a; overflow-y: auto;
+  }
+  #sidebar h2 { color: #ffe066; font-size: 1.2em; text-shadow: 0 0 10px rgba(255,224,102,0.4); }
+
+  .stat-row { display: flex; gap: 8px; }
+  .stat-box { flex: 1; background: rgba(255,255,255,0.07); border-radius: 10px; padding: 8px 10px; text-align: center; }
+  .stat-box .label { display: block; opacity: 0.65; font-size: 0.72em; }
+  .stat-box .value { font-size: 1.15em; font-weight: bold; }
+
+  #timer-bar-bg { width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; }
+  #timer-bar { height: 100%; background: linear-gradient(90deg, #7CFC00, #ffd166, #ff5e62); width: 100%; transition: width 0.2s linear; }
+
+  #shop-title { font-size: 1.02em; color: #ffe066; margin-top: 2px; }
+  .upgrade-card {
+    background: rgba(255,255,255,0.06); border: 2px solid transparent; border-radius: 10px;
+    padding: 8px 10px; cursor: pointer; transition: border-color 0.2s, transform 0.1s;
+  }
+  .upgrade-card:hover { border-color: #ffe066; }
+  .upgrade-card:active { transform: scale(0.98); }
+  .upgrade-card.disabled { opacity: 0.5; cursor: not-allowed; }
+  .upgrade-card .u-top { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.92em; }
+  .upgrade-card .u-desc { font-size: 0.75em; opacity: 0.8; margin: 2px 0; }
+  .upgrade-card .u-bottom { display: flex; justify-content: space-between; font-size: 0.8em; }
+  .upgrade-card .u-cost { color: #ffe066; font-weight: bold; }
+  .upgrade-card .u-level { opacity: 0.7; }
+
+  #overview-label { font-size: 0.72em; opacity: 0.6; text-align: center; }
+  #overview {
+    background: rgba(255,255,255,0.05); border-radius: 10px; padding: 8px 10px;
+    font-size: 1.4em; min-height: 36px; text-align: center; letter-spacing: 2px;
+  }
+
+  #feedback-text { min-height: 24px; font-weight: bold; font-size: 0.95em; text-align: center; }
+  #fact-text { font-size: 0.78em; opacity: 0.85; text-align: center; min-height: 32px; color: #ffe066; }
+
+  /* FARM AREA */
+  #farm-area {
+    flex: 1; position: relative; display: flex; flex-direction: column;
+    background: linear-gradient(180deg, #4a6b2a 0%, #1a2e12 100%);
+  }
+  #farm-title { text-align: center; padding: 14px 0 6px; font-size: 1.2em; font-weight: bold; color: #ffe066; }
+
+  #plot-grid {
+    flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
+    gap: 16px; padding: 10px 24px 24px;
+  }
+
+  .plot {
+    position: relative; background: rgba(255,255,255,0.06); border: 3px solid #6b8e3a;
+    border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; overflow: hidden;
+  }
+  .plot:active { transform: scale(0.97); }
+  .plot.ready { border-color: #ffd166; box-shadow: 0 0 18px rgba(255,209,102,0.6); animation: glow 1s infinite alternate; }
+  @keyframes glow { from { box-shadow: 0 0 8px rgba(255,209,102,0.4); } to { box-shadow: 0 0 22px rgba(255,209,102,0.9); } }
+  .plot.shake { animation: shake 0.3s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .plot.harvested { animation: pop 0.3s; }
+  @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+  .plot .crop-emoji { font-size: 3em; line-height: 1; transition: transform 0.3s; }
+  .plot .ready-label {
+    margin-top: 4px; font-size: 0.85em; font-weight: bold; color: #ffd166;
+  }
+  .plot .progress-bg {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 8px; background: rgba(0,0,0,0.3);
+  }
+  .plot .progress-bar { height: 100%; background: linear-gradient(90deg, #7CFC00, #ffd166); width: 0%; transition: width 0.2s linear; }
+
+  .attention-badge {
+    position: absolute; top: 6px; right: 6px; font-size: 1.5em;
+    background: rgba(0,0,0,0.4); border-radius: 50%; width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    animation: pulseBadge 0.6s infinite alternate;
+  }
+  @keyframes pulseBadge { from { transform: scale(1); } to { transform: scale(1.15); } }
+  .attention-ring-bg {
+    position: absolute; top: 6px; right: 6px; width: 38px; height: 38px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.2);
+  }
+  .attention-ring {
+    position: absolute; top: 6px; right: 6px; width: 38px; height: 38px; border-radius: 50%;
+    border: 3px solid #ff5e62; clip-path: inset(0 0 0 50%);
+  }
+
+  .float-text {
+    position: absolute; font-weight: bold; font-size: 1.2em; pointer-events: none;
+    animation: floatUp 0.9s ease-out forwards; z-index: 6; left: 50%; top: 30%;
+    transform: translateX(-50%);
+  }
+  @keyframes floatUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -50px); } }
+
+  #intro-banner {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: #fff; font-size: 1.7em; font-weight: bold; z-index: 10; text-align: center; padding: 20px;
+  }
+  #intro-banner span { color: #ffe066; font-size: 0.9em; margin-top: 10px; max-width: 85%; }
+
+  #stars { font-size: 3em; margin: 16px 0; letter-spacing: 8px; }
+  .star { color: #355c1e; transition: color 0.3s, transform 0.3s; display: inline-block; }
+  .star.filled { color: #ffe066; transform: scale(1.2); text-shadow: 0 0 14px #ffe066; }
+  #end-stats { font-size: 1.2em; line-height: 1.9; margin-bottom: 10px; }
+
+  #sound-toggle {
+    position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,0.4); border: none; color: #fff;
+    border-radius: 50%; width: 40px; height: 40px; font-size: 1.2em; cursor: pointer; z-index: 20;
+  }
+
+  @media (max-width: 760px) {
+    #game-screen { flex-direction: column; }
+    #sidebar { width: 100%; max-height: 50%; }
+    #plot-grid { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 8px; padding: 8px; }
+    .plot .crop-emoji { font-size: 2em; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <button id="sound-toggle" title="Mute/Unmute">🔊</button>
+
+  <!-- START SCREEN -->
+  <div id="start-screen" class="screen">
+    <h1>🌾 Farm Tycoon</h1>
+    <p>Grow your farm! Crops grow on their own over time — tap a plot when it's
+    <b>ready (✨ glowing)</b> to harvest for coins. Watch out for plots that need
+    <b>water 💧</b> or have <b>pests 🐛</b> — respond before time runs out!
+    Spend your coins on upgrades to grow faster, earn more, and automate care.</p>
+    <button class="btn" id="btn-start">Start Game</button>
+    <button class="btn btn-secondary" id="btn-instructions">How to Play</button>
+  </div>
+
+  <!-- INSTRUCTIONS SCREEN -->
+  <div id="instructions-screen" class="screen hidden">
+    <h1>How to Play</h1>
+    <ul>
+      <li>🌱 Each of the 6 plots grows a crop automatically over time (shown by a progress bar).</li>
+      <li>✨ When a plot's bar is full, it glows — <b>tap it to harvest</b> for coins!</li>
+      <li>💧🐛 Sometimes a plot shows a <b>water</b> or <b>pest</b> alert with a shrinking ring timer.</li>
+      <li>👆 Tap the plot before the ring empties to resolve the alert safely.</li>
+      <li>❌ If the ring empties, you lose a life (❤️) and that plot's growth is set back.</li>
+      <li>🛒 Spend coins on upgrades:
+        <ul style="margin-top:4px;">
+          <li><b>Fertilizer</b> — crops grow faster</li>
+          <li><b>Sprinkler System</b> — chance to auto-resolve water/pest alerts</li>
+          <li><b>Quality Seeds</b> — earn more coins per harvest</li>
+        </ul>
+      </li>
+      <li>🚜 Your farm overview grows visually as you buy upgrades!</li>
+      <li>⏱️ You have <b>90 seconds</b>. Harvest as much as you can before time runs out!</li>
+    </ul>
+    <button class="btn" id="btn-back">Back</button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen hidden">
+    <div id="sidebar">
+      <h2>🌾 Farm Tycoon</h2>
+      <div class="stat-row">
+        <div class="stat-box"><span class="label">Coins</span><span class="value" id="hud-coins">0</span></div>
+        <div class="stat-box"><span class="label">Lives</span><span class="value" id="hud-lives">❤️❤️❤️</span></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-box"><span class="label">Time Left</span><span class="value" id="hud-time">90</span></div>
+      </div>
+      <div id="timer-bar-bg"><div id="timer-bar"></div></div>
+
+      <div id="shop-title">🛒 Farm Upgrades</div>
+      <div class="upgrade-card" id="upgrade-fertilizer">
+        <div class="u-top"><span>🌿 Fertilizer</span><span class="u-level" id="lvl-fertilizer">Lv 0</span></div>
+        <div class="u-desc">Crops grow faster</div>
+        <div class="u-bottom"><span class="u-cost" id="cost-fertilizer">20 coins</span></div>
+      </div>
+      <div class="upgrade-card" id="upgrade-sprinkler">
+        <div class="u-top"><span>💧 Sprinkler System</span><span class="u-level" id="lvl-sprinkler">Lv 0</span></div>
+        <div class="u-desc">Chance to auto-resolve alerts</div>
+        <div class="u-bottom"><span class="u-cost" id="cost-sprinkler">25 coins</span></div>
+      </div>
+      <div class="upgrade-card" id="upgrade-seeds">
+        <div class="u-top"><span>🌟 Quality Seeds</span><span class="u-level" id="lvl-seeds">Lv 0</span></div>
+        <div class="u-desc">+3 coins per harvest</div>
+        <div class="u-bottom"><span class="u-cost" id="cost-seeds">25 coins</span></div>
+      </div>
+
+      <div id="overview-label">Farm Overview</div>
+      <div id="overview">🌳🌳🌳</div>
+
+      <div id="fact-text"></div>
+      <div id="feedback-text"></div>
+    </div>
+    <div id="farm-area">
+      <div id="farm-title">Tap glowing plots to harvest!</div>
+      <div id="plot-grid"></div>
+    </div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div id="end-screen" class="screen hidden">
+    <h1 id="end-title">Harvest Report</h1>
+    <div id="stars">
+      <span class="star" id="star1">★</span>
+      <span class="star" id="star2">★</span>
+      <span class="star" id="star3">★</span>
+    </div>
+    <div id="end-stats"></div>
+    <button class="btn" id="btn-restart">Play Again</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ====================== AUDIO ======================
+  let audioCtx = null, muted = false, bgInterval = null;
+  function getCtx() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+  function beep(freq, duration, type='sine', volume=0.15) {
+    if (muted) return;
+    const ctx = getCtx();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = type; osc.frequency.value = freq; gain.gain.value = volume;
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+    osc.stop(ctx.currentTime + duration);
+  }
+  const sounds = {
+    harvest: () => { beep(880,0.12,'triangle',0.16); setTimeout(()=>beep(1320,0.12,'triangle',0.1),70); },
+    resolve: () => beep(659,0.1,'sine',0.15),
+    wrong: () => beep(180,0.3,'sawtooth',0.2),
+    purchase: () => { beep(523,0.08,'square',0.12); setTimeout(()=>beep(659,0.1,'square',0.12),70); setTimeout(()=>beep(784,0.12,'square',0.12),140); },
+    cantAfford: () => beep(200,0.15,'square',0.12),
+    start: () => { beep(523,0.12); setTimeout(()=>beep(659,0.12),120); setTimeout(()=>beep(784,0.18),240); },
+    gameOver: () => { beep(300,0.25,'sawtooth',0.2); setTimeout(()=>beep(200,0.4,'sawtooth',0.2),200); },
+    win: () => [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.2,'triangle',0.15), i*150)),
+  };
+  function startBgMusic() {
+    stopBgMusic();
+    // gentle pastoral loop
+    const melody = [294, 349, 392, 349, 330, 294, 262, 294];
+    let i = 0;
+    bgInterval = setInterval(() => { if (!muted) beep(melody[i % melody.length], 0.45, 'sine', 0.035); i++; }, 600);
+  }
+  function stopBgMusic() { if (bgInterval) clearInterval(bgInterval); bgInterval = null; }
+  document.getElementById('sound-toggle').addEventListener('click', () => {
+    muted = !muted;
+    document.getElementById('sound-toggle').textContent = muted ? '🔇' : '🔊';
+  });
+
+  // ====================== CONSTANTS ======================
+  const GAME_TIME = 90;
+  const STARTING_LIVES = 3;
+  const NUM_PLOTS = 6;
+  const BASE_GROWTH_PER_SEC = 8;   // % per second
+  const BASE_COINS_PER_HARVEST = 8;
+  const ATTENTION_TIME = 5; // seconds to respond
+  const ATTENTION_PENALTY = 35; // % progress lost if ignored
+
+  const CROPS = ["🌽","🍅","🥕","🍓","🌻","🥬"];
+  const FACTS = [
+    "Plants use sunlight, water, and CO2 to make food through photosynthesis.",
+    "Roots absorb water and nutrients from the soil to help plants grow.",
+    "Fertilizer adds nutrients like nitrogen that plants need to grow faster.",
+    "Pests can damage crops by eating leaves, stems, or fruit.",
+    "Crop rotation helps keep soil healthy for future harvests.",
+    "Pollinators like bees help many crops produce fruit and seeds.",
+  ];
+
+  const UPGRADES = {
+    fertilizer: { baseCost: 20, growth: 1.5,  level: 0 },
+    sprinkler:  { baseCost: 25, growth: 1.55, level: 0 },
+    seeds:      { baseCost: 25, growth: 1.5,  level: 0 },
+  };
+
+  // ====================== STATE ======================
+  let coins = 0, lives = STARTING_LIVES, timeLeft = GAME_TIME;
+  let growthPerSec = BASE_GROWTH_PER_SEC, coinsPerHarvest = BASE_COINS_PER_HARVEST, autoResolveChance = 0;
+  let gameActive = false;
+  let timerInterval = null, growthInterval = null, attentionTimeoutId = null;
+  let plots = [];
+
+  // ====================== DOM ======================
+  const startScreen = document.getElementById('start-screen');
+  const instructionsScreen = document.getElementById('instructions-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const endScreen = document.getElementById('end-screen');
+  const plotGrid = document.getElementById('plot-grid');
+  const hudCoins = document.getElementById('hud-coins');
+  const hudLives = document.getElementById('hud-lives');
+  const hudTime = document.getElementById('hud-time');
+  const timerBar = document.getElementById('timer-bar');
+  const feedbackText = document.getElementById('feedback-text');
+  const factText = document.getElementById('fact-text');
+  const overview = document.getElementById('overview');
+
+  function showScreen(el) {
+    [startScreen, instructionsScreen, gameScreen, endScreen].forEach(s => s.classList.add('hidden'));
+    el.classList.remove('hidden');
+  }
+
+  // ====================== NAVIGATION ======================
+  document.getElementById('btn-instructions').addEventListener('click', () => showScreen(instructionsScreen));
+  document.getElementById('btn-back').addEventListener('click', () => showScreen(startScreen));
+  document.getElementById('btn-start').addEventListener('click', () => { sounds.start(); startGame(); });
+  document.getElementById('btn-restart').addEventListener('click', () => { sounds.start(); startGame(); });
+
+  // ====================== UPGRADES ======================
+  function upgradeCost(key) {
+    const u = UPGRADES[key];
+    return Math.round(u.baseCost * Math.pow(u.growth, u.level));
+  }
+  function buyUpgrade(key) {
+    if (!gameActive) return;
+    const cost = upgradeCost(key);
+    if (coins < cost) {
+      sounds.cantAfford();
+      feedbackText.textContent = "Not enough coins!";
+      feedbackText.style.color = '#ff5e62';
+      return;
+    }
+    coins -= cost;
+    UPGRADES[key].level++;
+    if (key === 'fertilizer') growthPerSec += 2;
+    if (key === 'sprinkler') autoResolveChance = Math.min(0.9, autoResolveChance + 0.25);
+    if (key === 'seeds') coinsPerHarvest += 3;
+    sounds.purchase();
+    feedbackText.textContent = "Upgrade purchased! Farm improving 🚜";
+    feedbackText.style.color = '#9be564';
+    updateOverview();
+    updateHud();
+  }
+  document.getElementById('upgrade-fertilizer').addEventListener('click', () => buyUpgrade('fertilizer'));
+  document.getElementById('upgrade-sprinkler').addEventListener('click', () => buyUpgrade('sprinkler'));
+  document.getElementById('upgrade-seeds').addEventListener('click', () => buyUpgrade('seeds'));
+
+  function updateOverview() {
+    let html = '🌳🌳🌳';
+    for (let i = 0; i < Math.min(UPGRADES.fertilizer.level, 6); i++) html += '🌿';
+    for (let i = 0; i < Math.min(UPGRADES.sprinkler.level, 6); i++) html += '💧';
+    for (let i = 0; i < Math.min(UPGRADES.seeds.level, 6); i++) html += '🌟';
+    overview.textContent = html;
+  }
+
+  // ====================== GAME SETUP ======================
+  function startGame() {
+    coins = 0; lives = STARTING_LIVES; timeLeft = GAME_TIME;
+    growthPerSec = BASE_GROWTH_PER_SEC; coinsPerHarvest = BASE_COINS_PER_HARVEST; autoResolveChance = 0;
+    UPGRADES.fertilizer.level = 0; UPGRADES.sprinkler.level = 0; UPGRADES.seeds.level = 0;
+    feedbackText.textContent = ''; factText.textContent = '';
+    updateOverview();
+
+    plots = [];
+    for (let i = 0; i < NUM_PLOTS; i++) {
+      plots.push({
+        id: i,
+        crop: CROPS[i % CROPS.length],
+        progress: Math.random() * 20, // slight stagger
+        attention: null // {type:'water'|'pest', timeLeft, maxTime}
+      });
+    }
+
+    renderPlots();
+    updateHud();
+    showScreen(gameScreen);
+
+    showIntroBanner("Welcome to your Farm!", "Tap glowing plots to harvest. Respond to alerts quickly!", () => {
+      gameActive = true;
+      startBgMusic();
+      startTimer();
+      startGrowthLoop();
+      scheduleAttention(3000);
+    });
+  }
+
+  function showIntroBanner(title, subtitle, callback) {
+    const banner = document.createElement('div');
+    banner.id = 'intro-banner';
+    banner.innerHTML = `<div>${title}</div><span>${subtitle}</span>`;
+    document.getElementById('game-container').appendChild(banner);
+    setTimeout(() => { banner.remove(); callback(); }, 1300);
+  }
+
+  function updateHud() {
+    hudCoins.textContent = Math.floor(coins);
+    hudLives.textContent = '❤️'.repeat(Math.max(lives,0)) + '🖤'.repeat(Math.max(STARTING_LIVES-lives,0));
+    hudTime.textContent = Math.max(0, Math.ceil(timeLeft));
+    ['fertilizer','sprinkler','seeds'].forEach(key => {
+      const cost = upgradeCost(key);
+      document.getElementById('lvl-' + key).textContent = 'Lv ' + UPGRADES[key].level;
+      document.getElementById('cost-' + key).textContent = cost + ' coins';
+      document.getElementById('upgrade-' + key).classList.toggle('disabled', coins < cost);
+    });
+  }
+
+  // ====================== TIMER ======================
+  function startTimer() {
+    clearInterval(timerInterval);
+    timerBar.style.transition = 'none';
+    timerBar.style.width = '100%';
+    requestAnimationFrame(() => {
+      timerBar.style.transition = `width ${GAME_TIME}s linear`;
+      timerBar.style.width = '0%';
+    });
+    timerInterval = setInterval(() => {
+      timeLeft -= 1;
+      if (timeLeft <= 0) { timeLeft = 0; updateHud(); endGame(); return; }
+      updateHud();
+    }, 1000);
+  }
+
+  // ====================== GROWTH LOOP ======================
+  function startGrowthLoop() {
+    clearInterval(growthInterval);
+    const TICK = 200; // ms
+    growthInterval = setInterval(() => {
+      if (!gameActive) return;
+      plots.forEach(plot => {
+        if (plot.attention) {
+          plot.attention.timeLeft -= TICK / 1000;
+          if (plot.attention.timeLeft <= 0) {
+            // Ignored alert
+            plot.progress = Math.max(0, plot.progress - ATTENTION_PENALTY);
+            plot.attention = null;
+            lives -= 1;
+            sounds.wrong();
+            flashPlot(plot.id, 'shake');
+            feedbackText.textContent = "A plot was neglected! Growth set back.";
+            feedbackText.style.color = '#ff5e62';
+            updateHud();
+            if (lives <= 0) { endGame(); }
+          }
+        } else if (plot.progress < 100) {
+          plot.progress = Math.min(100, plot.progress + growthPerSec * (TICK/1000));
+        }
+      });
+      renderPlots();
+    }, TICK);
+  }
+
+  // ====================== ATTENTION EVENTS ======================
+  function scheduleAttention(delay) {
+    clearTimeout(attentionTimeoutId);
+    attentionTimeoutId = setTimeout(() => {
+      if (!gameActive) return;
+      triggerAttention();
+      const nextDelay = 2500 + Math.random() * 2500;
+      scheduleAttention(nextDelay);
+    }, delay);
+  }
+
+  function triggerAttention() {
+    const eligible = plots.filter(p => !p.attention && p.progress < 95);
+    if (eligible.length === 0) return;
+    const plot = eligible[Math.floor(Math.random() * eligible.length)];
+    const type = Math.random() < 0.5 ? 'water' : 'pest';
+
+    // Sprinkler auto-resolve chance
+    if (Math.random() < autoResolveChance) {
+      feedbackText.textContent = "💧 Sprinkler handled it automatically!";
+      feedbackText.style.color = '#9be564';
+      return;
+    }
+
+    plot.attention = { type, timeLeft: ATTENTION_TIME, maxTime: ATTENTION_TIME };
+    renderPlots();
+  }
+
+  // ====================== RENDERING ======================
+  function renderPlots() {
+    plotGrid.innerHTML = '';
+    plots.forEach(plot => {
+      const div = document.createElement('div');
+      div.className = 'plot';
+      div.dataset.id = plot.id;
+      if (plot.progress >= 100) div.classList.add('ready');
+
+      let html = `<span class="crop-emoji">${plot.crop}</span>`;
+      if (plot.progress >= 100) {
+        html += `<div class="ready-label">✨ Ready!</div>`;
+      }
+      html += `<div class="progress-bg"><div class="progress-bar" style="width:${plot.progress}%"></div></div>`;
+
+      if (plot.attention) {
+        const pct = plot.attention.timeLeft / plot.attention.maxTime;
+        const deg = pct * 360;
+        html += `<div class="attention-ring-bg"></div>`;
+        html += `<div class="attention-ring" style="transform: rotate(${deg}deg);"></div>`;
+        html += `<div class="attention-badge">${plot.attention.type === 'water' ? '💧' : '🐛'}</div>`;
+      }
+
+      div.innerHTML = html;
+      div.addEventListener('click', () => handlePlotClick(plot.id));
+      plotGrid.appendChild(div);
+    });
+  }
+
+  // ====================== INTERACTION ======================
+  function handlePlotClick(id) {
+    if (!gameActive) return;
+    const plot = plots.find(p => p.id === id);
+    if (!plot) return;
+
+    if (plot.attention) {
+      // Resolve alert
+      plot.attention = null;
+      sounds.resolve();
+      feedbackText.textContent = "Alert resolved! 👍";
+      feedbackText.style.color = '#9be564';
+      renderPlots();
+      return;
+    }
+
+    if (plot.progress >= 100) {
+      // Harvest
+      coins += coinsPerHarvest;
+      plot.progress = 0;
+      sounds.harvest();
+      showFloat(plot.id, '+' + coinsPerHarvest, '#ffe066');
+      factText.textContent = '🌱 ' + FACTS[Math.floor(Math.random() * FACTS.length)];
+      flashPlot(plot.id, 'harvested');
+      updateHud();
+    }
+  }
+
+  function flashPlot(id, className) {
+    const el = plotGrid.children[id];
+    if (!el) return;
+    el.classList.add(className);
+    setTimeout(() => el.classList.remove(className), 300);
+  }
+
+  function showFloat(id, text, color) {
+    const el = plotGrid.children[id];
+    if (!el) return;
+    const fb = document.createElement('div');
+    fb.className = 'float-text';
+    fb.textContent = text;
+    fb.style.color = color;
+    el.appendChild(fb);
+    setTimeout(() => fb.remove(), 900);
+  }
+
+  // ====================== END GAME ======================
+  function endGame() {
+    if (!gameActive) return;
+    gameActive = false;
+    clearInterval(timerInterval);
+    clearInterval(growthInterval);
+    clearTimeout(attentionTimeoutId);
+    stopBgMusic();
+
+    const finalCoins = Math.floor(coins);
+    let starCount = 0;
+    if (finalCoins >= 500) starCount = 3;
+    else if (finalCoins >= 250) starCount = 2;
+    else if (finalCoins > 0) starCount = 1;
+
+    document.getElementById('end-title').textContent =
+      lives > 0 ? '🌾 Harvest Report: Day Complete!' : '💥 Farm Overrun (Out of Lives)!';
+    document.getElementById('end-stats').innerHTML =
+      `Final Coins: <b>${finalCoins}</b><br>
+       Fertilizer Lv: <b>${UPGRADES.fertilizer.level}</b> | Sprinkler Lv: <b>${UPGRADES.sprinkler.level}</b> | Seeds Lv: <b>${UPGRADES.seeds.level}</b><br>
+       Lives Remaining: <b>${Math.max(lives,0)}</b>`;
+
+    for (let i=1;i<=3;i++) document.getElementById('star'+i).classList.remove('filled');
+    if (lives > 0 && starCount >= 2) sounds.win(); else sounds.gameOver();
+    showScreen(endScreen);
+    for (let i=1;i<=starCount;i++) {
+      setTimeout(() => {
+        document.getElementById('star'+i).classList.add('filled');
+        beep(700 + i*150, 0.2, 'triangle', 0.15);
+      }, i*400);
+    }
+  }
+
+})();
+</script>
+</body>
+</html>

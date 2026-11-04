@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Periodic Table Explorer: Cosmic Sorter</title>
+<style>
+  :root{
+    --bg-deep:#070a1f;
+    --bg-panel:#0e1338;
+    --cyan:#4ce0d2;
+    --purple:#b95cf4;
+    --amber:#ffb454;
+    --green:#5cf49a;
+    --red:#ff5470;
+    --ink:#eaf0ff;
+    --dim:#8892c0;
+    --font-display: 'Segoe UI', 'Trebuchet MS', Verdana, sans-serif;
+    --font-data: 'Courier New', Consolas, monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--bg-deep); color:var(--ink);
+    font-family:var(--font-display);
+    overflow:hidden; touch-action:none;
+    user-select:none;
+  }
+  #app{position:relative; width:100vw; height:100vh; overflow:hidden;}
+  canvas#stars{position:absolute; inset:0; width:100%; height:100%; z-index:0;}
+
+  .screen{
+    position:absolute; inset:0; z-index:5;
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:16px; gap:14px;
+  }
+  .screen.active{display:flex;}
+
+  /* ---------- shared bits ---------- */
+  .glow-btn{
+    font-family:var(--font-display); font-weight:700; font-size:1.05rem;
+    padding:14px 34px; border-radius:40px; border:none; cursor:pointer;
+    color:#03101a; background:linear-gradient(135deg,var(--cyan),var(--purple));
+    box-shadow:0 0 18px rgba(76,224,210,.55), 0 6px 14px rgba(0,0,0,.4);
+    transition:transform .15s ease, box-shadow .15s ease;
+    letter-spacing:.5px;
+  }
+  .glow-btn:active{transform:scale(.94);}
+  .ghost-btn{
+    font-family:var(--font-display); font-weight:600; font-size:.95rem;
+    padding:10px 22px; border-radius:30px; cursor:pointer;
+    color:var(--ink); background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.25);
+  }
+  .title-glow{
+    font-size:clamp(1.8rem,7vw,3rem); font-weight:800; letter-spacing:1px;
+    background:linear-gradient(90deg,var(--cyan),var(--purple),var(--amber));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 30px rgba(185,92,244,.35);
+    animation:floaty 4s ease-in-out infinite;
+  }
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .subtitle{color:var(--dim); font-size:clamp(.85rem,3vw,1.05rem); max-width:480px;}
+
+  .ship-badge{
+    width:74px; height:74px; position:relative; margin-bottom:4px;
+  }
+  .ship-badge svg{width:100%; height:100%; filter:drop-shadow(0 0 12px var(--cyan));}
+
+  /* ---------- start screen ---------- */
+  #startScreen .panel{
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+    border-radius:24px; padding:28px 22px; backdrop-filter:blur(6px);
+    max-width:440px; width:100%;
+    display:flex; flex-direction:column; align-items:center; gap:16px;
+  }
+  .mini-elements{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:6px 0;}
+  .mini-el{
+    width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-data); font-weight:700; font-size:.85rem;
+    background:rgba(76,224,210,.12); border:1px solid var(--cyan); color:var(--cyan);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  .mini-el:nth-child(2n){border-color:var(--purple); color:var(--purple); background:rgba(185,92,244,.12); animation-delay:.4s;}
+  .mini-el:nth-child(3n){border-color:var(--amber); color:var(--amber); background:rgba(255,180,84,.12); animation-delay:.8s;}
+  @keyframes pulse{0%,100%{transform:scale(1); opacity:.85}50%{transform:scale(1.12); opacity:1}}
+
+  /* ---------- instructions (slides) ---------- */
+  #instructionsScreen{justify-content:space-between; padding:22px 14px;}
+  .slides-wrap{
+    width:100%; max-width:480px; flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; min-height:0;
+  }
+  .slide{
+    display:none; width:100%; flex-direction:column; align-items:center; gap:14px;
+    animation:slideIn .35s ease;
+  }
+  .slide.active{display:flex;}
+  @keyframes slideIn{from{opacity:0; transform:translateX(24px)} to{opacity:1; transform:translateX(0)}}
+  .slide-art{
+    width:min(78vw,300px); height:min(46vw,190px);
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.1);
+    border-radius:18px; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .slide-caption{font-size:.95rem; color:var(--ink); font-weight:600; max-width:320px;}
+  .slide-sub{font-size:.8rem; color:var(--dim); max-width:320px; margin-top:-8px;}
+  .dots{display:flex; gap:8px; margin-top:10px;}
+  .dot{width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.25);}
+  .dot.on{background:var(--cyan); box-shadow:0 0 8px var(--cyan);}
+  .nav-row{display:flex; gap:14px; align-items:center; justify-content:center; width:100%; max-width:480px;}
+
+  /* ---------- game screen ---------- */
+  #gameScreen{padding:0; justify-content:flex-start;}
+  #hud{
+    width:100%; display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; gap:8px; font-family:var(--font-data);
+    background:linear-gradient(180deg, rgba(7,10,31,.9), transparent);
+    z-index:20; flex-shrink:0;
+  }
+  .hud-chip{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+    border-radius:12px; padding:6px 10px; min-width:56px;
+  }
+  .hud-label{font-size:.58rem; letter-spacing:1px; color:var(--dim); text-transform:uppercase;}
+  .hud-value{font-size:1.3rem; font-weight:900; color:var(--cyan); text-shadow:0 0 8px rgba(76,224,210,.5);}
+  #livesRow{display:flex; gap:3px; font-size:1.35rem;}
+  #timerBarWrap{
+    position:relative; width:100%; height:6px; background:rgba(255,255,255,.08); flex-shrink:0;
+  }
+  #timerBar{height:100%; width:100%; background:linear-gradient(90deg,var(--green),var(--amber),var(--red)); transition:width .2s linear;}
+
+  #track{
+    position:relative; flex:1; width:100%; min-height:0;
+    background:radial-gradient(circle at 50% 0%, #131a4a 0%, #070a1f 70%);
+    overflow:hidden;
+  }
+
+  /* incoming element card ("holding bay") */
+  #holdingBay{
+    position:absolute; top:6%; left:50%; z-index:12;
+  }
+  .challenge-card{
+    position:relative;
+    width:clamp(118px,32vw,168px); min-height:clamp(118px,32vw,168px);
+    transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    border-radius:20px; padding:10px 8px; text-align:center;
+    font-family:var(--font-data); font-weight:700;
+    box-shadow:0 0 26px currentColor, inset 0 0 14px rgba(255,255,255,.06);
+    animation:hoverBob 2.6s ease-in-out infinite;
+  }
+  @keyframes hoverBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
+  .challenge-card.key-z{background:rgba(76,224,210,.18); border:3px solid var(--cyan); color:var(--cyan);}
+  .challenge-card.key-g{background:rgba(255,180,84,.18); border:3px solid var(--amber); color:var(--amber);}
+  .cc-tag{font-size:.55rem; letter-spacing:1px; opacity:.9; font-weight:800;}
+  .cc-val{font-size:clamp(1.8rem,7vw,2.6rem); font-weight:900; color:var(--ink); text-shadow:0 0 10px currentColor; line-height:1;}
+  .cc-sym{font-size:clamp(1rem,3.4vw,1.3rem); font-weight:800;}
+  .cc-name{font-size:clamp(.5rem,2vw,.62rem); color:var(--dim); font-weight:700; max-width:90%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .challenge-card.shake{animation:shakeCard .4s ease, hoverBob 2.6s ease-in-out infinite;}
+  @keyframes shakeCard{0%,100%{transform:translateX(-50%)}20%{transform:translate(-65%,0)}40%{transform:translate(-35%,0)}60%{transform:translate(-60%,0)}80%{transform:translate(-40%,0)}}
+
+  /* the growing sorted line the player builds */
+  #sortLine{position:absolute; left:0; right:0; top:60%; height:80px; --tile-scale:1;}
+  #gapMarker{
+    position:absolute; top:-8px; height:calc(100% + 16px);
+    background:rgba(255,255,255,.06);
+    border-left:2px dashed rgba(234,240,255,.4); border-right:2px dashed rgba(234,240,255,.4);
+    border-radius:10px; transition:left .15s ease, width .15s ease; z-index:1;
+  }
+  #gapMarker.hot{
+    background:rgba(92,244,154,.2); border-color:var(--green);
+    box-shadow:0 0 22px rgba(92,244,154,.6) inset;
+  }
+  .chainLink{
+    position:absolute; top:50%; height:3px; transform:translateY(-50%);
+    background:linear-gradient(90deg, currentColor 0%, rgba(255,255,255,.2) 50%, currentColor 100%);
+    background-size:200% 100%; animation:chainFlow 2.2s linear infinite;
+    border-radius:2px; z-index:2; opacity:.5;
+  }
+  @keyframes chainFlow{from{background-position:0% 0;}to{background-position:200% 0;}}
+
+  .dockedPod{
+    position:absolute; top:0;
+    width:calc(74px * var(--tile-scale,1)); height:calc(74px * var(--tile-scale,1));
+    transform:translate(-50%,0); transition:left .45s ease, width .3s ease, height .3s ease;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    border-radius:12px; font-family:var(--font-data); font-weight:700; z-index:5;
+    box-shadow:0 0 12px currentColor;
+    background:rgba(76,224,210,.16); border:2px solid var(--cyan); color:var(--cyan);
+    animation:tilePulse 2.6s ease-in-out infinite;
+  }
+  @keyframes tilePulse{0%,100%{box-shadow:0 0 10px currentColor;}50%{box-shadow:0 0 20px currentColor;}}
+  .dockedPod.key-g{background:rgba(255,180,84,.16); border-color:var(--amber); color:var(--amber);}
+  .dockedPod.anchor{border-color:var(--purple); background:rgba(185,92,244,.18); color:var(--purple); box-shadow:0 0 14px var(--purple);}
+  .dockedPod.neighbor{box-shadow:0 0 22px var(--ink); border-color:var(--ink);}
+  .dockedPod .dp-val{font-size:calc(1.05rem * var(--tile-scale,1)); font-weight:900; color:var(--ink); position:relative; z-index:2;}
+  .dockedPod .dp-sym{font-size:calc(.65rem * var(--tile-scale,1)); font-weight:700; opacity:.9; position:relative; z-index:2;}
+  .dockedPod .dp-lock{position:absolute; top:-9px; right:-6px; font-size:calc(.7rem * var(--tile-scale,1)); z-index:3;}
+  .dockedPod .dp-hint{
+    position:absolute; top:50%; transform:translateY(-50%); font-size:1.1rem; font-weight:900;
+    opacity:0; transition:opacity .15s ease; pointer-events:none; color:var(--green);
+    text-shadow:0 0 8px currentColor; z-index:4;
+  }
+  .dockedPod .dp-hint.show{opacity:1;}
+  @keyframes dockArrive{0%{transform:translate(-50%,0) scale(.2); opacity:0}60%{transform:translate(-50%,0) scale(1.3); opacity:1}100%{transform:translate(-50%,0) scale(1); opacity:1}}
+  .dockedPod.arrive{animation:dockArrive .5s ease;}
+
+  /* orbiting electrons — purely decorative "atom" flourish */
+  .electron-orbit{position:absolute; inset:-7px; border-radius:50%; pointer-events:none; z-index:1;}
+  .electron-orbit::before{
+    content:''; position:absolute; top:-2.5px; left:50%; width:5px; height:5px; border-radius:50%;
+    background:var(--ink); box-shadow:0 0 6px var(--ink); transform:translateX(-50%);
+  }
+  .electron-orbit.e1{animation:spinOrbit 2.6s linear infinite;}
+  .electron-orbit.e2{inset:-13px; animation:spinOrbit 3.8s linear infinite reverse;}
+  @keyframes spinOrbit{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  .challenge-card .electron-orbit.e1{inset:-12px; animation-duration:2.2s;}
+  .challenge-card .electron-orbit.e2{inset:-22px; animation-duration:3.4s;}
+  .challenge-card .electron-orbit::before{width:7px; height:7px; top:-3.5px;}
+
+
+  #ship{
+    position:absolute; top:34%; width:54px; height:40px; transform:translate(-50%,0);
+    z-index:15; filter:drop-shadow(0 0 10px var(--cyan));
+    transition:filter .15s ease;
+  }
+  #ship svg{width:100%; height:100%;}
+  #shipBeam{
+    position:absolute; top:44%; width:2px; height:16%; transform:translateX(-50%);
+    background:repeating-linear-gradient(180deg, var(--cyan) 0 6px, transparent 6px 12px);
+    opacity:.5; z-index:4;
+  }
+
+  #dockBtn{flex-shrink:0; margin:10px auto 16px;}
+  #dockBtn:disabled{opacity:.4; cursor:default; box-shadow:none;}
+
+  .particle{
+    position:absolute; width:6px; height:6px; border-radius:50%; background:var(--green);
+    z-index:20; pointer-events:none;
+  }
+
+  #roundOverlay{
+    position:absolute; inset:0; z-index:30; display:none;
+    align-items:center; justify-content:center; flex-direction:column; gap:10px;
+    background:rgba(7,10,31,.72); backdrop-filter:blur(3px);
+  }
+  #roundOverlay.show{display:flex;}
+  #roundOverlay h2{margin:0; font-size:1.6rem; color:var(--cyan); text-shadow:0 0 14px var(--cyan);}
+  #roundOverlay p{margin:0; color:var(--dim); font-size:.9rem;}
+
+  #muteBtn{
+    position:absolute; top:8px; right:10px; z-index:25;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2);
+    border-radius:50%; width:34px; height:34px; color:var(--ink); font-size:1rem;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  #hintBtn{
+    position:absolute; top:8px; left:10px; z-index:25;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2);
+    border-radius:20px; height:34px; padding:0 12px; color:var(--ink); font-size:.8rem; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; gap:5px; justify-content:center;
+  }
+  #hintBtn.on{background:rgba(92,244,154,.18); border-color:var(--green); color:var(--green);}
+
+  /* ---------- end screen ---------- */
+  #endScreen .stars{display:flex; gap:10px; font-size:2.6rem; margin:6px 0; width:100%; justify-content:center; align-items:center;}
+  #endScreen .star{color:rgba(255,255,255,.15); text-shadow:none; transition:all .4s ease; line-height:1;}
+  #endScreen .star.filled{color:var(--amber); text-shadow:0 0 18px var(--amber);}
+  #endStats{display:flex; gap:18px; flex-wrap:wrap; justify-content:center; margin:8px 0;}
+  #endStats div{background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:10px 16px;}
+  #endStats .n{font-family:var(--font-data); font-size:1.3rem; color:var(--cyan); font-weight:800;}
+  #endStats .l{font-size:.65rem; color:var(--dim); text-transform:uppercase; letter-spacing:1px;}
+
+  @media (max-width:420px){
+    .dockedPod{width:46px; height:46px;}
+    .challenge-card{width:106px; min-height:106px;}
+    #ship{width:46px; height:34px;}
+    .hud-chip{min-width:44px; padding:5px 7px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+<canvas id="stars"></canvas>
+
+<!-- START SCREEN -->
+<div class="screen active" id="startScreen">
+  <div class="panel">
+    <div class="ship-badge">
+      <svg viewBox="0 0 100 100"><polygon points="50,10 70,70 50,58 30,70" fill="#4ce0d2"/><circle cx="50" cy="40" r="8" fill="#0e1338" stroke="#b95cf4" stroke-width="3"/></svg>
+    </div>
+    <div class="title-glow">Periodic Table Explorer</div>
+    <div class="subtitle">Cosmic Sorter &mdash; read each incoming element, then slide into the correct gap to build a perfectly ordered line by atomic number or group!</div>
+    <div class="mini-elements">
+      <div class="mini-el">H</div><div class="mini-el">He</div><div class="mini-el">Li</div>
+      <div class="mini-el">C</div><div class="mini-el">O</div><div class="mini-el">Ne</div>
+    </div>
+    <button class="glow-btn" id="btnPlay">▶ Launch Mission</button>
+    <button class="ghost-btn" id="btnHow">How to Play</button>
+  </div>
+</div>
+
+<!-- INSTRUCTIONS SCREEN -->
+<div class="screen" id="instructionsScreen">
+  <div class="title-glow" style="font-size:1.4rem;">How to Play</div>
+  <div class="slides-wrap" id="slidesWrap">
+
+    <div class="slide active" data-i="0">
+      <div class="slide-art">
+        <svg viewBox="0 0 300 190" width="90%" height="90%">
+          <rect x="0" y="0" width="300" height="190" fill="none"/>
+          <circle cx="90" cy="40" r="3" fill="#4ce0d2"/><circle cx="220" cy="60" r="2" fill="#fff"/><circle cx="260" cy="20" r="2" fill="#b95cf4"/>
+          <rect x="40" y="150" width="220" height="4" fill="#4ce0d2" opacity=".4"/>
+          <polygon points="150,150 165,178 150,170 135,178" fill="#4ce0d2"/>
+          <path d="M60 160 L60 100" stroke="#b95cf4" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+          <path d="M240 160 L240 100" stroke="#b95cf4" stroke-width="3" fill="none"/>
+          <polygon points="60,95 54,108 66,108" fill="#b95cf4"/>
+          <polygon points="240,95 234,108 246,108" fill="#b95cf4"/>
+        </svg>
+      </div>
+      <div class="slide-caption">Drag or swipe anywhere on the track to slide your insertion cursor left and right.</div>
+      <div class="slide-sub">On desktop you can also use the ← → arrow keys, and Space/Enter to DOCK.</div>
+    </div>
+
+    <div class="slide" data-i="1">
+      <div class="slide-art">
+        <svg viewBox="0 0 300 190" width="90%" height="90%">
+          <rect x="120" y="14" width="60" height="52" rx="12" fill="rgba(76,224,210,.2)" stroke="#4ce0d2" stroke-width="2"/>
+          <text x="150" y="46" fill="#4ce0d2" font-size="22" text-anchor="middle" font-weight="bold">14</text>
+          <line x1="30" y1="150" x2="270" y2="150" stroke="#4ce0d2" stroke-width="2" opacity=".5"/>
+          <circle cx="50" cy="150" r="16" fill="rgba(185,92,244,.2)" stroke="#b95cf4" stroke-width="2"/>
+          <text x="50" y="155" fill="#b95cf4" font-size="12" text-anchor="middle" font-weight="bold">1</text>
+          <circle cx="250" cy="150" r="16" fill="rgba(185,92,244,.2)" stroke="#b95cf4" stroke-width="2"/>
+          <text x="250" y="155" fill="#b95cf4" font-size="12" text-anchor="middle" font-weight="bold">20</text>
+          <rect x="70" y="134" width="160" height="32" rx="8" fill="none" stroke="#eaf0ff" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <polygon points="150,100 138,122 162,122" fill="#4ce0d2"/>
+        </svg>
+      </div>
+      <div class="slide-caption">Read the number on the incoming element, then slide your cursor to the gap where it belongs in your line.</div>
+      <div class="slide-sub">Compare it to the elements already docked &mdash; bigger goes further right, smaller goes further left.</div>
+    </div>
+
+    <div class="slide" data-i="2">
+      <div class="slide-art">
+        <svg viewBox="0 0 300 190" width="90%" height="90%">
+          <rect x="60" y="60" width="50" height="46" rx="10" fill="rgba(76,224,210,.16)" stroke="#4ce0d2" stroke-width="2"/>
+          <text x="85" y="90" fill="#4ce0d2" font-size="14" text-anchor="middle" font-weight="bold">1</text>
+          <rect x="130" y="60" width="50" height="46" rx="10" fill="rgba(255,180,84,.22)" stroke="#ffb454" stroke-width="3"/>
+          <text x="155" y="90" fill="#ffb454" font-size="16" text-anchor="middle" font-weight="bold">?</text>
+          <rect x="200" y="60" width="50" height="46" rx="10" fill="rgba(76,224,210,.16)" stroke="#4ce0d2" stroke-width="2"/>
+          <text x="225" y="90" fill="#4ce0d2" font-size="14" text-anchor="middle" font-weight="bold">18</text>
+          <polygon points="155,130 143,112 167,112" fill="#ffb454"/>
+          <rect x="60" y="150" width="190" height="10" rx="5" fill="rgba(255,255,255,.08)"/>
+          <rect x="60" y="150" width="60" height="10" rx="5" fill="#5cf49a"/>
+        </svg>
+      </div>
+      <div class="slide-caption">Tap DOCK once you're lined up. Some rounds sort by GROUP number instead of atomic number &mdash; same idea either way.</div>
+      <div class="slide-sub">Not sure which is bigger? Watch for the ← → arrows on the tiles next to your cursor, and the gap glows green when you're in the right spot.</div>
+    </div>
+
+    <div class="slide" data-i="3">
+      <div class="slide-art">
+        <svg viewBox="0 0 300 190" width="90%" height="90%">
+          <text x="30" y="40" fill="#eaf0ff" font-size="13" font-weight="bold">Rnd 3/10</text>
+          <text x="150" y="40" fill="#4ce0d2" font-size="13" font-weight="bold" text-anchor="middle">Score 420</text>
+          <text x="270" y="40" fill="#ff5470" font-size="13" text-anchor="end">♥ ♥ ♡</text>
+          <rect x="30" y="55" width="240" height="8" rx="4" fill="rgba(255,255,255,.1)"/>
+          <rect x="30" y="55" width="150" height="8" rx="4" fill="#5cf49a"/>
+          <text x="150" y="100" fill="#8892c0" font-size="12" text-anchor="middle">Wrong gap = lose a life &amp; the line resets for that round.</text>
+          <text x="150" y="130" fill="#8892c0" font-size="12" text-anchor="middle">Finish 10 rounds to win the mission!</text>
+        </svg>
+      </div>
+      <div class="slide-caption">Watch your Round, Score, Lives and Timer at the top of the screen.</div>
+      <div class="slide-sub">Your final stars are based on your score, not your remaining lives.</div>
+    </div>
+
+  </div>
+  <div class="dots" id="dots"></div>
+  <div class="nav-row">
+    <button class="ghost-btn" id="btnPrevSlide">◀ Back</button>
+    <button class="glow-btn" id="btnStartFromSlides">🚀 Start Mission</button>
+    <button class="ghost-btn" id="btnNextSlide">Next ▶</button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div class="screen" id="gameScreen">
+  <button id="muteBtn">🔊</button>
+  <button id="hintBtn" class="on">💡 Hints</button>
+  <div id="hud">
+    <div class="hud-chip"><div class="hud-label">Round</div><div class="hud-value" id="hudRound">1/10</div></div>
+    <div class="hud-chip"><div class="hud-label">Score</div><div class="hud-value" id="hudScore">0</div></div>
+    <div class="hud-chip"><div class="hud-label">Lives</div><div class="hud-value" id="livesRow">❤️❤️❤️</div></div>
+    <div class="hud-chip"><div class="hud-label">Time</div><div class="hud-value" id="hudTimer">30</div></div>
+  </div>
+  <div id="timerBarWrap"><div id="timerBar"></div></div>
+  <div id="track">
+    <div id="holdingBay"><div class="challenge-card key-z" id="challengeCard"><span class="electron-orbit e1"></span><span class="electron-orbit e2"></span></div></div>
+    <div id="shipBeam"></div>
+    <div id="ship">
+      <svg viewBox="0 0 100 74"><polygon points="50,4 82,66 50,50 18,66" fill="#4ce0d2" stroke="#0e1338" stroke-width="2"/><circle cx="50" cy="34" r="9" fill="#0e1338" stroke="#b95cf4" stroke-width="3"/><polygon points="42,60 50,74 58,60" fill="#ffb454" opacity="0.9"/></svg>
+    </div>
+    <div id="sortLine"><div id="gapMarker"></div></div>
+    <div id="roundOverlay"><h2 id="roundOverlayTitle">Round 1</h2><p id="roundOverlaySub">Get ready!</p></div>
+  </div>
+  <button class="glow-btn" id="dockBtn">🔒 DOCK ELEMENT</button>
+</div>
+
+<!-- END SCREEN -->
+<div class="screen" id="endScreen">
+  <div class="panel" style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:24px; padding:30px 22px; max-width:440px; width:100%; display:flex; flex-direction:column; align-items:center; gap:14px;">
+    <div class="title-glow" id="endTitle" style="font-size:1.7rem;">Mission Complete</div>
+    <div class="stars" id="endStars"><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+    <div id="endStats">
+      <div><div class="n" id="endScore">0</div><div class="l">Score</div></div>
+      <div><div class="n" id="endRounds">0/10</div><div class="l">Rounds</div></div>
+      <div><div class="n" id="endLives">0</div><div class="l">Lives Left</div></div>
+    </div>
+    <button class="glow-btn" id="btnReplay">🔁 Play Again</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ STARFIELD BACKGROUND ============ */
+const starsCanvas = document.getElementById('stars');
+const sctx = starsCanvas.getContext('2d');
+let stars = [];
+function resizeCanvas(){
+  starsCanvas.width = window.innerWidth;
+  starsCanvas.height = window.innerHeight;
+  stars = [];
+  const count = Math.floor((window.innerWidth*window.innerHeight)/6000);
+  for(let i=0;i<count;i++){
+    stars.push({
+      x:Math.random()*starsCanvas.width, y:Math.random()*starsCanvas.height,
+      r:Math.random()*1.6+0.3, s:Math.random()*0.4+0.08, tw:Math.random()*Math.PI*2
+    });
+  }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+function drawStars(t){
+  sctx.clearRect(0,0,starsCanvas.width,starsCanvas.height);
+  sctx.fillStyle = '#070a1f';
+  sctx.fillRect(0,0,starsCanvas.width,starsCanvas.height);
+  for(const st of stars){
+    st.y += st.s;
+    if(st.y > starsCanvas.height) st.y = 0;
+    const flick = 0.5 + 0.5*Math.sin(t/600 + st.tw);
+    sctx.globalAlpha = 0.3 + flick*0.7;
+    sctx.fillStyle = '#dfe8ff';
+    sctx.beginPath();
+    sctx.arc(st.x, st.y, st.r, 0, Math.PI*2);
+    sctx.fill();
+  }
+  sctx.globalAlpha = 1;
+  requestAnimationFrame(drawStars);
+}
+requestAnimationFrame(drawStars);
+
+/* ============ AUDIO (WebAudio, no external files) ============ */
+const Audio_ = {
+  ctx:null, muted:false, musicNodes:[], musicTimer:null,
+  init(){ if(!this.ctx){ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); } },
+  tone(freq, dur, type, vol, delay){
+    if(this.muted) return;
+    this.init();
+    const t0 = this.ctx.currentTime + (delay||0);
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type||'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(vol||0.15, t0+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    osc.connect(gain); gain.connect(this.ctx.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  },
+  catch(){ this.tone(660,0.12,'triangle',0.18,0); this.tone(880,0.14,'triangle',0.14,0.06); },
+  miss(){ this.tone(180,0.25,'sawtooth',0.16,0); },
+  life(){ this.tone(140,0.35,'square',0.15,0); this.tone(100,0.35,'square',0.12,0.1); },
+  roundWin(){ [523,659,784,1046].forEach((f,i)=>this.tone(f,0.18,'triangle',0.16,i*0.1)); },
+  gameWin(){ [523,659,784,1046,1318].forEach((f,i)=>this.tone(f,0.28,'triangle',0.17,i*0.12)); },
+  gameOver(){ [400,340,280,220].forEach((f,i)=>this.tone(f,0.3,'sawtooth',0.14,i*0.15)); },
+  tick(){ this.tone(1000,0.05,'square',0.05,0); },
+  startMusic(){
+    if(this.muted) return;
+    this.init();
+    this.stopMusic();
+    const notes = [261.6,329.6,392.0,329.6,392.0,466.2,392.0,329.6];
+    let i = 0;
+    const play = ()=>{
+      if(this.muted) return;
+      this.tone(notes[i%notes.length], 0.5, 'sine', 0.045, 0);
+      i++;
+      this.musicTimer = setTimeout(play, 420);
+    };
+    play();
+  },
+  stopMusic(){ if(this.musicTimer){ clearTimeout(this.musicTimer); this.musicTimer=null; } },
+  toggleMute(){
+    this.muted = !this.muted;
+    if(this.muted) this.stopMusic(); else this.startMusic();
+    return this.muted;
+  }
+};
+
+/* ============ ELEMENT DATA ============ */
+const ELEMENTS = [
+  {s:'H',n:'Hydrogen',z:1,g:1},{s:'He',n:'Helium',z:2,g:18},
+  {s:'Li',n:'Lithium',z:3,g:1},{s:'Be',n:'Beryllium',z:4,g:2},
+  {s:'B',n:'Boron',z:5,g:13},{s:'C',n:'Carbon',z:6,g:14},
+  {s:'N',n:'Nitrogen',z:7,g:15},{s:'O',n:'Oxygen',z:8,g:16},
+  {s:'F',n:'Fluorine',z:9,g:17},{s:'Ne',n:'Neon',z:10,g:18},
+  {s:'Na',n:'Sodium',z:11,g:1},{s:'Mg',n:'Magnesium',z:12,g:2},
+  {s:'Al',n:'Aluminium',z:13,g:13},{s:'Si',n:'Silicon',z:14,g:14},
+  {s:'P',n:'Phosphorus',z:15,g:15},{s:'S',n:'Sulfur',z:16,g:16},
+  {s:'Cl',n:'Chlorine',z:17,g:17},{s:'Ar',n:'Argon',z:18,g:18},
+  {s:'K',n:'Potassium',z:19,g:1},{s:'Ca',n:'Calcium',z:20,g:2},
+  {s:'Ga',n:'Gallium',z:31,g:13},{s:'Ge',n:'Germanium',z:32,g:14},
+  {s:'As',n:'Arsenic',z:33,g:15},{s:'Se',n:'Selenium',z:34,g:16},
+  {s:'Br',n:'Bromine',z:35,g:17},{s:'Kr',n:'Krypton',z:36,g:18},
+  {s:'Rb',n:'Rubidium',z:37,g:1},{s:'Sr',n:'Strontium',z:38,g:2},
+  {s:'In',n:'Indium',z:49,g:13},{s:'Sn',n:'Tin',z:50,g:14},
+  {s:'Sb',n:'Antimony',z:51,g:15},{s:'Te',n:'Tellurium',z:52,g:16},
+  {s:'I',n:'Iodine',z:53,g:17},{s:'Xe',n:'Xenon',z:54,g:18}
+];
+const ALL_GROUPS = [1,2,13,14,15,16,17,18];
+
+/* ============ ROUND CONFIG (progressive difficulty) ============ */
+function poolByMaxZ(maxZ){ return ELEMENTS.filter(e=>e.z<=maxZ); }
+function poolByGroups(groups, maxZ){ return ELEMENTS.filter(e=>groups.includes(e.g) && (!maxZ||e.z<=maxZ)); }
+
+const ROUNDS = [
+  {key:'z', required:4, timeLimit:50, pool:poolByMaxZ(10)},
+  {key:'z', required:5, timeLimit:46, pool:poolByMaxZ(18)},
+  {key:'g', required:4, timeLimit:42, pool:poolByGroups([1,2,17,18],20)},
+  {key:'g', required:5, timeLimit:40, pool:poolByGroups(ALL_GROUPS,20)},
+  {key:'z', required:5, timeLimit:38, pool:poolByMaxZ(36)},
+  {key:'g', required:6, timeLimit:36, pool:poolByGroups(ALL_GROUPS,36)},
+  {key:'z', required:6, timeLimit:34, pool:poolByMaxZ(54)},
+  {key:'g', required:7, timeLimit:32, pool:poolByGroups(ALL_GROUPS,54)},
+  {key:'z', required:7, timeLimit:30, pool:ELEMENTS.slice()},
+  {key:'z', required:8, timeLimit:30, pool:ELEMENTS.slice(), reverse:true}
+];
+// theoretical max score for star calc
+function pointsFor(roundIdx, combo){ return 100 + roundIdx*20 + Math.min(combo,5)*10; }
+let THEORY_MAX = 0;
+ROUNDS.forEach((r,ri)=>{ for(let c=1;c<=r.required;c++) THEORY_MAX += pointsFor(ri, c); });
+
+/* ============ SORTING HELPERS ============ */
+function valueOf(el, key){ return key==='z' ? el.z : el.g; }
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+function pickAnchors(pool, key){
+  let lowEl = pool[0], highEl = pool[0];
+  pool.forEach(e=>{
+    if(valueOf(e,key) < valueOf(lowEl,key)) lowEl = e;
+    if(valueOf(e,key) > valueOf(highEl,key)) highEl = e;
+  });
+  const remaining = pool.filter(e=> e!==lowEl && e!==highEl);
+  return {lowEl, highEl, remaining};
+}
+
+/* ============ GAME STATE ============ */
+const state = {
+  round:0, score:0, lives:3, roundsCompleted:0,
+  roundProgress:0, combo:0, timeRemaining:0,
+  shipPercent:50, timerInterval:null,
+  lockedLine:[], remainingPool:[], currentChallenge:null,
+  running:false, hintsOn:true
+};
+
+/* ============ DOM refs ============ */
+const screens = {
+  start: document.getElementById('startScreen'),
+  instr: document.getElementById('instructionsScreen'),
+  game: document.getElementById('gameScreen'),
+  end: document.getElementById('endScreen')
+};
+function showScreen(name){
+  Object.values(screens).forEach(s=>s.classList.remove('active'));
+  screens[name].classList.add('active');
+}
+const track = document.getElementById('track');
+const ship = document.getElementById('ship');
+const holdingBay = document.getElementById('holdingBay');
+const challengeCard = document.getElementById('challengeCard');
+const sortLine = document.getElementById('sortLine');
+const gapMarker = document.getElementById('gapMarker');
+const dockBtn = document.getElementById('dockBtn');
+const hudRound = document.getElementById('hudRound');
+const hudScore = document.getElementById('hudScore');
+const hudTimer = document.getElementById('hudTimer');
+const livesRow = document.getElementById('livesRow');
+const timerBar = document.getElementById('timerBar');
+const roundOverlay = document.getElementById('roundOverlay');
+const roundOverlayTitle = document.getElementById('roundOverlayTitle');
+const roundOverlaySub = document.getElementById('roundOverlaySub');
+const muteBtn = document.getElementById('muteBtn');
+const hintBtn = document.getElementById('hintBtn');
+
+/* ============ SHIP MOVEMENT ============ */
+function setShipPercent(p){
+  state.shipPercent = Math.max(5, Math.min(95, p));
+  ship.style.left = state.shipPercent + '%';
+  document.getElementById('shipBeam').style.left = state.shipPercent + '%';
+  updateGapHighlight();
+}
+setShipPercent(50);
+
+function pointerToPercent(clientX){
+  const rect = track.getBoundingClientRect();
+  return ((clientX - rect.left) / rect.width) * 100;
+}
+let dragging = false;
+track.addEventListener('pointerdown', e=>{
+  if(e.target.closest('#holdingBay')) return; // reading the incoming element shouldn't move your cursor
+  dragging=true; setShipPercent(pointerToPercent(e.clientX)); Audio_.init();
+});
+track.addEventListener('pointermove', e=>{ if(dragging) setShipPercent(pointerToPercent(e.clientX)); });
+window.addEventListener('pointerup', ()=>{ dragging=false; });
+track.addEventListener('pointercancel', ()=>{ dragging=false; });
+
+const keys = {left:false, right:false};
+window.addEventListener('keydown', e=>{
+  if(e.key==='ArrowLeft') keys.left=true;
+  if(e.key==='ArrowRight') keys.right=true;
+});
+window.addEventListener('keyup', e=>{
+  if(e.key==='ArrowLeft') keys.left=false;
+  if(e.key==='ArrowRight') keys.right=false;
+});
+function keyLoop(){
+  if(screens.game.classList.contains('active')){
+    if(keys.left) setShipPercent(state.shipPercent - 1.6);
+    if(keys.right) setShipPercent(state.shipPercent + 1.6);
+  }
+  requestAnimationFrame(keyLoop);
+}
+requestAnimationFrame(keyLoop);
+
+/* ============ HUD UPDATE ============ */
+function updateHUD(){
+  hudRound.textContent = (state.round+1) + '/10';
+  hudScore.textContent = state.score;
+  hudTimer.textContent = Math.ceil(state.timeRemaining);
+  let hearts = '';
+  for(let i=0;i<3;i++) hearts += i < state.lives ? '❤️' : '🖤';
+  livesRow.textContent = hearts;
+}
+
+/* ============ SORTED LINE RENDERING ============ */
+function clearLineDom(){
+  sortLine.querySelectorAll('.dockedPod, .chainLink').forEach(n=>n.remove());
+}
+function computeTileScale(N){
+  // Keep tiles from ever visually overlapping, no matter how long the line gets.
+  const trackWidthPx = track.getBoundingClientRect().width || 360;
+  const spacingPercent = N > 1 ? 82/(N-1) : 82;
+  const spacingPx = trackWidthPx * spacingPercent/100;
+  let scale = (spacingPx*0.76)/74;
+  return Math.max(0.4, Math.min(1, scale));
+}
+function renderLockedLine(instant){
+  const round = ROUNDS[state.round];
+  const N = state.lockedLine.length;
+  const margin = 9, usable = 82;
+  sortLine.style.setProperty('--tile-scale', computeTileScale(N));
+  state.lockedLine.forEach((item,i)=>{
+    const pct = N===1 ? 50 : margin + i*(usable/(N-1));
+    item.leftPercent = pct;
+    if(!item.dom){
+      const d = document.createElement('div');
+      d.className = 'dockedPod' + (round.key==='g' ? ' key-g' : '') + (item.isAnchor ? ' anchor' : '') + (instant ? '' : ' arrive');
+      d.innerHTML = '<span class="electron-orbit e1"></span>'+
+        '<div class="dp-val">'+item.value+'</div><div class="dp-sym">'+item.el.s+'</div>'+
+        '<div class="dp-hint"></div>' + (item.isAnchor ? '<div class="dp-lock">🔒</div>' : '');
+      d.style.left = pct + '%';
+      sortLine.appendChild(d);
+      item.dom = d;
+      if(!instant){
+        // let the entrance pop play once, then hand back to the normal idle pulse
+        setTimeout(()=> d.classList.remove('arrive'), 520);
+      }
+    } else {
+      item.dom.style.left = pct + '%';
+    }
+  });
+  renderChainLinks(round);
+  updateGapHighlight();
+}
+function renderChainLinks(round){
+  sortLine.querySelectorAll('.chainLink').forEach(n=>n.remove());
+  const color = round.key==='g' ? 'var(--amber)' : 'var(--cyan)';
+  for(let i=0;i<state.lockedLine.length-1;i++){
+    const a = state.lockedLine[i].leftPercent, b = state.lockedLine[i+1].leftPercent;
+    const link = document.createElement('div');
+    link.className = 'chainLink';
+    link.style.left = a + '%';
+    link.style.width = (b-a) + '%';
+    link.style.color = color;
+    sortLine.insertBefore(link, sortLine.firstChild);
+  }
+}
+function currentGapIndex(){
+  const positions = state.lockedLine.map(p=>p.leftPercent);
+  for(let i=0;i<positions.length-1;i++){
+    const mid = (positions[i]+positions[i+1])/2;
+    if(state.shipPercent < mid) return i;
+  }
+  return positions.length-2;
+}
+function computeValidGapRange(round, V){
+  let loK=0, hiK=0;
+  state.lockedLine.forEach(item=>{
+    const before = round.reverse ? item.value > V : item.value < V;
+    const beforeOrEq = round.reverse ? item.value >= V : item.value <= V;
+    if(before) loK++;
+    if(beforeOrEq) hiK++;
+  });
+  return {min: loK-1, max: hiK-1};
+}
+function updateGapHighlight(){
+  if(!state.lockedLine || state.lockedLine.length<2) return;
+  const gi = currentGapIndex();
+  const round = ROUNDS[state.round];
+  const challenge = state.currentChallenge;
+
+  state.lockedLine.forEach((item,i)=>{
+    if(!item.dom) return;
+    const isNeighbor = (i===gi || i===gi+1);
+    item.dom.classList.toggle('neighbor', isNeighbor);
+    const hintEl = item.dom.querySelector('.dp-hint');
+    if(hintEl){
+      if(isNeighbor && state.hintsOn && challenge){
+        const shouldBeRight = round.reverse ? item.value > challenge.value : item.value < challenge.value;
+        hintEl.textContent = shouldBeRight ? '→' : '←';
+        hintEl.style.left = shouldBeRight ? 'auto' : 'calc(-1 * clamp(10px,4vw,16px))';
+        hintEl.style.right = shouldBeRight ? 'calc(-1 * clamp(10px,4vw,16px))' : 'auto';
+        hintEl.classList.add('show');
+      } else {
+        hintEl.classList.remove('show');
+      }
+    }
+  });
+
+  gapMarker.style.left = state.lockedLine[gi].leftPercent + '%';
+  gapMarker.style.width = (state.lockedLine[gi+1].leftPercent - state.lockedLine[gi].leftPercent) + '%';
+  if(state.hintsOn && challenge && round){
+    const range = computeValidGapRange(round, challenge.value);
+    gapMarker.classList.toggle('hot', gi >= range.min && gi <= range.max);
+  } else {
+    gapMarker.classList.remove('hot');
+  }
+}
+
+/* ============ CHALLENGE CARD (incoming element) ============ */
+function drawNextChallenge(round){
+  if(state.remainingPool.length === 0){
+    const usedSyms = new Set(state.lockedLine.map(p=>p.el.s));
+    state.remainingPool = shuffle(round.pool.filter(e=>!usedSyms.has(e.s)));
+  }
+  const el = state.remainingPool.pop();
+  state.currentChallenge = {el, value: valueOf(el, round.key)};
+  renderChallengeCard(round);
+  updateGapHighlight();
+}
+function renderChallengeCard(round){
+  const c = state.currentChallenge;
+  const tag = round.key==='z' ? 'ATOMIC # (Z)' : 'GROUP #';
+  challengeCard.className = 'challenge-card key-' + round.key;
+  challengeCard.innerHTML =
+    '<span class="electron-orbit e1"></span><span class="electron-orbit e2"></span>'+
+    '<div class="cc-tag">'+tag+'</div>'+
+    '<div class="cc-val">'+c.value+'</div>'+
+    '<div class="cc-sym">'+c.el.s+'</div>'+
+    '<div class="cc-name">'+c.el.n+'</div>';
+}
+function shakeChallengeCard(){
+  challengeCard.classList.remove('shake');
+  void challengeCard.offsetWidth;
+  challengeCard.classList.add('shake');
+}
+
+/* ============ PARTICLES ============ */
+function burst(xPercent, yPercent, color){
+  const rect = track.getBoundingClientRect();
+  const x = rect.width * xPercent/100;
+  const y = rect.height * yPercent/100;
+  for(let i=0;i<10;i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.background = color;
+    p.style.left = x+'px'; p.style.top = y+'px';
+    track.appendChild(p);
+    const ang = Math.random()*Math.PI*2;
+    const dist = 20 + Math.random()*40;
+    const dx = Math.cos(ang)*dist, dy = Math.sin(ang)*dist;
+    p.animate([
+      {transform:'translate(0,0)', opacity:1},
+      {transform:`translate(${dx}px,${dy}px)`, opacity:0}
+    ], {duration:500, easing:'ease-out'});
+    setTimeout(()=>p.remove(), 520);
+  }
+}
+
+
+/* ============ ROUND FLOW ============ */
+function clearAllTimers(){
+  if(state.timerInterval){ clearInterval(state.timerInterval); state.timerInterval=null; }
+}
+
+function startRound(idx){
+  clearAllTimers();
+  state.round = idx;
+  state.roundProgress = 0;
+  state.combo = 0;
+  const round = ROUNDS[idx];
+  state.timeRemaining = round.timeLimit;
+
+  const {lowEl, highEl, remaining} = pickAnchors(round.pool, round.key);
+  state.remainingPool = shuffle(remaining.slice());
+  const lowItem = {el:lowEl, value:valueOf(lowEl,round.key), isAnchor:true};
+  const highItem = {el:highEl, value:valueOf(highEl,round.key), isAnchor:true};
+  state.lockedLine = round.reverse ? [highItem, lowItem] : [lowItem, highItem];
+
+  clearLineDom();
+  renderLockedLine(true);
+  setShipPercent(50);
+  drawNextChallenge(round);
+
+  updateHUD();
+  timerBar.style.width = '100%';
+  showRoundOverlay('Round ' + (idx+1), roundLabel(round), 1400, ()=>{
+    state.running = true;
+    startTimer();
+  });
+}
+function roundLabel(round){
+  const keyName = round.key==='z' ? 'ATOMIC NUMBER' : 'GROUP';
+  const dir = round.reverse ? 'highest → lowest' : 'lowest → highest';
+  return 'Sort by ' + keyName + ' (' + dir + '). Arrows & glow show the way!';
+}
+function showRoundOverlay(title, sub, autoHideMs, cb){
+  roundOverlayTitle.textContent = title;
+  roundOverlaySub.textContent = sub;
+  roundOverlay.classList.add('show');
+  setTimeout(()=>{
+    roundOverlay.classList.remove('show');
+    if(cb) cb();
+  }, autoHideMs);
+}
+
+function startTimer(){
+  state.timerInterval = setInterval(()=>{
+    state.timeRemaining -= 0.2;
+    if(state.timeRemaining <= 0){
+      state.timeRemaining = 0;
+      updateHUD();
+      timerBar.style.width = '0%';
+      onTimeUp();
+      return;
+    }
+    const round = ROUNDS[state.round];
+    timerBar.style.width = (state.timeRemaining/round.timeLimit*100)+'%';
+    updateHUD();
+  }, 200);
+}
+
+function onTimeUp(){
+  clearAllTimers();
+  Audio_.miss();
+  loseLifeAndRetry("Time's up!");
+}
+
+/* ============ DOCK ATTEMPT (core mechanic) ============ */
+function attemptDock(){
+  if(!state.running || !state.currentChallenge) return;
+  const round = ROUNDS[state.round];
+  const V = state.currentChallenge.value;
+  const gi = currentGapIndex();
+  const range = computeValidGapRange(round, V);
+  const success = gi >= range.min && gi <= range.max;
+
+  if(success){
+    Audio_.catch();
+    state.combo++;
+    state.score += pointsFor(state.round, state.combo);
+    state.roundProgress++;
+    updateHUD();
+    burst(50, 10, round.key==='z' ? '#4ce0d2' : '#ffb454');
+
+    const newItem = {el: state.currentChallenge.el, value: V, isAnchor:false};
+    state.lockedLine.splice(range.min + 1, 0, newItem);
+    renderLockedLine(false);
+    state.currentChallenge = null;
+
+    if(state.roundProgress >= round.required){
+      finishRound();
+    } else {
+      setTimeout(()=> drawNextChallenge(round), 380);
+    }
+  } else {
+    Audio_.miss();
+    shakeChallengeCard();
+    loseLifeAndRetry('Not quite the right spot!');
+  }
+}
+
+function loseLifeAndRetry(reason){
+  clearAllTimers();
+  state.running = false;
+  state.lives--;
+  updateHUD();
+  if(state.lives <= 0){
+    Audio_.gameOver();
+    setTimeout(()=>endGame(false), 500);
+    return;
+  }
+  Audio_.life();
+  showRoundOverlay('Life Lost 💔', reason + ' Retry Round ' + (state.round+1) + '...', 1300, ()=>{
+    startRound(state.round);
+  });
+}
+
+function finishRound(){
+  clearAllTimers();
+  state.running = false;
+  state.roundsCompleted++;
+  Audio_.roundWin();
+  const nextIdx = state.round + 1;
+  if(nextIdx >= ROUNDS.length){
+    showRoundOverlay('Round Complete! 🎉', 'All 10 rounds finished!', 1200, ()=>{
+      endGame(true);
+    });
+  } else {
+    showRoundOverlay('Round Complete! 🎉', 'Advancing to Round ' + (nextIdx+1) + '...', 1200, ()=>{
+      startRound(nextIdx);
+    });
+  }
+}
+
+/* ============ END GAME / STARS ============ */
+function computeStars(score){
+  const pct = score / THEORY_MAX;
+  if(pct >= 0.8) return 3;
+  if(pct >= 0.5) return 2;
+  if(pct >= 0.22) return 1;
+  return 0;
+}
+function endGame(won){
+  clearAllTimers();
+  state.running = false;
+  Audio_.stopMusic();
+  if(won) Audio_.gameWin();
+
+  const stars = computeStars(state.score);
+  document.getElementById('endTitle').textContent = won ? 'Mission Complete! 🚀' : 'Mission Ended';
+  const starEls = document.querySelectorAll('#endStars .star');
+  starEls.forEach((el,i)=> el.classList.toggle('filled', i < stars));
+  document.getElementById('endScore').textContent = state.score;
+  document.getElementById('endRounds').textContent = state.roundsCompleted + '/10';
+  document.getElementById('endLives').textContent = state.lives;
+  showScreen('end');
+}
+
+/* ============ GAME INIT / RESET ============ */
+function beginGame(){
+  state.score = 0;
+  state.lives = 3;
+  state.roundsCompleted = 0;
+  state.round = 0;
+  updateHUD();
+  showScreen('game');
+  Audio_.startMusic();
+  startRound(0);
+}
+
+/* ============ SCREEN NAV ============ */
+document.getElementById('btnPlay').addEventListener('click', ()=>{ Audio_.init(); beginGame(); });
+document.getElementById('btnHow').addEventListener('click', ()=>{ showScreen('instr'); goToSlide(0); });
+document.getElementById('btnStartFromSlides').addEventListener('click', ()=>{ Audio_.init(); beginGame(); });
+document.getElementById('btnReplay').addEventListener('click', ()=>{ showScreen('start'); });
+dockBtn.addEventListener('click', ()=>{ Audio_.init(); attemptDock(); });
+window.addEventListener('keydown', e=>{
+  if((e.key===' ' || e.key==='Enter') && screens.game.classList.contains('active')){
+    e.preventDefault();
+    attemptDock();
+  }
+});
+muteBtn.addEventListener('click', ()=>{
+  const m = Audio_.toggleMute();
+  muteBtn.textContent = m ? '🔇' : '🔊';
+});
+hintBtn.addEventListener('click', ()=>{
+  state.hintsOn = !state.hintsOn;
+  hintBtn.classList.toggle('on', state.hintsOn);
+  hintBtn.textContent = state.hintsOn ? '💡 Hints' : '🌑 Hints';
+  updateGapHighlight();
+});
+
+/* ============ INSTRUCTION SLIDES ============ */
+const slideEls = Array.from(document.querySelectorAll('.slide'));
+const dotsWrap = document.getElementById('dots');
+slideEls.forEach((s,i)=>{
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' on':'');
+  dotsWrap.appendChild(d);
+});
+let currentSlide = 0;
+function goToSlide(i){
+  currentSlide = (i+slideEls.length)%slideEls.length;
+  slideEls.forEach((s,idx)=> s.classList.toggle('active', idx===currentSlide));
+  Array.from(dotsWrap.children).forEach((d,idx)=> d.classList.toggle('on', idx===currentSlide));
+}
+document.getElementById('btnNextSlide').addEventListener('click', ()=> goToSlide(currentSlide+1));
+document.getElementById('btnPrevSlide').addEventListener('click', ()=> goToSlide(currentSlide-1));
+
+/* ============ SAFETY: pause timers if tab hidden ============ */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ Audio_.stopMusic(); }
+  else if(state.running && screens.game.classList.contains('active')){ Audio_.startMusic(); }
+});
+
+})();
+</script>
+</body>
+</html>

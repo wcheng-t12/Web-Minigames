@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Lab Balance ⚖️</title>
+<style>
+:root {
+  --bg:        #0A0F1E;
+  --surface:   #131929;
+  --card:      #1A2236;
+  --border:    rgba(100,180,255,0.15);
+  --blue:      #4A9EFF;
+  --blue-glow: rgba(74,158,255,0.3);
+  --teal:      #00D4AA;
+  --teal-glow: rgba(0,212,170,0.3);
+  --gold:      #FFD166;
+  --gold-glow: rgba(255,209,102,0.3);
+  --red:       #FF5C5C;
+  --red-glow:  rgba(255,92,92,0.3);
+  --purple:    #B57BFF;
+  --text:      #E8F0FF;
+  --muted:     rgba(232,240,255,0.45);
+}
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; user-select:none; }
+
+/* BG */
+#bgc { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+/* SCREENS */
+.scr { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10; padding:16px; transition:opacity .3s,transform .3s; }
+.scr.off { opacity:0; pointer-events:none; transform:scale(.97); }
+
+/* ── START ── */
+#sStart { background:radial-gradient(ellipse 80% 55% at 50% 30%, rgba(74,158,255,.1) 0%, transparent 70%), var(--bg); }
+.s-icon { font-size:clamp(60px,13vw,90px); animation:bob 3s ease-in-out infinite; filter:drop-shadow(0 0 24px var(--blue)); margin-bottom:4px; }
+@keyframes bob { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
+.s-title { font-size:clamp(30px,7.5vw,54px); font-weight:900; letter-spacing:-2px; text-align:center; line-height:1.05; margin-bottom:6px;
+  background:linear-gradient(135deg,var(--blue),var(--teal)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.s-sub { font-size:clamp(10px,2.5vw,13px); letter-spacing:4px; text-transform:uppercase; color:var(--muted); margin-bottom:32px; text-align:center; }
+.btn { border:none; border-radius:50px; cursor:pointer; font-weight:800; letter-spacing:.5px; font-size:clamp(14px,3.5vw,17px); transition:transform .15s,box-shadow .15s; }
+.btn:active { transform:scale(.94); }
+.btn-main { background:linear-gradient(135deg,var(--blue),var(--teal)); color:#fff; padding:15px 44px; min-width:210px; box-shadow:0 0 28px var(--blue-glow); margin-bottom:11px; }
+.btn-main:hover { box-shadow:0 0 44px rgba(74,158,255,.55); transform:translateY(-2px); }
+.btn-out { background:transparent; color:var(--blue); border:2px solid var(--border); padding:12px 36px; min-width:210px; }
+.btn-out:hover { background:rgba(74,158,255,.08); border-color:var(--blue); }
+
+/* ── HOW TO PLAY ── */
+#sHow { background:var(--bg); }
+.slide-wrap { width:100%; max-width:480px; }
+.slide { display:none; flex-direction:column; align-items:center; text-align:center; }
+.slide.on { display:flex; }
+.sl-art { width:clamp(140px,46vw,200px); height:clamp(140px,46vw,200px); margin-bottom:14px; }
+.sl-h { font-size:clamp(17px,4.5vw,22px); font-weight:800; color:var(--blue); margin-bottom:8px; }
+.sl-p { font-size:clamp(12px,3vw,14px); color:rgba(232,240,255,.82); line-height:1.7; max-width:360px; margin-bottom:12px; }
+.sl-p b { color:var(--gold); } .sl-p .g { color:var(--teal); } .sl-p .r { color:var(--red); }
+.dots { display:flex; gap:8px; margin-bottom:12px; }
+.dot { width:9px; height:9px; border-radius:50%; background:var(--border); cursor:pointer; transition:background .25s,transform .25s; }
+.dot.on { background:var(--blue); transform:scale(1.35); }
+.sl-nav { display:flex; gap:10px; }
+.sl-btn { padding:10px 24px; border-radius:50px; border:2px solid var(--border); background:rgba(74,158,255,.07); color:var(--text); font-size:14px; font-weight:700; cursor:pointer; transition:all .2s; }
+.sl-btn.go { background:var(--blue); color:#fff; border-color:var(--blue); }
+.sl-btn:hover { opacity:.85; }
+
+/* ── HUD ── */
+#hud { position:fixed; top:0; left:0; right:0; height:52px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 14px; z-index:20; background:rgba(10,15,30,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); }
+#hud.off { display:none; }
+.hc { display:flex; flex-direction:column; align-items:center; min-width:52px; }
+.hl { font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:1px; }
+.hv { font-size:clamp(15px,4vw,20px); font-weight:900; line-height:1; }
+.hv-t { color:var(--gold); }
+.hv-t.hot { color:var(--red); animation:blink .4s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.lrow { display:flex; gap:3px; }
+.lf { font-size:clamp(14px,3.5vw,18px); transition:all .3s; }
+.lf.gone { opacity:.18; filter:grayscale(1); }
+
+/* ── GAME SCREEN ── */
+#sGame { padding-top:56px; justify-content:flex-start; overflow-y:auto; background:transparent; }
+.lab { width:100%; max-width:500px; display:flex; flex-direction:column; gap:12px; padding:10px 10px 24px; }
+
+/* Round label */
+.rlabel { text-align:center; padding:10px 16px;
+  background:linear-gradient(135deg,rgba(74,158,255,.1),rgba(0,212,170,.07));
+  border:1.5px solid var(--border); border-radius:16px; }
+.rlabel h2 { font-size:clamp(13px,3.5vw,17px); color:var(--blue); margin-bottom:3px; }
+.rlabel p  { font-size:clamp(10px,2.5vw,13px); color:var(--muted); }
+
+/* ── SCALE ── */
+.scale-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
+
+/* beam */
+.beam-row { width:100%; display:flex; align-items:flex-end; justify-content:center; height:clamp(90px,22vw,120px); position:relative; }
+.beam {
+  width:78%; height:10px; background:linear-gradient(90deg,var(--blue),var(--teal));
+  border-radius:5px; position:absolute; bottom:20px;
+  transform-origin:center bottom;
+  transition:transform .5s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 0 16px var(--blue-glow);
+}
+.beam::before { /* pivot pin */
+  content:''; position:absolute; left:50%; bottom:-24px;
+  width:6px; height:26px; background:var(--blue); border-radius:3px; transform:translateX(-50%);
+}
+.pan {
+  position:absolute; bottom:18px;
+  width:clamp(70px,18vw,95px); height:clamp(50px,13vw,66px);
+  border-radius:0 0 50% 50%;
+  border:2px solid var(--border);
+  display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+  gap:3px; padding:6px 4px 8px;
+  transition:bottom .5s cubic-bezier(.34,1.56,.64,1);
+}
+.pan.left  { left:5%; background:linear-gradient(180deg,rgba(74,158,255,.12),rgba(74,158,255,.04)); border-color:rgba(74,158,255,.3); }
+.pan.right { right:5%; background:linear-gradient(180deg,rgba(0,212,170,.1),rgba(0,212,170,.03)); border-color:rgba(0,212,170,.25); }
+.pan-sum {
+  position:absolute; font-size:clamp(18px,4.5vw,24px); font-weight:900;
+  pointer-events:none;
+}
+.pan.left  .pan-sum { bottom:-30px; color:var(--blue); }
+.pan.right .pan-sum { bottom:-30px; color:var(--teal); }
+
+/* base */
+.base { width:clamp(50px,13vw,70px); height:clamp(18px,4.5vw,26px); background:linear-gradient(180deg,rgba(74,158,255,.25),rgba(74,158,255,.1)); border-radius:6px 6px 0 0; border-top:2px solid var(--blue); }
+.stand { width:clamp(90px,22vw,120px); height:8px; background:rgba(74,158,255,.2); border-radius:4px; border-top:1px solid var(--border); }
+
+/* Chip tokens on pan */
+.chip-on-pan {
+  background:var(--card); border:1.5px solid var(--border); border-radius:8px;
+  padding:2px 6px; font-size:clamp(10px,2.5vw,13px); font-weight:800;
+  color:var(--text); line-height:1.2;
+}
+
+/* Balance indicator */
+.bal-row { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:2px; }
+.bal-msg { font-size:clamp(12px,3vw,15px); font-weight:700; transition:color .4s; }
+
+/* ── OBJECTIVE ── */
+.obj-card {
+  background:var(--card); border:1.5px solid var(--border); border-radius:16px; padding:12px 16px;
+  display:flex; align-items:center; gap:12px;
+}
+.obj-left { flex:1; }
+.obj-eyebrow { font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+.obj-eq { font-size:clamp(16px,4vw,21px); font-weight:900; color:var(--gold); line-height:1.2; }
+.obj-hint { font-size:clamp(10px,2.5vw,12px); color:var(--muted); margin-top:4px; line-height:1.5; }
+.obj-right { text-align:center; min-width:70px; }
+.obj-lbl { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+.obj-target { font-size:clamp(24px,6vw,32px); font-weight:900; color:var(--gold); }
+
+/* ── BOTTLE SHELF ── */
+.shelf-lbl { font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); padding-left:4px; margin-bottom:7px; }
+.bottles { display:flex; gap:8px; flex-wrap:wrap; }
+.bottle {
+  flex:1; min-width:clamp(58px,14vw,78px); max-width:96px;
+  background:var(--card); border:2px solid var(--border); border-radius:16px;
+  padding:8px 4px 8px; text-align:center; cursor:pointer;
+  transition:transform .15s, border-color .2s, box-shadow .2s, background .2s;
+  position:relative; display:flex; flex-direction:column; align-items:center; gap:3px;
+}
+.bottle:hover { border-color:var(--teal); background:rgba(0,212,170,.07); box-shadow:0 0 14px var(--teal-glow); }
+.bottle:active { transform:scale(.88); }
+.bottle.used { opacity:.22; pointer-events:none; }
+.bottle.bonus { border-color:rgba(181,123,255,.5); background:rgba(181,123,255,.07); }
+.bottle.bonus:hover { border-color:var(--purple); background:rgba(181,123,255,.13); box-shadow:0 0 14px rgba(181,123,255,.3); }
+.b-svg { width:clamp(36px,9vw,52px); height:clamp(48px,12vw,68px); }
+.b-val { font-size:clamp(14px,3.8vw,19px); font-weight:900; color:var(--teal); line-height:1; }
+.b-tag { font-size:9px; color:var(--muted); }
+.b-badge { position:absolute; top:4px; right:5px; font-size:9px; font-weight:700;
+  background:rgba(181,123,255,.25); color:var(--purple); border-radius:4px; padding:1px 4px; }
+
+/* right-side clear btn */
+.clear-btn {
+  width:100%; padding:11px; border-radius:12px;
+  border:2px solid var(--border); background:rgba(255,92,92,.08);
+  color:var(--red); font-size:clamp(13px,3.2vw,15px); font-weight:700;
+  cursor:pointer; transition:all .2s;
+}
+.clear-btn:hover { background:rgba(255,92,92,.16); border-color:var(--red); }
+.clear-btn:active { transform:scale(.97); }
+
+/* brew btn */
+.brew-btn {
+  width:100%; padding:16px; border-radius:16px; border:none;
+  background:linear-gradient(135deg,var(--teal),var(--blue));
+  color:#fff; font-size:clamp(15px,4vw,18px); font-weight:800; letter-spacing:.5px;
+  box-shadow:0 4px 24px var(--teal-glow); cursor:pointer; transition:all .2s;
+}
+.brew-btn:hover { box-shadow:0 4px 36px rgba(0,212,170,.55); transform:translateY(-2px); }
+.brew-btn:active { transform:scale(.97); }
+.brew-btn:disabled { opacity:.3; pointer-events:none; }
+
+/* ── ROUND OVERLAY ── */
+.rov { position:fixed; inset:0; background:rgba(10,15,30,.87); display:flex; align-items:center; justify-content:center; z-index:50; animation:fi .3s; }
+.rov.off { display:none; }
+@keyframes fi { from{opacity:0} to{opacity:1} }
+.rcard { background:var(--card); border:2px solid var(--border); border-radius:24px; padding:28px 32px; text-align:center; max-width:310px; width:92%; }
+.rcard h2 { font-size:clamp(22px,6vw,28px); margin-bottom:6px; }
+.rcard p { color:var(--muted); font-size:13px; line-height:1.65; margin-bottom:20px; }
+
+/* ── END ── */
+#sEnd { background:radial-gradient(ellipse 80% 55% at 50% 35%, rgba(0,212,170,.1) 0%, transparent 65%), var(--bg); }
+.e-icon { font-size:clamp(52px,12vw,76px); margin-bottom:6px; animation:bob 3s ease-in-out infinite; }
+.e-h { font-size:clamp(22px,5.5vw,34px); font-weight:900; text-align:center; margin-bottom:6px; }
+.e-sub { font-size:clamp(12px,3vw,14px); color:var(--muted); margin-bottom:20px; text-align:center; }
+.stars { display:flex; gap:10px; font-size:clamp(32px,9vw,50px); margin-bottom:20px; }
+.star { opacity:.15; filter:grayscale(1); transition:all .45s; }
+.star.lit { opacity:1; filter:none; animation:starPop .55s backwards; }
+@keyframes starPop { 0%{transform:scale(0) rotate(-40deg)} 75%{transform:scale(1.3)} 100%{transform:scale(1)} }
+.star:nth-child(1).lit{animation-delay:.2s} .star:nth-child(2).lit{animation-delay:.5s} .star:nth-child(3).lit{animation-delay:.8s}
+.e-stats { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:22px; }
+.e-chip { background:var(--card); border:1px solid var(--border); border-radius:50px; padding:10px 20px; min-width:96px; text-align:center; }
+.e-chip .cv { font-size:clamp(19px,5vw,26px); font-weight:900; color:var(--teal); }
+.e-chip .cl { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+
+/* TOAST */
+.toast { position:fixed; top:60px; left:50%; transform:translateX(-50%);
+  background:rgba(10,15,30,.97); border:2px solid var(--blue); border-radius:50px;
+  padding:9px 24px; font-size:clamp(12px,3vw,14px); font-weight:700;
+  z-index:100; pointer-events:none; white-space:nowrap;
+  transition:opacity .3s,transform .3s; box-shadow:0 0 22px var(--blue-glow); }
+.toast.off { opacity:0; transform:translateX(-50%) translateY(-8px); }
+.toast.ok  { border-color:var(--teal); box-shadow:0 0 22px var(--teal-glow); }
+.toast.bad { border-color:var(--red);  box-shadow:0 0 22px var(--red-glow); }
+.toast.gd  { border-color:var(--gold); box-shadow:0 0 22px var(--gold-glow); }
+
+/* PARTICLE */
+.px { position:fixed; pointer-events:none; z-index:200; animation:pf 1.1s forwards; }
+@keyframes pf { 0%{opacity:1;transform:translate(0,0) scale(1)} 100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)} }
+
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+@media(max-width:360px) { .bottles { gap:6px; } }
+</style>
+</head>
+<body>
+
+<canvas id="bgc"></canvas>
+
+<!-- ═══════ START ═══════ -->
+<div class="scr" id="sStart">
+  <div class="s-icon">⚖️</div>
+  <h1 class="s-title">Lab Balance</h1>
+  <p class="s-sub">Chemistry · Maths Game</p>
+  <button class="btn btn-main" onclick="showHow()">▶ Play Now</button>
+  <button class="btn btn-out"  onclick="showHow()">📖 How to Play</button>
+  <p style="margin-top:18px;font-size:10px;color:rgba(232,240,255,.22);letter-spacing:2px;text-transform:uppercase">Secondary School Mathematics</p>
+</div>
+
+<!-- ═══════ HOW TO PLAY ═══════ -->
+<div class="scr off" id="sHow">
+  <div class="slide-wrap">
+
+    <div class="slide on" id="sl0">
+      <svg class="sl-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs><radialGradient id="rg0" cx="50%" cy="50%"><stop offset="0%" stop-color="#4A9EFF" stop-opacity=".25"/><stop offset="100%" stop-color="#0A0F1E" stop-opacity="0"/></radialGradient></defs>
+        <circle cx="100" cy="100" r="90" fill="url(#rg0)"/>
+        <text x="100" y="118" text-anchor="middle" font-size="80">⚖️</text>
+        <circle cx="50" cy="55" r="9" fill="#4A9EFF" opacity=".7"><animate attributeName="r" values="9;13;9" dur="2s" repeatCount="indefinite"/></circle>
+        <circle cx="155" cy="62" r="7" fill="#00D4AA" opacity=".8"><animate attributeName="r" values="7;11;7" dur="1.6s" repeatCount="indefinite"/></circle>
+        <circle cx="75" cy="160" r="6" fill="#FFD166" opacity=".7"><animate attributeName="r" values="6;9;6" dur="2.2s" repeatCount="indefinite"/></circle>
+      </svg>
+      <h2 class="sl-h">Welcome to the Lab!</h2>
+      <p class="sl-p">You're a lab technician who must <b>balance the scales</b> using chemical bottles. Make both sides equal — and the experiment succeeds!</p>
+    </div>
+
+    <div class="slide" id="sl1">
+      <svg class="sl-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="200" height="200" fill="rgba(74,158,255,.04)" rx="16"/>
+        <!-- Scale balanced -->
+        <line x1="100" y1="100" x2="100" y2="130" stroke="#4A9EFF" stroke-width="4" stroke-linecap="round"/>
+        <rect x="38" y="97" width="124" height="7" rx="3" fill="#4A9EFF"/>
+        <!-- Left pan -->
+        <path d="M42,104 Q55,125 68,104" stroke="#4A9EFF" stroke-width="2.5" fill="none"/>
+        <!-- bottles on left -->
+        <rect x="47" y="93" width="18" height="14" rx="4" fill="#4A9EFF" opacity=".7"/>
+        <text x="56" y="104" text-anchor="middle" font-size="9" fill="white" font-weight="bold">12</text>
+        <!-- Right pan -->
+        <path d="M132,104 Q145,125 158,104" stroke="#00D4AA" stroke-width="2.5" fill="none"/>
+        <!-- bottles on right -->
+        <rect x="135" y="93" width="16" height="14" rx="4" fill="#00D4AA" opacity=".7"/>
+        <text x="143" y="104" text-anchor="middle" font-size="9" fill="white" font-weight="bold">7</text>
+        <rect x="152" y="93" width="14" height="14" rx="4" fill="#00D4AA" opacity=".7"/>
+        <text x="159" y="104" text-anchor="middle" font-size="9" fill="white" font-weight="bold">5</text>
+        <!-- = sign -->
+        <text x="100" y="150" text-anchor="middle" font-size="28" fill="#FFD166" font-weight="900">12 = 7 + 5</text>
+        <text x="100" y="172" text-anchor="middle" font-size="12" fill="#00D4AA">✅ Balanced!</text>
+        <circle cx="100" cy="132" r="5" fill="#4A9EFF"/>
+      </svg>
+      <h2 class="sl-h">How It Works</h2>
+      <p class="sl-p">The <b>left pan is fixed</b> — it shows a number you must match. Tap <span class="g">bottles from the shelf</span> to add them to the right pan. When your total <b>equals the left side</b>, the scale tips into balance!</p>
+    </div>
+
+    <div class="slide" id="sl2">
+      <svg class="sl-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="200" height="200" fill="rgba(0,212,170,.04)" rx="16"/>
+        <!-- Shelf of bottles -->
+        <rect x="14" y="60" width="170" height="2" fill="rgba(74,158,255,.3)" rx="1"/>
+        <!-- bottle 1 -->
+        <rect x="20" y="30" width="28" height="34" rx="7" fill="#131929" stroke="rgba(74,158,255,.4)" stroke-width="1.5"/>
+        <rect x="27" y="25" width="14" height="8" rx="3" fill="#131929" stroke="rgba(74,158,255,.4)" stroke-width="1.5"/>
+        <text x="34" y="52" text-anchor="middle" font-size="15" fill="#00D4AA" font-weight="900">2</text>
+        <!-- bottle 2 -->
+        <rect x="58" y="30" width="28" height="34" rx="7" fill="#131929" stroke="rgba(74,158,255,.4)" stroke-width="1.5"/>
+        <rect x="65" y="25" width="14" height="8" rx="3" fill="#131929" stroke="rgba(74,158,255,.4)" stroke-width="1.5"/>
+        <text x="72" y="52" text-anchor="middle" font-size="15" fill="#00D4AA" font-weight="900">5</text>
+        <!-- bottle 3 highlighted -->
+        <rect x="96" y="28" width="30" height="36" rx="7" fill="rgba(0,212,170,.2)" stroke="#00D4AA" stroke-width="2"/>
+        <rect x="103" y="23" width="16" height="8" rx="3" fill="rgba(0,212,170,.2)" stroke="#00D4AA" stroke-width="2"/>
+        <text x="111" y="50" text-anchor="middle" font-size="15" fill="#00D4AA" font-weight="900">10</text>
+        <!-- bottle 4 -->
+        <rect x="136" y="30" width="28" height="34" rx="7" fill="#131929" stroke="rgba(74,158,255,.4)" stroke-width="1.5"/>
+        <rect x="143" y="25" width="14" height="8" rx="3" fill="#131929" stroke="rgba(74,158,255,.4)" stroke-width="1.5"/>
+        <text x="150" y="52" text-anchor="middle" font-size="15" fill="#00D4AA" font-weight="900">20</text>
+        <text x="100" y="88" text-anchor="middle" font-size="11" fill="rgba(232,240,255,.5)">SHELF — tap to pour</text>
+        <!-- result sum -->
+        <rect x="40" y="115" width="120" height="36" rx="12" fill="rgba(74,158,255,.1)" stroke="rgba(74,158,255,.3)" stroke-width="1.5"/>
+        <text x="100" y="139" text-anchor="middle" font-size="16" fill="white" font-weight="900">Right pan: 2 + 5 = 7</text>
+        <text x="100" y="172" text-anchor="middle" font-size="13" fill="rgba(232,240,255,.6)">Keep adding until it matches! 👆</text>
+      </svg>
+      <h2 class="sl-h">Pick Your Bottles</h2>
+      <p class="sl-p">Bottles on the shelf have different values. <b>Tap to add</b> a bottle to the right pan. Your running total shows on the pan. <span class="r">Go over the target</span> — and you must clear and retry!</p>
+    </div>
+
+    <div class="slide" id="sl3">
+      <svg class="sl-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="200" height="200" fill="rgba(181,123,255,.04)" rx="16"/>
+        <!-- bonus bottle -->
+        <rect x="70" y="30" width="60" height="70" rx="12" fill="rgba(181,123,255,.15)" stroke="#B57BFF" stroke-width="2"/>
+        <rect x="83" y="22" width="34" height="12" rx="5" fill="rgba(181,123,255,.15)" stroke="#B57BFF" stroke-width="2"/>
+        <text x="100" y="62" text-anchor="middle" font-size="22" fill="#B57BFF" font-weight="900">×2</text>
+        <rect x="72" y="14" width="40" height="16" rx="6" fill="rgba(181,123,255,.25)"/>
+        <text x="92" y="25" text-anchor="middle" font-size="10" fill="#B57BFF" font-weight="bold">BONUS</text>
+        <!-- explanation -->
+        <rect x="20" y="120" width="160" height="30" rx="10" fill="rgba(181,123,255,.1)" stroke="rgba(181,123,255,.3)" stroke-width="1.5"/>
+        <text x="100" y="140" text-anchor="middle" font-size="13" fill="white" font-weight="bold">Doubles the next bottle!</text>
+        <!-- difficulty climb -->
+        <text x="100" y="180" text-anchor="middle" font-size="11" fill="rgba(232,240,255,.5)">Appears from round 4 onwards</text>
+        <text x="100" y="196" text-anchor="middle" font-size="11" fill="rgba(232,240,255,.5)">⚡ Teaches multiplication!</text>
+      </svg>
+      <h2 class="sl-h">Bonus Bottle: ×2</h2>
+      <p class="sl-p">From round 4, a <b style="color:#B57BFF">×2 Catalyst bottle</b> appears. Use it before another bottle to <span class="g">double that bottle's value</span>. This helps you hit targets you couldn't reach with normal bottles!</p>
+    </div>
+
+    <div class="slide" id="sl4">
+      <svg class="sl-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs><radialGradient id="rg4" cx="50%" cy="40%"><stop offset="0%" stop-color="#FFD166" stop-opacity=".2"/><stop offset="100%" stop-color="#0A0F1E" stop-opacity="0"/></radialGradient></defs>
+        <circle cx="100" cy="100" r="90" fill="url(#rg4)"/>
+        <text x="100" y="70" text-anchor="middle" font-size="40">⭐⭐⭐</text>
+        <rect x="24" y="90" width="152" height="26" rx="13" fill="rgba(0,212,170,.12)" stroke="rgba(0,212,170,.35)" stroke-width="1.5"/>
+        <text x="100" y="108" text-anchor="middle" font-size="13" fill="#00D4AA" font-weight="bold">1000+ pts = ⭐⭐⭐</text>
+        <rect x="24" y="122" width="152" height="26" rx="13" fill="rgba(255,209,102,.1)" stroke="rgba(255,209,102,.35)" stroke-width="1.5"/>
+        <text x="100" y="140" text-anchor="middle" font-size="13" fill="#FFD166" font-weight="bold">600+ pts = ⭐⭐</text>
+        <rect x="24" y="154" width="152" height="26" rx="13" fill="rgba(74,158,255,.08)" stroke="rgba(74,158,255,.3)" stroke-width="1.5"/>
+        <text x="100" y="172" text-anchor="middle" font-size="13" fill="#4A9EFF" font-weight="bold">300+ pts = ⭐</text>
+        <text x="100" y="36" text-anchor="middle" font-size="12" fill="rgba(232,240,255,.5)">10 ROUNDS · 3 SHARED LIVES</text>
+      </svg>
+      <h2 class="sl-h">Scoring & Stars</h2>
+      <p class="sl-p">Balance faster for a <b>time bonus</b>. Use fewer bottles for a <span class="g">precision bonus</span>. You have <b>3 lives</b> — a wrong answer retries the same round. Complete all 10 rounds for up to <b>3 stars!</b></p>
+    </div>
+
+  </div>
+  <div class="dots" id="howDots"></div>
+  <div class="sl-nav">
+    <button class="sl-btn" id="prevSl" onclick="mvSl(-1)">← Back</button>
+    <button class="sl-btn go" id="nextSl" onclick="mvSl(1)">Next →</button>
+  </div>
+</div>
+
+<!-- ═══════ HUD ═══════ -->
+<div id="hud" class="off">
+  <div class="hc"><div class="hl">Round</div><div class="hv" id="hv-rnd">1/10</div></div>
+  <div class="hc"><div class="hl">Score</div><div class="hv" id="hv-scr" style="color:var(--teal)">0</div></div>
+  <div class="hc"><div class="hl">Lives</div><div class="lrow" id="hv-lv"><span class="lf">🧪</span><span class="lf">🧪</span><span class="lf">🧪</span></div></div>
+  <div class="hc"><div class="hl">Time</div><div class="hv hv-t" id="hv-tm">30</div></div>
+</div>
+
+<!-- ═══════ GAME ═══════ -->
+<div class="scr off" id="sGame">
+  <div class="lab">
+
+    <!-- Round label -->
+    <div class="rlabel">
+      <h2 id="rndTitle">Round 1</h2>
+      <p id="rndDesc">Make both sides of the scale equal</p>
+    </div>
+
+    <!-- Objective -->
+    <div class="obj-card">
+      <div class="obj-left">
+        <div class="obj-eyebrow">Balance the equation</div>
+        <div class="obj-eq" id="objEq">? = __</div>
+        <div class="obj-hint" id="objHint">Add bottles to the right pan to match the left.</div>
+      </div>
+      <div class="obj-right">
+        <div class="obj-lbl">Target</div>
+        <div class="obj-target" id="objTarget">0</div>
+      </div>
+    </div>
+
+    <!-- Scale visual -->
+    <div class="scale-wrap">
+      <div class="beam-row" id="beamRow">
+        <div class="pan left" id="panL">
+          <div class="pan-sum" id="panLsum">0</div>
+        </div>
+        <div class="beam" id="beam"></div>
+        <div class="pan right" id="panR">
+          <div class="pan-sum" id="panRsum">0</div>
+        </div>
+      </div>
+      <div class="base"></div>
+      <div class="stand"></div>
+    </div>
+
+    <!-- Balance indicator -->
+    <div class="bal-row">
+      <div class="bal-msg" id="balMsg" style="color:var(--muted)">⚖️ Add bottles to the right pan</div>
+    </div>
+
+    <!-- Bottles shelf -->
+    <div>
+      <div class="shelf-lbl">🧪 Shelf — tap a bottle to pour it</div>
+      <div class="bottles" id="bottles"></div>
+    </div>
+
+    <!-- Clear & Brew -->
+    <button class="clear-btn" onclick="clearRight()">↩ Clear right pan</button>
+    <button class="brew-btn" id="brewBtn" disabled onclick="brewPotion()">⚗️ Balance Achieved — Brew!</button>
+
+  </div>
+</div>
+
+<!-- Round Overlay -->
+<div class="rov off" id="rov">
+  <div class="rcard">
+    <h2 id="rovIcon">✅</h2>
+    <h2 id="rovTitle" style="color:var(--teal);margin:6px 0">Balanced!</h2>
+    <p id="rovMsg">Perfect synthesis.</p>
+    <button class="btn btn-main" id="rovBtn" onclick="continueRound()">Continue →</button>
+  </div>
+</div>
+
+<!-- ═══════ END ═══════ -->
+<div class="scr off" id="sEnd">
+  <div class="e-icon">🏆</div>
+  <h1 class="e-h" id="eH">Lab Complete!</h1>
+  <p class="e-sub" id="eSub">All 10 experiments balanced!</p>
+  <div class="stars"><span class="star" id="es1">⭐</span><span class="star" id="es2">⭐</span><span class="star" id="es3">⭐</span></div>
+  <div class="e-stats">
+    <div class="e-chip"><div class="cv" id="eScore">0</div><div class="cl">Score</div></div>
+    <div class="e-chip"><div class="cv" id="eRound">0</div><div class="cl">Rounds</div></div>
+    <div class="e-chip"><div class="cv" id="eAcc">0%</div><div class="cl">Accuracy</div></div>
+  </div>
+  <button class="btn btn-main" onclick="restartGame()">⚖️ Play Again</button>
+</div>
+
+<div class="toast off" id="toast"></div>
+
+<script>
+/* ── AUDIO ── */
+const AC = new (window.AudioContext||window.webkitAudioContext)();
+const ua = ()=>{ if(AC.state==='suspended') AC.resume(); };
+function tone(f,t,d,v=.22,dl=0){
+  ua(); const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  o.type=t;o.frequency.value=f;
+  const s=AC.currentTime+dl;
+  g.gain.setValueAtTime(v,s);g.gain.exponentialRampToValueAtTime(.001,s+d);
+  o.start(s);o.stop(s+d);
+}
+const sfx={
+  pour: ()=>tone(550,'sine',.08,.18),
+  clear:()=>tone(330,'sine',.1,.15),
+  over: ()=>{ tone(220,'sawtooth',.18,.2); tone(180,'sawtooth',.18,.2,.14); },
+  exact:()=>{ tone(523,'sine',.12,.2); tone(659,'sine',.12,.2,.1); tone(784,'sine',.18,.2,.2); },
+  brew: ()=>[523,659,784,1047].forEach((f,i)=>tone(f,'sine',.22,.22,i*.1)),
+  wrong:()=>{ tone(250,'sawtooth',.22,.22); tone(200,'sawtooth',.22,.22,.16); },
+  tick: ()=>tone(880,'square',.04,.07),
+  star: ()=>[784,1047,1319].forEach((f,i)=>tone(f,'sine',.28,.2,i*.16)),
+};
+
+let bgmOn=false;
+function startBGM(){
+  if(bgmOn)return; bgmOn=true;
+  const m=[261,294,330,349,392,330,294,261];
+  let i=0;
+  const nxt=()=>{ if(!bgmOn)return; tone(m[i%m.length],'sine',.5,.05); i++; setTimeout(nxt,520); };
+  nxt();
+}
+
+/* ── BACKGROUND ── */
+const cv=document.getElementById('bgc'),cx=cv.getContext('2d');
+let W,H,pts=[];
+function initBG(){
+  W=cv.width=innerWidth;H=cv.height=innerHeight;
+  pts=Array.from({length:40},()=>({
+    x:Math.random()*W,y:Math.random()*H,
+    r:Math.random()*2+.5,vx:(Math.random()-.5)*.35,vy:-Math.random()*.5-.1,
+    a:Math.random()*.5+.1,
+    c:['#4A9EFF','#00D4AA','#FFD166','#B57BFF'][Math.floor(Math.random()*4)]
+  }));
+}
+function doBG(){
+  cx.clearRect(0,0,W,H);
+  pts.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.a-=.002;
+    if(p.y<-8||p.a<=0){p.x=Math.random()*W;p.y=H+8;p.a=Math.random()*.5+.1;}
+    cx.beginPath();cx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    cx.fillStyle=p.c;cx.globalAlpha=p.a*.55;cx.fill();
+  });
+  cx.globalAlpha=1;
+  requestAnimationFrame(doBG);
+}
+addEventListener('resize',initBG);initBG();doBG();
+
+/* ── SLIDES ── */
+let curSl=0; const NSLIDES=5;
+function buildDots(){
+  const d=document.getElementById('howDots');d.innerHTML='';
+  for(let i=0;i<NSLIDES;i++){
+    const el=document.createElement('div');
+    el.className='dot'+(i===0?' on':'');
+    el.onclick=()=>goSl(i);d.appendChild(el);
+  }
+}
+function goSl(n){
+  document.getElementById('sl'+curSl).classList.remove('on');
+  curSl=Math.max(0,Math.min(NSLIDES-1,n));
+  document.getElementById('sl'+curSl).classList.add('on');
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===curSl));
+  document.getElementById('prevSl').style.opacity=curSl===0?'.3':'1';
+  document.getElementById('nextSl').textContent=curSl===NSLIDES-1?'▶ Play!':'Next →';
+}
+function mvSl(d){ ua(); if(curSl===NSLIDES-1&&d===1){startGame();return;} goSl(curSl+d); }
+buildDots();
+
+/* ── SCREENS ── */
+function show(id){
+  ['sStart','sHow','sGame','sEnd'].forEach(s=>document.getElementById(s).classList.toggle('off',s!==id));
+  document.getElementById('hud').classList.toggle('off',id!=='sGame');
+}
+function showHow(){ ua(); goSl(0); show('sHow'); }
+
+/* ══════════════════════════════════
+   ROUND CONFIGS
+══════════════════════════════════ */
+const ROUNDS = [
+  // target, left-side label, available bottles, time, hasBonus, hint
+  { t:10, lbl:'10',        bottles:[2,3,5,7,8,1,4],        time:35, bonus:false, hint:'Find numbers that add to 10.' },
+  { t:15, lbl:'15',        bottles:[3,5,7,8,2,6,9],        time:33, bonus:false, hint:'You can use more than two bottles.' },
+  { t:24, lbl:'24',        bottles:[4,6,8,10,5,3,12],      time:31, bonus:false, hint:'12 + 12 = 24. Can you find other ways?' },
+  { t:30, lbl:'30',        bottles:[5,10,8,6,15,3,12,4],   time:29, bonus:true,  hint:'The ×2 bottle doubles the next one you pour.' },
+  { t:36, lbl:'36',        bottles:[6,9,12,18,4,8,15,3],   time:28, bonus:true,  hint:'Try the ×2 bottle with 18 → that\'s 36!' },
+  { t:50, lbl:'50',        bottles:[10,15,20,25,5,8,12,6], time:26, bonus:true,  hint:'25 × 2 = 50. Or mix without the bonus.' },
+  { t:48, lbl:'3 × 16',    bottles:[8,16,12,6,4,20,24,10], time:25, bonus:true,  hint:'The equation shows a product. Match the value.' },
+  { t:60, lbl:'4 × 15',    bottles:[15,20,12,8,30,10,6,5], time:23, bonus:true,  hint:'30 × 2 = 60. Or 15 + 20 + 25 = 60.' },
+  { t:72, lbl:'8 × 9',     bottles:[9,18,24,36,12,8,30,6], time:22, bonus:true,  hint:'36 × 2 = 72. Think smart!' },
+  { t:100,lbl:'10 × 10',   bottles:[25,50,10,20,15,30,40,5],time:20,bonus:true,  hint:'50 × 2 = 100. Or 25 + 25 + 50. You decide!' },
+];
+
+/* ══════════════════════════════════
+   GAME STATE
+══════════════════════════════════ */
+let G={};
+function initG(){
+  G={ round:1,score:0,lives:3,timer:30,
+      tInt:null, rightSum:0, poured:[],
+      pendingDouble:false,
+      totalA:0, correctA:0,
+      _ovOk:false };
+}
+
+/* ── BUILD ROUND ── */
+function loadRound(){
+  const cfg=ROUNDS[Math.min(G.round-1,ROUNDS.length-1)];
+  G.target=cfg.t;
+  G.rightSum=0; G.poured=[]; G.pendingDouble=false;
+  G.timer=cfg.time;
+
+  // Always wipe the right pan chips and reset beam before rendering new round
+  document.getElementById('panR').querySelectorAll('.chip-on-pan').forEach(c=>c.remove());
+  document.getElementById('panRsum').textContent='0';
+  document.getElementById('beam').style.transform='rotate(0deg)';
+  document.getElementById('panL').style.bottom='18px';
+  document.getElementById('panR').style.bottom='18px';
+  const msg=document.getElementById('balMsg');
+  msg.textContent='⚖️ Add bottles to the right pan'; msg.style.color='var(--muted)';
+
+  document.getElementById('rndTitle').textContent='Round '+G.round+' / 10';
+  document.getElementById('rndDesc').textContent=cfg.hint;
+  document.getElementById('objEq').textContent=cfg.lbl+' = __';
+  document.getElementById('objTarget').textContent=cfg.t;
+  document.getElementById('objHint').textContent=cfg.hint;
+  document.getElementById('rov').classList.add('off');
+  document.getElementById('brewBtn').disabled=true;
+
+  // Left pan = target value chips
+  renderLeftPan(cfg.t);
+  updatePans();
+  buildBottles(cfg.bottles, cfg.bonus);
+  updateHUD();
+
+  // Timer
+  clearInterval(G.tInt);
+  G.tInt=setInterval(()=>{
+    G.timer--;
+    document.getElementById('hv-tm').textContent=G.timer;
+    const te=document.getElementById('hv-tm');
+    if(G.timer<=7){te.classList.add('hot');sfx.tick();}
+    else te.classList.remove('hot');
+    if(G.timer<=0){
+      clearInterval(G.tInt);
+      toast('⏰ Time\'s up!','bad');
+      sfx.wrong();
+      setTimeout(()=>onWrong(),500);
+    }
+  },1000);
+}
+
+/* ── LEFT PAN chips ── */
+function renderLeftPan(t){
+  const p=document.getElementById('panL');
+  // clear old chips
+  p.querySelectorAll('.chip-on-pan').forEach(c=>c.remove());
+  // show the target number as one chip
+  const chip=document.createElement('div');
+  chip.className='chip-on-pan';
+  chip.textContent=t;
+  chip.style.background='rgba(74,158,255,.25)';
+  chip.style.borderColor='rgba(74,158,255,.5)';
+  chip.style.color='var(--blue)';
+  chip.style.fontSize='clamp(16px,4vw,22px)';
+  chip.style.padding='4px 10px';
+  p.insertBefore(chip, p.querySelector('.pan-sum'));
+}
+
+/* ── SVG BOTTLE DESIGNS ── */
+// 8 distinct bottle silhouettes, each with a liquid colour and shape variant
+const BOTTLE_DESIGNS = [
+  // [liquidColor, glassStroke, shape] — shape: 'round','flask','erlen','test','vial','reagent','wide','conical'
+  { liq:'#00D4AA', stroke:'#00D4AA', shape:'round'    },
+  { liq:'#4A9EFF', stroke:'#4A9EFF', shape:'erlen'    },
+  { liq:'#FFD166', stroke:'#FFD166', shape:'flask'    },
+  { liq:'#FF5C5C', stroke:'#FF5C5C', shape:'test'     },
+  { liq:'#B57BFF', stroke:'#B57BFF', shape:'vial'     },
+  { liq:'#FF9F43', stroke:'#FF9F43', shape:'reagent'  },
+  { liq:'#00CEC9', stroke:'#00CEC9', shape:'wide'     },
+  { liq:'#A29BFE', stroke:'#A29BFE', shape:'conical'  },
+];
+
+function makeBottleSVG(design, label, isBonus) {
+  const { liq, stroke, shape } = design;
+  const lg = liq + '99'; // semi-transparent liquid
+  const lg2 = liq + 'DD';
+
+  // Each shape returns SVG path data for the outer bottle and the liquid fill clip
+  const shapes = {
+    // classic round-bottom flask
+    round: `
+      <path d="M18,8 L18,22 Q8,30 6,44 Q4,62 20,68 Q32,74 44,68 Q58,62 58,44 Q56,30 46,22 L46,8 Z"
+            fill="rgba(180,220,255,0.07)" stroke="${stroke}" stroke-width="2"/>
+      <rect x="22" y="5" width="20" height="6" rx="3" fill="rgba(180,220,255,0.1)" stroke="${stroke}" stroke-width="1.5"/>
+      <rect x="26" y="2" width="12" height="5" rx="2.5" fill="#8B6F47" stroke="#6B4F27" stroke-width="1"/>
+      <clipPath id="clip_r"><path d="M18,8 L18,22 Q8,30 6,44 Q4,62 20,68 Q32,74 44,68 Q58,62 58,44 Q56,30 46,22 L46,8 Z"/></clipPath>
+      <rect x="0" y="36" width="70" height="40" fill="${lg2}" clip-path="url(#clip_r)"/>
+      <ellipse cx="32" cy="36" rx="18" ry="4" fill="${liq}" opacity=".6" clip-path="url(#clip_r)"/>
+      <rect x="24" y="12" width="4" height="30" rx="2" fill="white" opacity=".1"/>
+    `,
+    // erlenmeyer flask
+    erlen: `
+      <path d="M22,6 L22,28 L6,60 Q4,70 20,74 Q32,78 46,74 Q60,70 58,60 L42,28 L42,6 Z"
+            fill="rgba(180,220,255,0.07)" stroke="${stroke}" stroke-width="2"/>
+      <rect x="25" y="3" width="14" height="5" rx="2.5" fill="#8B6F47" stroke="#6B4F27" stroke-width="1"/>
+      <clipPath id="clip_e"><path d="M22,6 L22,28 L6,60 Q4,70 20,74 Q32,78 46,74 Q60,70 58,60 L42,28 L42,6 Z"/></clipPath>
+      <rect x="0" y="44" width="70" height="40" fill="${lg2}" clip-path="url(#clip_e)"/>
+      <ellipse cx="32" cy="44" rx="22" ry="4" fill="${liq}" opacity=".6" clip-path="url(#clip_e)"/>
+      <rect x="26" y="10" width="3" height="18" rx="1.5" fill="white" opacity=".12"/>
+    `,
+    // flat-bottom flask
+    flask: `
+      <path d="M20,4 L20,24 Q6,36 6,56 Q6,72 32,74 Q58,72 58,56 Q58,36 44,24 L44,4 Z"
+            fill="rgba(180,220,255,0.07)" stroke="${stroke}" stroke-width="2"/>
+      <rect x="24" y="1" width="16" height="5" rx="2.5" fill="#8B6F47" stroke="#6B4F27" stroke-width="1"/>
+      <clipPath id="clip_f"><path d="M20,4 L20,24 Q6,36 6,56 Q6,72 32,74 Q58,72 58,56 Q58,36 44,24 L44,4 Z"/></clipPath>
+      <rect x="0" y="42" width="70" height="38" fill="${lg2}" clip-path="url(#clip_f)"/>
+      <ellipse cx="32" cy="42" rx="20" ry="3.5" fill="${liq}" opacity=".55" clip-path="url(#clip_f)"/>
+      <rect x="26" y="8" width="3" height="16" rx="1.5" fill="white" opacity=".12"/>
+    `,
+    // test tube
+    test: `
+      <path d="M22,4 L22,58 Q22,74 32,74 Q42,74 42,58 L42,4 Z"
+            fill="rgba(180,220,255,0.07)" stroke="${stroke}" stroke-width="2"/>
+      <rect x="22" y="2" width="20" height="4" rx="2" fill="#8B6F47" stroke="#6B4F27" stroke-width="1"/>
+      <clipPath id="clip_t"><path d="M22,4 L22,58 Q22,74 32,74 Q42,74 42,58 L42,4 Z"/></clipPath>
+      <rect x="22" y="38" width="20" height="40" fill="${lg2}" clip-path="url(#clip_t)"/>
+      <rect x="22" y="38" width="20" height="3" fill="${liq}" opacity=".7" clip-path="url(#clip_t)"/>
+      <rect x="26" y="8" width="3" height="28" rx="1.5" fill="white" opacity=".12"/>
+    `,
+    // vial (narrow tall)
+    vial: `
+      <rect x="20" y="8" width="24" height="62" rx="12" fill="rgba(180,220,255,0.07)" stroke="${stroke}" stroke-width="2"/>
+      <rect x="24" y="4" width="16" height="6" rx="3" fill="rgba(180,220,255,0.1)" stroke="${stroke}" stroke-width="1.5"/>
+      <rect x="27" y="1" width="10" height="5" rx="2.5" fill="#8B6F47" stroke="#6B4F27" stroke-width="1"/>
+      <clipPath id="clip_v"><rect x="20" y="8" width="24" height="62" rx="12"/></clipPath>
+      <rect x="20" y="40" width="24" height="36" fill="${lg2}" clip-path="url(#clip_v)"/>
+      <rect x="20" y="40" width="24" height="3" fill="${liq}" opacity=".7" clip-path="url(#clip_v)"/>
+      <rect x="25" y="12" width="3" height="26" rx="1.5" fill="white" opacity=".12"/>
+    `,
+    // reagent bottle (wide squat)
+    reagent: `
+      <path d="M10,18 L10,64 Q10,74 32,74 Q54,74 54,64 L54,18 Q54,10 44,10 L20,10 Q10,10 10,18 Z"
+            fill="rgba(180,220,255,0.07)" stroke="${stroke}" stroke-width="2"/>
+      <rect x="22" y="6" width="20" height="6" rx="3" fill="rgba(180,220,255,0.1)" stroke="${stroke}" stroke-width="1.5"/>
+      <rect x="26" y="2" width="12" height="6" rx="3" fill="#8B6F47" stroke="#6B4F27" stroke-width="1"/>
+      <clipPath id="clip_rg"><path d="M10,18 L10,64 Q10,74 32,74 Q54,74 54,64 L54,18 Q54,10 44,10 L20,10 Q10,10 10,18 Z"/></clipPath>
+      <rect x="10" y="44" width="44" height="34" fill="${lg2}" clip-path="url(#clip_rg)"/>
+      <rect x="10" y="44" width="44" height="3" fill="${liq}" opacity=".7" clip-path="url(#clip_rg)"/>
+      <rect x="16" y="22" width="4" height="20" rx="2" fill="white" opacity=".1"/>
+    `,
+    // wide-mouth bottle
+    wide: `
+      <path d="M8,22 L8,64 Q8,76 32,76 Q56,76 56,64 L56,22 Q56,14 46,12 L18,12 Q8,14 8,22 Z"
+            fill="rgba(180,220,255,0.07)" stroke="${stroke}" stroke-width="2"/>
+      <rect x="20" y="8" width="24" height="6" rx="3" fill="rgba(180,220,255,0.1)" stroke="${stroke}" stroke-width="1.5"/>
+      <rect x="25" y="4" width="14" height="6" rx="3" fill="#8B6F47" stroke="#6B4F27" stroke-width="1"/>
+      <clipPath id="clip_w"><path d="M8,22 L8,64 Q8,76 32,76 Q56,76 56,64 L56,22 Q56,14 46,12 L18,12 Q8,14 8,22 Z"/></clipPath>
+      <rect x="8" y="46" width="48" height="34" fill="${lg2}" clip-path="url(#clip_w)"/>
+      <rect x="8" y="46" width="48" height="3" fill="${liq}" opacity=".7" clip-path="url(#clip_w)"/>
+      <rect x="14" y="26" width="4" height="18" rx="2" fill="white" opacity=".1"/>
+    `,
+    // conical (pointed bottom)
+    conical: `
+      <path d="M14,6 L14,20 L6,66 Q8,76 32,76 Q56,76 58,66 L50,20 L50,6 Z"
+            fill="rgba(180,220,255,0.07)" stroke="${stroke}" stroke-width="2"/>
+      <rect x="18" y="3" width="28" height="5" rx="2.5" fill="#8B6F47" stroke="#6B4F27" stroke-width="1"/>
+      <clipPath id="clip_c"><path d="M14,6 L14,20 L6,66 Q8,76 32,76 Q56,76 58,66 L50,20 L50,6 Z"/></clipPath>
+      <rect x="0" y="50" width="70" height="34" fill="${lg2}" clip-path="url(#clip_c)"/>
+      <ellipse cx="32" cy="50" rx="24" ry="4" fill="${liq}" opacity=".55" clip-path="url(#clip_c)"/>
+      <rect x="20" y="10" width="3" height="14" rx="1.5" fill="white" opacity=".12"/>
+    `,
+  };
+
+  const bodyPath = shapes[shape] || shapes.round;
+  // gloss highlight (same for all)
+  return `<svg class="b-svg" viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg">
+    <defs></defs>
+    ${bodyPath}
+    <!-- label band -->
+    <rect x="14" y="50" width="36" height="14" rx="3" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    <text x="32" y="61" text-anchor="middle" font-size="9" fill="white" font-weight="700" font-family="system-ui,sans-serif">${label}</text>
+  </svg>`;
+}
+
+/* ── BOTTLES ── */
+function buildBottles(vals, hasBonus){
+  const shelf=document.getElementById('bottles');
+  shelf.innerHTML='';
+
+  vals.forEach((v,i)=>{
+    const design = BOTTLE_DESIGNS[i % BOTTLE_DESIGNS.length];
+    const d=document.createElement('div');
+    d.className='bottle';
+    d.style.setProperty('--bc', design.liq);
+    d.innerHTML=`${makeBottleSVG(design, v+'mL', false)}
+      <div class="b-val">${v}</div>
+      <div class="b-tag">mL</div>`;
+    d.onclick=()=>pourBottle(v,d);
+    shelf.appendChild(d);
+  });
+
+  if(hasBonus){
+    const d=document.createElement('div');
+    d.className='bottle bonus';
+    // Special catalyst bottle — glowing purple lightning bolt vial
+    d.innerHTML=`<div class="b-badge">×2</div>
+      <svg class="b-svg" viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="catglow" cx="50%" cy="40%">
+            <stop offset="0%" stop-color="#B57BFF" stop-opacity=".5"/>
+            <stop offset="100%" stop-color="#B57BFF" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="32" cy="50" rx="26" ry="28" fill="url(#catglow)"/>
+        <rect x="20" y="8" width="24" height="58" rx="12" fill="rgba(181,123,255,0.12)" stroke="#B57BFF" stroke-width="2"/>
+        <rect x="24" y="4" width="16" height="6" rx="3" fill="rgba(181,123,255,0.15)" stroke="#B57BFF" stroke-width="1.5"/>
+        <rect x="27" y="1" width="10" height="5" rx="2.5" fill="#6B3FA0" stroke="#4B2F70" stroke-width="1"/>
+        <clipPath id="clip_cat"><rect x="20" y="8" width="24" height="58" rx="12"/></clipPath>
+        <rect x="20" y="30" width="24" height="40" fill="rgba(181,123,255,0.5)" clip-path="url(#clip_cat)"/>
+        <rect x="20" y="30" width="24" height="3" fill="#B57BFF" opacity=".8" clip-path="url(#clip_cat)"/>
+        <!-- lightning bolt -->
+        <path d="M35,18 L27,36 L32,36 L29,54 L38,33 L33,33 Z" fill="#FFD166" opacity=".95"/>
+        <path d="M35,18 L27,36 L32,36 L29,54 L38,33 L33,33 Z" fill="none" stroke="#FFD166" stroke-width=".5" opacity=".5"/>
+      </svg>
+      <div class="b-val" style="color:var(--purple)">×2</div>
+      <div class="b-tag">catalyst</div>`;
+    d.onclick=()=>pourDouble(d);
+    shelf.appendChild(d);
+  }
+}
+
+/* ── POUR ── */
+function pourBottle(val, el){
+  ua();
+  let effectiveVal = val;
+  if(G.pendingDouble){
+    effectiveVal = val * 2;
+    G.pendingDouble = false;
+    document.querySelectorAll('.bottle.bonus').forEach(b=>{ b.style.boxShadow=''; b.style.borderColor=''; });
+  }
+
+  if(G.rightSum + effectiveVal > G.target){
+    sfx.over();
+    toast('⚠️ Too much! Right side would exceed '+G.target,'bad');
+    el.style.animation='none';
+    el.offsetHeight; // reflow
+    el.style.animation='';
+    return;
+  }
+
+  G.rightSum += effectiveVal;
+  G.poured.push(effectiveVal);
+  el.classList.add('used');
+  sfx.pour();
+
+  // show chip on right pan
+  addChipToRightPan(effectiveVal);
+  updatePans();
+
+  if(G.rightSum === G.target){
+    sfx.exact();
+    document.getElementById('brewBtn').disabled=false;
+    toast('⚖️ Balanced! Tap Brew!','ok');
+  }
+}
+
+function pourDouble(el){
+  ua();
+  if(G.pendingDouble){
+    G.pendingDouble=false;
+    el.style.boxShadow='';
+    el.style.borderColor='';
+    toast('×2 cancelled','');
+    return;
+  }
+  G.pendingDouble=true;
+  el.style.boxShadow='0 0 18px var(--gold-glow)';
+  el.style.borderColor='var(--gold)';
+  sfx.pour();
+  toast('⚡ ×2 active — tap a bottle to double it!','gd');
+}
+
+function addChipToRightPan(val){
+  const p=document.getElementById('panR');
+  const chip=document.createElement('div');
+  chip.className='chip-on-pan';
+  chip.textContent=val;
+  p.insertBefore(chip, p.querySelector('.pan-sum'));
+}
+
+/* ── UPDATE PANS & BEAM ── */
+function updatePans(){
+  const ls=G.target, rs=G.rightSum;
+  document.getElementById('panLsum').textContent=ls;
+  document.getElementById('panRsum').textContent=rs;
+
+  // beam tilt: positive = right heavier (tips right = positive angle)
+  const diff = rs - ls; // positive = right heavier
+  const maxDiff = ls;
+  const angle = Math.max(-18, Math.min(18, (diff/maxDiff)*18));
+  document.getElementById('beam').style.transform=`rotate(${angle}deg)`;
+
+  // pan heights float with beam
+  document.getElementById('panL').style.bottom = (18 + angle*1.2)+'px';
+  document.getElementById('panR').style.bottom = (18 - angle*1.2)+'px';
+
+  // balance message
+  const msg=document.getElementById('balMsg');
+  if(rs===0){ msg.textContent='⚖️ Add bottles to the right pan'; msg.style.color='var(--muted)'; }
+  else if(rs===ls){ msg.textContent='✅ Perfectly balanced!'; msg.style.color='var(--teal)'; }
+  else if(rs<ls){ msg.textContent='⬆️ Right side needs +'+(ls-rs)+' more'; msg.style.color='var(--blue)'; }
+  else { msg.textContent='⬇️ Right side is '+(rs-ls)+' too heavy!'; msg.style.color='var(--red)'; }
+}
+
+/* ── CLEAR ── */
+function clearRight(){
+  ua(); sfx.clear();
+  G.rightSum=0; G.poured=[];
+  G.pendingDouble=false;
+  // remove chips from right pan
+  document.getElementById('panR').querySelectorAll('.chip-on-pan').forEach(c=>c.remove());
+  // re-enable bottles
+  document.querySelectorAll('.bottle').forEach(b=>b.classList.remove('used'));
+  document.querySelectorAll('.bottle.bonus').forEach(b=>{b.style.boxShadow='';b.style.borderColor='';});
+  document.getElementById('brewBtn').disabled=true;
+  updatePans();
+  toast('↩ Right pan cleared','');
+}
+
+/* ── BREW ── */
+function brewPotion(){
+  ua();
+  if(G.rightSum!==G.target) return;
+  G.totalA++; G.correctA++;
+  clearInterval(G.tInt);
+
+  const tBonus=G.timer*4;
+  const pBonus=G.poured.length<=2?60:G.poured.length<=3?30:0;
+  const pts=100+tBonus+pBonus;
+  G.score+=pts;
+  sfx.brew();
+  spawnParticles();
+  updateHUD();
+
+  const msg=`+${pts} pts  (speed: +${tBonus}, precision: +${pBonus})`;
+  showOv(true,'⚗️ Brewed!',msg);
+}
+
+/* ── WRONG ── */
+function onWrong(){
+  G.totalA++;
+  G.lives--;
+  sfx.wrong();
+  updateHUD();
+  if(G.lives<=0){ clearInterval(G.tInt); setTimeout(()=>endGame(false),600); return; }
+  clearInterval(G.tInt);
+  showOv(false,'💧 Reaction Failed!',`That didn't balance. ${G.lives} life${G.lives>1?'s':''} left — try again!`);
+}
+
+/* ── OVERLAY ── */
+function showOv(ok,title,msg){
+  G._ovOk=ok;
+  document.getElementById('rovIcon').textContent=ok?'🎉':'🧪';
+  document.getElementById('rovTitle').textContent=title;
+  document.getElementById('rovTitle').style.color=ok?'var(--teal)':'var(--red)';
+  document.getElementById('rovMsg').textContent=msg;
+  const b=document.getElementById('rovBtn');
+  b.textContent=!ok?'🔄 Retry':G.round>=10?'🏆 Results':'Next Round →';
+  document.getElementById('rov').classList.remove('off');
+}
+
+function continueRound(){
+  document.getElementById('rov').classList.add('off');
+  if(G._ovOk){
+    if(G.round>=10){endGame(true);return;}
+    G.round++;
+    updateHUD();
+  }
+  loadRound();
+}
+
+/* ── HUD ── */
+function updateHUD(){
+  document.getElementById('hv-rnd').textContent=G.round+'/10';
+  document.getElementById('hv-scr').textContent=G.score;
+  document.getElementById('hv-tm').textContent=G.timer;
+  document.querySelectorAll('.lf').forEach((e,i)=>e.classList.toggle('gone',i>=G.lives));
+}
+
+/* ── GAME FLOW ── */
+function startGame(){ ua(); startBGM(); initG(); show('sGame'); loadRound(); }
+
+function endGame(won){
+  clearInterval(G.tInt); show('sEnd');
+  document.getElementById('eH').textContent=won?'🏆 Lab Complete!':'💀 Game Over!';
+  document.getElementById('eSub').textContent=won?'All 10 experiments balanced!':'Reached round '+G.round+'. Keep practising!';
+  document.getElementById('eScore').textContent=G.score;
+  document.getElementById('eRound').textContent=(won?'10':G.round)+'/10';
+  const acc=G.totalA>0?Math.round(G.correctA/G.totalA*100):0;
+  document.getElementById('eAcc').textContent=acc+'%';
+  const stars=G.score>=1000?3:G.score>=600?2:G.score>=300?1:0;
+  setTimeout(()=>{
+    for(let i=1;i<=stars;i++) document.getElementById('es'+i).classList.add('lit');
+    if(stars>=2) sfx.star();
+  },350);
+}
+
+function restartGame(){ ua(); document.querySelectorAll('.star').forEach(s=>s.classList.remove('lit')); initG(); show('sStart'); }
+
+/* ── TOAST ── */
+let toastTm;
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  clearTimeout(toastTm);
+  t.textContent=msg; t.className='toast '+type;
+  toastTm=setTimeout(()=>t.className='toast off',2100);
+}
+
+/* ── PARTICLES ── */
+function spawnParticles(){
+  const em=['⭐','✨','⚗️','💫','🌟','⚖️'];
+  for(let i=0;i<16;i++){
+    const p=document.createElement('span');
+    p.className='px'; p.textContent=em[Math.floor(Math.random()*em.length)];
+    p.style.cssText=`left:${innerWidth/2}px;top:${innerHeight/2}px;font-size:${14+Math.random()*16}px;
+      --dx:${(Math.random()-.5)*260}px;--dy:${(Math.random()-.5)*220}px;
+      animation-duration:${.9+Math.random()*.7}s;`;
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),1800);
+  }
+}
+
+/* ── INIT ── */
+show('sStart');
+</script>
+</body>
+</html>

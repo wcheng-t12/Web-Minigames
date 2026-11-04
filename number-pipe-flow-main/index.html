@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NumFlow — Math Pipe Puzzle</title>
+<style>
+:root {
+  --bg: #07091a;
+  --panel: #0f1729;
+  --panel2: #172035;
+  --cyan: #00e5ff;
+  --magenta: #ff006e;
+  --lime: #b8ff00;
+  --gold: #ffd60a;
+  --red: #ff3a3a;
+  --orange: #ff8c00;
+  --text: #e8eaf6;
+  --subtext: #7986cb;
+  --pipe-idle: #1e3358;
+  --font-mono: 'Courier New', monospace;
+  --font-ui: 'Segoe UI', system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
+  pointer-events: none; z-index: 9000;
+}
+#bg-canvas { position: fixed; inset: 0; z-index: 0; }
+
+/* ── SCREENS ── */
+.screen {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  transition: opacity 0.35s, transform 0.35s;
+}
+.screen.hidden { opacity: 0; pointer-events: none; transform: scale(0.97); }
+
+/* ── CARD ── */
+.card {
+  background: var(--panel);
+  border-radius: 20px; padding: 44px 52px;
+  text-align: center; max-width: 500px; width: 92vw;
+  box-shadow: 0 0 60px rgba(0,229,255,0.1), 0 24px 64px rgba(0,0,0,0.7);
+  border: 1px solid rgba(0,229,255,0.18);
+  position: relative; overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute;
+  top: -1px; left: -1px; right: -1px; bottom: -1px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(0,229,255,0.25), transparent 50%, rgba(255,0,110,0.15));
+  z-index: -1;
+}
+
+/* ── LOGO ── */
+.logo-row { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 6px; }
+.logo-num { font: bold 52px var(--font-mono); color: var(--cyan); text-shadow: 0 0 20px var(--cyan); }
+.logo-arrow { font-size: 32px; color: var(--magenta); text-shadow: 0 0 14px var(--magenta); animation: pa 1.1s ease-in-out infinite; }
+@keyframes pa { 0%,100%{transform:translateX(0);opacity:1} 50%{transform:translateX(5px);opacity:.5} }
+.logo-target { font: bold 52px var(--font-mono); color: var(--lime); text-shadow: 0 0 20px var(--lime); }
+.game-title {
+  font-size: 38px; font-weight: 900; letter-spacing: 5px; text-transform: uppercase;
+  background: linear-gradient(90deg, var(--cyan), var(--magenta));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 6px;
+}
+.game-sub { color: var(--subtext); font-size: 13px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 32px; }
+
+/* ── BUTTONS ── */
+.btn {
+  border: none; border-radius: 50px; padding: 14px 36px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  letter-spacing: 1px; text-transform: uppercase;
+  transition: transform .15s, box-shadow .15s;
+  display: block; width: 100%; margin-bottom: 10px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--cyan), #0097a7);
+  color: #000; box-shadow: 0 4px 20px rgba(0,229,255,.4);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,229,255,.55); }
+.btn-secondary {
+  background: transparent; color: var(--subtext);
+  border: 1px solid rgba(121,134,203,.4);
+}
+.btn-secondary:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* ══════════════════════════════════════════
+   HOW TO PLAY — SLIDESHOW
+══════════════════════════════════════════ */
+#how-screen .card {
+  max-width: 580px;
+  padding: 36px 44px 32px;
+  text-align: left;
+}
+
+/* slide wrapper */
+.slides-viewport {
+  position: relative;
+  overflow: hidden;
+  min-height: 320px;
+  margin-bottom: 20px;
+}
+
+.slide {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  animation: slideIn .35s ease;
+}
+.slide.active { display: flex; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(22px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* slide hero visual */
+.slide-visual {
+  border-radius: 14px;
+  background: #060d1e;
+  border: 1px solid #0d1f3c;
+  padding: 22px 18px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 130px;
+  position: relative;
+  overflow: hidden;
+}
+.slide-visual::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+  pointer-events: none;
+}
+
+/* slide text */
+.slide-badge {
+  display: inline-block;
+  font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--magenta); font-weight: 700;
+  margin-bottom: 6px;
+}
+.slide-title {
+  font-size: 20px; font-weight: 800; color: var(--cyan);
+  letter-spacing: 1px; margin-bottom: 8px;
+}
+.slide-body {
+  font-size: 13.5px; line-height: 1.7; color: #b0bde8;
+}
+.slide-body strong { color: var(--text); }
+.slide-body .hl-cyan    { color: var(--cyan); font-weight: 700; }
+.slide-body .hl-lime    { color: var(--lime); font-weight: 700; }
+.slide-body .hl-gold    { color: var(--gold); font-weight: 700; }
+.slide-body .hl-magenta { color: var(--magenta); font-weight: 700; }
+
+/* op chips inside slides */
+.op-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.op-chip {
+  background: var(--panel2); border: 1px solid var(--pipe-idle);
+  border-radius: 6px; padding: 4px 10px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--gold);
+}
+
+/* slide nav row */
+.slide-nav {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.slide-dots { display: flex; gap: 7px; align-items: center; }
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #1e3358; border: 1px solid #2a4070;
+  cursor: pointer; transition: all .2s;
+}
+.dot.active {
+  background: var(--cyan); border-color: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  transform: scale(1.3);
+}
+.slide-arrows { display: flex; gap: 8px; }
+.arr-btn {
+  background: var(--panel2); border: 1px solid #2a4070;
+  color: var(--subtext); border-radius: 50px;
+  padding: 8px 18px; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all .15s;
+  letter-spacing: 1px;
+}
+.arr-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.arr-btn.primary-arr {
+  background: linear-gradient(135deg, var(--cyan), #0097a7);
+  color: #000; border: none;
+  box-shadow: 0 3px 14px rgba(0,229,255,.35);
+}
+.arr-btn.primary-arr:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(0,229,255,.5); }
+
+/* SVG mini-diagrams inside slides */
+.mini-pipe {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; width: 100%;
+}
+
+/* star rating — slide 6 */
+.star-row {
+  display: flex; gap: 6px; align-items: center; justify-content: center;
+  margin: 6px 0;
+}
+.star-row .star { font-size: 28px; transition: transform .2s; }
+.star-row .star.lit { animation: starPop .4s ease; }
+@keyframes starPop {
+  0% { transform: scale(0) rotate(-20deg); }
+  70% { transform: scale(1.35) rotate(5deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.star-tier {
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--panel2); border-radius: 10px;
+  padding: 8px 12px; gap: 4px; flex: 1;
+  border: 1px solid #1e3358;
+}
+.star-tier .stars { font-size: 16px; }
+.star-tier .desc { font-size: 11px; color: var(--subtext); text-align: center; line-height: 1.4; }
+
+/* life dots in slides */
+.life-row { display: flex; gap: 5px; align-items: center; }
+.ldot {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--red); box-shadow: 0 0 7px var(--red);
+}
+.ldot.lost { background: #2a2a40; box-shadow: none; }
+
+/* ── GAME SCREEN ── */
+#game-screen { flex-direction: column; padding: 10px; align-items: center; }
+.hud {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; max-width: 800px;
+  background: var(--panel); border: 1px solid rgba(0,229,255,.14);
+  border-radius: 14px; padding: 10px 20px; margin-bottom: 10px;
+  gap: 6px; flex-wrap: wrap;
+}
+.hud-item { display: flex; flex-direction: column; align-items: center; }
+.hud-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--subtext); margin-bottom: 2px; }
+.hud-val { font-family: var(--font-mono); font-size: 20px; font-weight: bold; line-height: 1; }
+.hud-val.cyan  { color: var(--cyan);  text-shadow: 0 0 10px var(--cyan); }
+.hud-val.gold  { color: var(--gold);  text-shadow: 0 0 10px var(--gold); }
+.hud-val.red   { color: var(--red);   text-shadow: 0 0 10px var(--red); }
+.hud-div { width: 1px; height: 34px; background: rgba(0,229,255,.12); }
+.lives-row { display: flex; gap: 4px; }
+.life-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--red); box-shadow: 0 0 6px var(--red);
+  transition: all .3s;
+}
+.life-dot.lost { background: #2a2a40; box-shadow: none; }
+
+.game-area {
+  background: var(--panel); border: 1px solid rgba(0,229,255,.13);
+  border-radius: 18px; padding: 18px 18px 14px;
+  max-width: 800px; width: 100%;
+  box-shadow: 0 0 40px rgba(0,229,255,.05), 0 20px 60px rgba(0,0,0,.55);
+  position: relative;
+}
+
+.round-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.round-label { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--subtext); }
+.target-display {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel2); border-radius: 10px; padding: 7px 14px;
+}
+.td-block { text-align: center; }
+.td-lbl { font-size: 10px; color: var(--subtext); letter-spacing: 1px; text-transform: uppercase; }
+.td-num { font-family: var(--font-mono); font-size: 20px; font-weight: bold; }
+.td-num.cyan { color: var(--cyan);  text-shadow: 0 0 10px var(--cyan); }
+.td-num.lime { color: var(--lime);  text-shadow: 0 0 10px var(--lime); }
+.td-arrow { font-size: 18px; color: var(--magenta); }
+
+.tbar-wrap { width: 100%; height: 4px; background: rgba(255,255,255,.05); border-radius: 2px; margin-bottom: 12px; overflow: hidden; }
+.tbar { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--magenta)); border-radius: 2px; box-shadow: 0 0 8px var(--cyan); transition: width .2s linear, background .4s; }
+.tbar.danger { background: linear-gradient(90deg, var(--red), var(--orange)); box-shadow: 0 0 8px var(--red); }
+
+#pipe-canvas {
+  display: block; width: 100%; border-radius: 12px;
+  background: #060d1e; border: 1px solid #0d1f3c;
+  cursor: pointer;
+}
+
+.msg-row { min-height: 28px; text-align: center; margin: 10px 0 0; font-size: 14px; font-weight: 600; letter-spacing: .5px; }
+.msg-neutral { color: var(--subtext); }
+.msg-hint    { color: var(--gold); }
+.msg-ok      { color: var(--lime);    text-shadow: 0 0 10px var(--lime); }
+.msg-fail    { color: var(--red);     text-shadow: 0 0 10px var(--red); }
+
+.btn-row { display: flex; gap: 10px; margin-top: 10px; }
+.btn-row .btn { margin-bottom: 0; }
+.btn-icon {
+  background: transparent; color: var(--subtext);
+  border: 1px solid rgba(121,134,203,.35); border-radius: 50px;
+  padding: 12px 18px; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .15s; letter-spacing: 1px;
+  text-transform: uppercase; white-space: nowrap;
+}
+.btn-icon:hover { border-color: var(--cyan); color: var(--cyan); }
+
+.flash-overlay {
+  position: absolute; inset: 0; border-radius: 18px;
+  pointer-events: none; opacity: 0; transition: opacity .1s;
+}
+.flash-ok   { background: rgba(184,255,0,.07); }
+.flash-fail { background: rgba(255,58,58,.09); }
+.flash-on   { opacity: 1 !important; }
+
+/* ══════════════════════════════════════════
+   END SCREEN — STAR RATING
+══════════════════════════════════════════ */
+.end-trophy { font-size: 62px; margin-bottom: 8px; animation: bob .8s ease infinite alternate; }
+@keyframes bob { from{transform:translateY(0)} to{transform:translateY(-10px)} }
+.end-title {
+  font-size: 26px; font-weight: 900; letter-spacing: 3px; margin-bottom: 6px;
+  background: linear-gradient(90deg, var(--gold), var(--lime));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.end-score {
+  font-family: var(--font-mono); font-size: 54px; font-weight: bold;
+  color: var(--gold); text-shadow: 0 0 30px var(--gold);
+  margin: 8px 0; line-height: 1;
+}
+
+/* 0–3 star rating display */
+.end-stars {
+  display: flex; gap: 10px; justify-content: center;
+  margin: 6px 0 14px;
+}
+.end-star {
+  font-size: 42px;
+  filter: grayscale(1) brightness(0.35);
+  transform: scale(0.9);
+  transition: all .15s;
+}
+.end-star.earned {
+  filter: none;
+  transform: scale(1);
+  animation: bigStarPop .55s cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes bigStarPop {
+  0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(1.4) rotate(8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0);      opacity: 1; }
+}
+.star-grade-label {
+  font-size: 13px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 12px;
+  color: var(--gold); text-shadow: 0 0 10px rgba(255,214,10,.5);
+}
+
+.end-stats { display: flex; justify-content: center; gap: 24px; margin-bottom: 20px; }
+.es { text-align: center; }
+.es-val { font-family: var(--font-mono); font-size: 22px; font-weight: bold; color: var(--cyan); }
+.es-lbl { font-size: 10px; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+.end-grade { font-size: 14px; color: var(--subtext); margin-bottom: 20px; }
+.end-grade strong { color: var(--text); }
+
+/* game-over banner (lives = 0 mid-game) */
+.gameover-overlay {
+  position: absolute; inset: 0; border-radius: 18px;
+  background: rgba(7,9,26,.88);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 20; gap: 10px;
+  animation: fadeIn .3s ease;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.go-title {
+  font-size: 32px; font-weight: 900; letter-spacing: 4px;
+  color: var(--red); text-shadow: 0 0 24px var(--red);
+}
+.go-sub { font-size: 14px; color: var(--subtext); letter-spacing: 1px; }
+
+@media(max-width:540px){
+  .card { padding: 28px 18px; }
+  .game-title { font-size: 28px; }
+  .hud { padding: 8px 12px; }
+  .hud-val { font-size: 16px; }
+  .game-area { padding: 12px 10px 10px; }
+}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+
+<!-- ════ START ════ -->
+<div class="screen" id="start-screen">
+  <div class="card">
+    <div class="logo-row">
+      <span class="logo-num">3</span>
+      <span class="logo-arrow">⟶</span>
+      <span class="logo-target">24</span>
+    </div>
+    <div class="game-title">NumFlow</div>
+    <div class="game-sub">Math Pipe Network</div>
+    <button class="btn btn-primary" onclick="startGame()">▶&nbsp; Play Now</button>
+    <button class="btn btn-secondary" onclick="showHow()">How to Play</button>
+  </div>
+</div>
+
+<!-- ════ HOW TO PLAY — SLIDESHOW ════ -->
+<div class="screen hidden" id="how-screen">
+  <div class="card" style="max-width:580px; padding:36px 40px 28px;">
+
+    <div class="slides-viewport">
+
+      <!-- SLIDE 1: Overview -->
+      <div class="slide active" data-slide="0">
+        <div class="slide-visual">
+          <!-- Mini pipe network SVG -->
+          <svg width="320" height="90" viewBox="0 0 320 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- start node -->
+            <circle cx="30" cy="45" r="22" fill="#0d2a3d" stroke="#00e5ff" stroke-width="2"/>
+            <text x="30" y="49" text-anchor="middle" font-family="Courier New" font-size="13" font-weight="bold" fill="#00e5ff">3</text>
+            <!-- pipe 1 -->
+            <path d="M52 45 C90 45 90 25 128 25" stroke="#00e5ff" stroke-width="3.5" stroke-dasharray="10 5" fill="none" opacity=".9"/>
+            <path d="M52 45 C90 45 90 65 128 65" stroke="#1e3a6a" stroke-width="2.5" fill="none" opacity=".6"/>
+            <!-- op label top -->
+            <rect x="74" y="16" width="42" height="19" rx="5" fill="#172035" stroke="#2a4070"/>
+            <text x="95" y="29" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#ffd60a">×2</text>
+            <!-- op label bottom -->
+            <rect x="74" y="55" width="42" height="19" rx="5" fill="#172035" stroke="#2a4070"/>
+            <text x="95" y="68" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#2a4070">+5</text>
+            <!-- mid node top -->
+            <circle cx="148" cy="25" r="17" fill="#0d1f3a" stroke="#00e5ff" stroke-width="2"/>
+            <text x="148" y="29" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#00e5ff">6</text>
+            <!-- mid node bottom -->
+            <circle cx="148" cy="65" r="17" fill="#0a1020" stroke="#1e3358" stroke-width="2"/>
+            <text x="148" y="69" text-anchor="middle" font-family="Courier New" font-size="11" fill="#2a4070">?</text>
+            <!-- pipe 2 selected -->
+            <path d="M165 25 C200 25 200 45 238 45" stroke="#00e5ff" stroke-width="3.5" stroke-dasharray="10 5" fill="none" opacity=".9"/>
+            <path d="M165 65 C200 65 200 45 238 45" stroke="#1e3a6a" stroke-width="2.5" fill="none" opacity=".4"/>
+            <!-- op label selected -->
+            <rect x="186" y="26" width="42" height="19" rx="5" fill="rgba(0,229,255,.16)" stroke="#00e5ff"/>
+            <text x="207" y="39" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#00e5ff">+6</text>
+            <rect x="186" y="46" width="42" height="19" rx="5" fill="#172035" stroke="#2a4070"/>
+            <text x="207" y="59" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#2a4070">−3</text>
+            <!-- end node -->
+            <circle cx="260" cy="45" r="22" fill="#1a2a0d" stroke="#b8ff00" stroke-width="2"/>
+            <text x="260" y="49" text-anchor="middle" font-family="Courier New" font-size="13" font-weight="bold" fill="#b8ff00">12</text>
+            <!-- particle -->
+            <circle cx="104" cy="25" r="4" fill="#00e5ff" opacity=".9">
+              <animateMotion dur="2s" repeatCount="indefinite" path="M0,0 C38,0 38,20 76,20"/>
+            </circle>
+          </svg>
+        </div>
+        <span class="slide-badge">Step 1 of 5 — The Goal</span>
+        <div class="slide-title">Route a number to the target</div>
+        <div class="slide-body">
+          A <span class="hl-cyan">starting number</span> enters from the left. Your job: guide it through the pipe network so it equals the <span class="hl-lime">target number</span> on the right — by choosing which pipes to use.
+        </div>
+      </div>
+
+      <!-- SLIDE 2: Operations -->
+      <div class="slide" data-slide="1">
+        <div class="slide-visual">
+          <svg width="320" height="90" viewBox="0 0 320 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- pipes with op labels, styled as a row of options -->
+            <defs>
+              <linearGradient id="pg" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#00e5ff" stop-opacity=".7"/>
+                <stop offset="100%" stop-color="#ff006e" stop-opacity=".7"/>
+              </linearGradient>
+            </defs>
+            <!-- 6 op chips in a 3x2 grid -->
+            <rect x="10"  y="10" width="88" height="30" rx="8" fill="#172035" stroke="#00e5ff" stroke-width="1.5"/>
+            <text x="54"  y="30" text-anchor="middle" font-family="Courier New" font-size="14" font-weight="bold" fill="#00e5ff">+5</text>
+
+            <rect x="116" y="10" width="88" height="30" rx="8" fill="#172035" stroke="#ffd60a" stroke-width="1.5"/>
+            <text x="160" y="30" text-anchor="middle" font-family="Courier New" font-size="14" font-weight="bold" fill="#ffd60a">×2</text>
+
+            <rect x="222" y="10" width="88" height="30" rx="8" fill="#172035" stroke="#ff006e" stroke-width="1.5"/>
+            <text x="266" y="30" text-anchor="middle" font-family="Courier New" font-size="14" font-weight="bold" fill="#ff006e">÷3</text>
+
+            <rect x="10"  y="52" width="88" height="30" rx="8" fill="#172035" stroke="#b8ff00" stroke-width="1.5"/>
+            <text x="54"  y="72" text-anchor="middle" font-family="Courier New" font-size="14" font-weight="bold" fill="#b8ff00">−4</text>
+
+            <rect x="116" y="52" width="88" height="30" rx="8" fill="#172035" stroke="#00e5ff" stroke-width="1.5"/>
+            <text x="160" y="72" text-anchor="middle" font-family="Courier New" font-size="14" font-weight="bold" fill="#00e5ff">×3</text>
+
+            <rect x="222" y="52" width="88" height="30" rx="8" fill="#172035" stroke="#ffd60a" stroke-width="1.5"/>
+            <text x="266" y="72" text-anchor="middle" font-family="Courier New" font-size="14" font-weight="bold" fill="#ffd60a">²</text>
+          </svg>
+        </div>
+        <span class="slide-badge">Step 2 of 5 — Operations</span>
+        <div class="slide-title">Every pipe has a math operation</div>
+        <div class="slide-body">
+          Each pipe applies a <span class="hl-gold">math operation</span> to your number as it flows through. Operations grow harder each round:
+          <div class="op-chips">
+            <span class="op-chip">+3</span><span class="op-chip">−2</span><span class="op-chip">×2</span>
+            <span class="op-chip">÷2</span><span class="op-chip">²</span><span class="op-chip">√</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: Clicking pipes -->
+      <div class="slide" data-slide="2">
+        <div class="slide-visual">
+          <svg width="320" height="100" viewBox="0 0 320 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- pointer cursor hint -->
+            <circle cx="30" cy="50" r="22" fill="#0d2a3d" stroke="#00e5ff" stroke-width="2"/>
+            <text x="30" y="54" text-anchor="middle" font-family="Courier New" font-size="13" font-weight="bold" fill="#00e5ff">5</text>
+
+            <!-- pipe going up — selected (glowing) -->
+            <path d="M52 50 C90 50 90 28 128 28" stroke="#00e5ff" stroke-width="5" stroke-dasharray="12 6" fill="none"/>
+            <rect x="72" y="19" width="46" height="20" rx="6" fill="rgba(0,229,255,.2)" stroke="#00e5ff" stroke-width="1.5"/>
+            <text x="95" y="33" text-anchor="middle" font-family="Courier New" font-size="12" font-weight="bold" fill="#00e5ff">×3</text>
+
+            <!-- cursor pointing at op label -->
+            <text x="122" y="13" font-size="16" fill="white" opacity=".8">👆</text>
+
+            <!-- pipe going down — dim -->
+            <path d="M52 50 C90 50 90 72 128 72" stroke="#1e3358" stroke-width="2.5" fill="none" opacity=".5"/>
+            <rect x="72" y="63" width="46" height="20" rx="6" fill="#172035" stroke="#2a4070"/>
+            <text x="95" y="77" text-anchor="middle" font-family="Courier New" font-size="12" font-weight="bold" fill="#2a4070">+4</text>
+
+            <!-- result node -->
+            <circle cx="148" cy="28" r="17" fill="#0d1f3a" stroke="#00e5ff" stroke-width="2"/>
+            <text x="148" y="32" text-anchor="middle" font-family="Courier New" font-size="11" font-weight="bold" fill="#00e5ff">15</text>
+
+            <!-- dim lower node -->
+            <circle cx="148" cy="72" r="17" fill="#0a1020" stroke="#1e3358" stroke-width="2" opacity=".4"/>
+            <text x="148" y="76" text-anchor="middle" font-family="Courier New" font-size="11" fill="#2a4070">?</text>
+
+            <!-- note -->
+            <text x="190" y="30" font-family="Segoe UI,sans-serif" font-size="11" fill="#7986cb">5 × 3 = 15 ✓</text>
+            <text x="190" y="48" font-family="Segoe UI,sans-serif" font-size="11" fill="#2a4070">5 + 4 = 9</text>
+            <text x="190" y="68" font-family="Segoe UI,sans-serif" font-size="10" fill="#5060a0">Live preview</text>
+            <text x="190" y="82" font-family="Segoe UI,sans-serif" font-size="10" fill="#5060a0">updates as you click!</text>
+          </svg>
+        </div>
+        <span class="slide-badge">Step 3 of 5 — Selecting</span>
+        <div class="slide-title">Click a pipe to route through it</div>
+        <div class="slide-body">
+          <strong>Click any available pipe</strong> to route your number through it. Node values <span class="hl-cyan">update live</span> so you can see the result instantly. You can change your mind — picking a new pipe at any junction replaces the route from there onwards.
+        </div>
+      </div>
+
+      <!-- SLIDE 4: Lives & timer -->
+      <div class="slide" data-slide="3">
+        <div class="slide-visual" style="gap: 24px; justify-content: space-around; flex-direction: row;">
+          <!-- Lives -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+            <div style="font-size:11px;letter-spacing:2px;color:#7986cb;text-transform:uppercase;">Lives</div>
+            <div style="display:flex;gap:6px;">
+              <div style="width:13px;height:13px;border-radius:50%;background:#ff3a3a;box-shadow:0 0 8px #ff3a3a;"></div>
+              <div style="width:13px;height:13px;border-radius:50%;background:#ff3a3a;box-shadow:0 0 8px #ff3a3a;"></div>
+              <div style="width:13px;height:13px;border-radius:50%;background:#2a2a40;"></div>
+            </div>
+            <div style="font-size:11px;color:#b0bde8;text-align:center;">Wrong answer or<br>timeout = −1 life</div>
+          </div>
+          <!-- Timer bar -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;flex:1;max-width:140px;">
+            <div style="font-size:11px;letter-spacing:2px;color:#7986cb;text-transform:uppercase;">Timer</div>
+            <div style="width:100%;height:8px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;">
+              <div style="width:28%;height:100%;background:linear-gradient(90deg,#ff3a3a,#ff8c00);border-radius:4px;box-shadow:0 0 8px #ff3a3a;"></div>
+            </div>
+            <div style="font-family:'Courier New',monospace;font-size:22px;font-weight:bold;color:#ff3a3a;text-shadow:0 0 10px #ff3a3a;">7</div>
+            <div style="font-size:11px;color:#b0bde8;text-align:center;">Each round has<br>a countdown timer</div>
+          </div>
+        </div>
+        <span class="slide-badge">Step 4 of 5 — Survival</span>
+        <div class="slide-title">3 lives — retry until correct</div>
+        <div class="slide-body">
+          You have <span class="hl-magenta">3 lives</span>. A wrong answer or running out of time costs one life, but you <strong>stay on the same round</strong> and retry until you get it right. Lose all 3 and the game ends. Route carefully — speed earns bonus points!
+        </div>
+      </div>
+
+      <!-- SLIDE 5: Star scoring -->
+      <div class="slide" data-slide="4">
+        <div class="slide-visual" style="flex-direction:column;gap:12px;">
+          <div style="font-size:11px;letter-spacing:2px;color:#7986cb;text-transform:uppercase;margin-bottom:2px;">Score Rating</div>
+          <div style="display:flex;gap:8px;width:100%;">
+            <div class="star-tier">
+              <div class="stars">⭐</div>
+              <div class="desc" style="color:#5060a0;">1 Star<br>Any attempt</div>
+            </div>
+            <div class="star-tier" style="border-color:#ffd60a44;">
+              <div class="stars">⭐⭐</div>
+              <div class="desc">2 Stars<br>6+ correct</div>
+            </div>
+            <div class="star-tier" style="border-color:#b8ff0044;">
+              <div class="stars">⭐⭐⭐</div>
+              <div class="desc" style="color:#b8ff00;">3 Stars<br>9+ correct &amp;<br>2+ lives left</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#5060a0;margin-top:2px;">Bonus points awarded for leftover time each round</div>
+        </div>
+        <span class="slide-badge">Step 5 of 5 — Scoring</span>
+        <div class="slide-title">Earn up to 3 stars</div>
+        <div class="slide-body">
+          At the end of all 10 rounds, your performance is graded <span class="hl-gold">0 to 3 stars</span>. Solve more puzzles correctly and keep your lives to reach the top rating. Speed earns time-bonus points too!
+        </div>
+      </div>
+
+    </div><!-- /slides-viewport -->
+
+    <!-- Navigation -->
+    <div class="slide-nav">
+      <div class="slide-dots" id="slide-dots">
+        <div class="dot active" onclick="goSlide(0)"></div>
+        <div class="dot" onclick="goSlide(1)"></div>
+        <div class="dot" onclick="goSlide(2)"></div>
+        <div class="dot" onclick="goSlide(3)"></div>
+        <div class="dot" onclick="goSlide(4)"></div>
+      </div>
+      <div class="slide-arrows">
+        <button class="arr-btn" id="prev-btn" onclick="prevSlide()" style="opacity:.35;pointer-events:none;">‹ Prev</button>
+        <button class="arr-btn primary-arr" id="next-btn" onclick="nextSlide()">Next ›</button>
+      </div>
+    </div>
+
+    <button class="btn btn-secondary" style="margin-top:14px;" onclick="hideHow()">← Back to Menu</button>
+  </div>
+</div>
+
+<!-- ════ GAME ════ -->
+<div class="screen hidden" id="game-screen">
+  <div class="hud">
+    <div class="hud-item">
+      <div class="hud-label">Round</div>
+      <div class="hud-val cyan" id="hud-round">1/10</div>
+    </div>
+    <div class="hud-div"></div>
+    <div class="hud-item">
+      <div class="hud-label">Score</div>
+      <div class="hud-val gold" id="hud-score">0</div>
+    </div>
+    <div class="hud-div"></div>
+    <div class="hud-item">
+      <div class="hud-label">Lives</div>
+      <div class="lives-row" id="hud-lives"></div>
+    </div>
+    <div class="hud-div"></div>
+    <div class="hud-item">
+      <div class="hud-label">Time</div>
+      <div class="hud-val red" id="hud-timer">30</div>
+    </div>
+  </div>
+
+  <div class="game-area">
+    <div class="flash-overlay" id="flash-overlay"></div>
+
+    <div class="round-header">
+      <div class="round-label" id="round-label">Round 1</div>
+      <div class="target-display">
+        <div class="td-block">
+          <div class="td-lbl">Start</div>
+          <div class="td-num cyan" id="td-start">—</div>
+        </div>
+        <div class="td-arrow">⟶</div>
+        <div class="td-block">
+          <div class="td-lbl">Target</div>
+          <div class="td-num lime" id="td-target">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tbar-wrap"><div class="tbar" id="tbar"></div></div>
+    <canvas id="pipe-canvas"></canvas>
+    <div class="msg-row msg-neutral" id="game-msg">Click a pipe to begin routing.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="send-btn" onclick="sendNumber()" style="flex:1;">🚀 SEND</button>
+      <button class="btn-icon" onclick="resetPath()">↺ Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ END ════ -->
+<div class="screen hidden" id="end-screen">
+  <div class="card">
+    <div class="end-trophy" id="end-trophy">🏆</div>
+    <div class="end-title" id="end-title">COMPLETE!</div>
+    <div class="end-score" id="end-score">0</div>
+
+    <!-- Star rating -->
+    <div class="end-stars">
+      <span class="end-star" id="estr-1">⭐</span>
+      <span class="end-star" id="estr-2">⭐</span>
+      <span class="end-star" id="estr-3">⭐</span>
+    </div>
+    <div class="star-grade-label" id="star-grade-label"></div>
+
+    <div class="end-stats">
+      <div class="es"><div class="es-val" id="e-correct">0</div><div class="es-lbl">Correct</div></div>
+      <div class="es"><div class="es-val" id="e-lives">0</div><div class="es-lbl">Lives Left</div></div>
+      <div class="es"><div class="es-val" id="e-bonus">0</div><div class="es-lbl">Time Bonus</div></div>
+    </div>
+    <div class="end-grade" id="end-grade"></div>
+    <button class="btn btn-primary" onclick="restartGame()">▶ Play Again</button>
+    <button class="btn btn-secondary" onclick="showHow()">How to Play</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   SLIDESHOW
+═══════════════════════════════════════ */
+let currentSlide = 0;
+const TOTAL_SLIDES = 5;
+
+function goSlide(n) {
+  document.querySelectorAll('.slide').forEach((s,i)=>{
+    s.classList.toggle('active', i===n);
+  });
+  document.querySelectorAll('#slide-dots .dot').forEach((d,i)=>{
+    d.classList.toggle('active', i===n);
+  });
+  currentSlide = n;
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  prevBtn.style.opacity = n===0 ? '.35' : '1';
+  prevBtn.style.pointerEvents = n===0 ? 'none' : 'auto';
+  if(n === TOTAL_SLIDES-1){
+    nextBtn.textContent = 'Play Now ▶';
+    nextBtn.onclick = ()=>{ hideHow(); startGame(); };
+  } else {
+    nextBtn.textContent = 'Next ›';
+    nextBtn.onclick = nextSlide;
+  }
+}
+function nextSlide(){ if(currentSlide<TOTAL_SLIDES-1) goSlide(currentSlide+1); else { hideHow(); startGame(); } }
+function prevSlide(){ if(currentSlide>0) goSlide(currentSlide-1); }
+
+/* keyboard nav for slides */
+document.addEventListener('keydown', e=>{
+  if(!document.getElementById('how-screen').classList.contains('hidden')){
+    if(e.key==='ArrowRight'||e.key==='ArrowDown') nextSlide();
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp') prevSlide();
+  }
+});
+
+/* ═══════════════════════════════════════
+   AUDIO
+═══════════════════════════════════════ */
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+function resumeAC(){ if(AC.state==='suspended') AC.resume(); }
+
+function tone(freq, type, dur, vol=0.25, t=AC.currentTime){
+  const o=AC.createOscillator(), g=AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type=type; o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(vol,t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  o.start(t); o.stop(t+dur+0.05);
+}
+const sfx = {
+  click:   ()=> tone(900,'sine',.07,.18),
+  flow:    ()=>{ tone(300,'sine',.15,.15); tone(500,'sine',.2,.12,AC.currentTime+.08); },
+  success: ()=>{ [523,659,784,1047].forEach((f,i)=>tone(f,'sine',.18,.28,AC.currentTime+i*.1)); },
+  fail:    ()=>{ tone(200,'sawtooth',.15,.28); tone(160,'sawtooth',.18,.22,AC.currentTime+.15); },
+  tick:    ()=> tone(1200,'square',.05,.1),
+  round:   ()=>{ [440,554,659].forEach((f,i)=>tone(f,'triangle',.14,.22,AC.currentTime+i*.08)); },
+  star:    (i)=>{ const f=[523,659,784][i]; setTimeout(()=>tone(f,'sine',.3,.3),i*200); },
+  gameover:()=>{ [330,220,165].forEach((f,i)=>tone(f,'sawtooth',.25,.3,AC.currentTime+i*.18)); },
+};
+
+let bgInterval=null;
+function startBgMusic(){
+  stopBgMusic();
+  const scale=[130.8,146.8,164.8,196,220,246.9,261.6];
+  const seq=[0,2,4,2,5,3,1,4,2,0,2,4];
+  let s=0;
+  bgInterval=setInterval(()=>{
+    if(document.hidden) return;
+    tone(scale[seq[s%seq.length]],'triangle',.38,.035);
+    s++;
+  },420);
+}
+function stopBgMusic(){ if(bgInterval){clearInterval(bgInterval);bgInterval=null;} }
+
+/* ═══════════════════════════════════════
+   BACKGROUND
+═══════════════════════════════════════ */
+const bgC=document.getElementById('bg-canvas');
+const bgX=bgC.getContext('2d');
+let stars=[];
+function initStars(){
+  bgC.width=innerWidth; bgC.height=innerHeight;
+  stars=Array.from({length:130},()=>({
+    x:Math.random()*bgC.width, y:Math.random()*bgC.height,
+    r:Math.random()*1.4+.3, a:Math.random(), s:Math.random()*.003+.001
+  }));
+}
+function animBg(){
+  bgX.fillStyle='#07091a'; bgX.fillRect(0,0,bgC.width,bgC.height);
+  stars.forEach(s=>{
+    s.a+=s.s;
+    const a=.25+.45*Math.abs(Math.sin(s.a));
+    bgX.beginPath(); bgX.arc(s.x,s.y,s.r,0,Math.PI*2);
+    bgX.fillStyle=`rgba(190,210,255,${a})`; bgX.fill();
+  });
+  requestAnimationFrame(animBg);
+}
+initStars(); animBg();
+window.addEventListener('resize',()=>{ initStars(); resizeCanvas(); });
+
+/* ═══════════════════════════════════════
+   GAME STATE
+═══════════════════════════════════════ */
+const G = {
+  round:1, score:0, lives:5,
+  timeLeft:30, timerMax:30,
+  timerInt:null,
+  totalCorrect:0, totalTimeBonus:0,
+  animating:false,
+  gameOver:false
+};
+
+/* ═══════════════════════════════════════
+   NETWORK GENERATION
+═══════════════════════════════════════ */
+const RCFG = [
+  { cols:1, rows:2, ops:['+2','+3','+4','+5','−1','−2'],                  tmax:35 },
+  { cols:1, rows:2, ops:['+3','+4','+5','+6','−2','−3','×2'],             tmax:33 },
+  { cols:1, rows:2, ops:['+4','+5','+6','−3','−4','×2','÷2'],             tmax:32 },
+  { cols:2, rows:2, ops:['+3','+4','+5','−2','−3','×2'],                  tmax:32 },
+  { cols:2, rows:2, ops:['+4','+5','+6','−3','−4','×2','÷2'],             tmax:30 },
+  { cols:2, rows:2, ops:['+5','+6','+8','−4','−5','×2','×3'],             tmax:29 },
+  { cols:2, rows:2, ops:['+6','+8','+10','−5','−6','×2','×3','÷2'],       tmax:28 },
+  { cols:2, rows:2, ops:['+8','+10','−6','−8','×2','×3','÷2','÷3'],       tmax:27 },
+  { cols:2, rows:2, ops:['+8','+10','+12','−8','×2','×3','×4','÷2','÷3'], tmax:25 },
+  { cols:2, rows:2, ops:['+10','+12','−10','×2','×3','×4','÷2','÷3','²'], tmax:23 },
+];
+
+const OPS = {
+  '+1':v=>v+1,'+2':v=>v+2,'+3':v=>v+3,'+4':v=>v+4,
+  '+5':v=>v+5,'+6':v=>v+6,'+7':v=>v+7,'+8':v=>v+8,
+  '+10':v=>v+10,'+12':v=>v+12,'+15':v=>v+15,'+20':v=>v+20,
+  '−1':v=>v-1,'−2':v=>v-2,'−3':v=>v-3,'−4':v=>v-4,
+  '−5':v=>v-5,'−6':v=>v-6,'−8':v=>v-8,'−10':v=>v-10,'−15':v=>v-15,
+  '×2':v=>v*2,'×3':v=>v*3,'×4':v=>v*4,'×5':v=>v*5,
+  '÷2':v=>v/2,'÷3':v=>v/3,'÷4':v=>v/4,
+  '²':v=>v*v,'√':v=>Math.round(Math.sqrt(v)),
+};
+function applyOp(op,v){ return OPS[op]?OPS[op](v):v; }
+function randFrom(a){ return a[Math.floor(Math.random()*a.length)]; }
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function shuffle(a){ const r=[...a]; for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];} return r; }
+
+let NET=null;
+let hoverEdgeId=null;
+let particles=[];
+let drawLoopId=null;
+
+function generateNet(roundIdx){
+  const cfg=RCFG[roundIdx];
+  let attempt=0;
+  while(attempt++<40){ const n=tryGenerate(cfg,roundIdx); if(n) return n; }
+  return tryGenerate(cfg,roundIdx,true);
+}
+
+function tryGenerate(cfg,roundIdx,force=false){
+  const {cols,rows}=cfg;
+  const opPool=shuffle([...cfg.ops,...cfg.ops,...cfg.ops]);
+  let opIdx=0;
+  function nextOp(){ return opPool[opIdx++%opPool.length]; }
+  const startNode={id:'START',col:-1,row:0};
+  const endNode={id:'END',col:cols,row:0};
+  const midNodes=[];
+  for(let c=0;c<cols;c++){
+    const col=[];
+    for(let r=0;r<rows;r++) col.push({id:`N${c}_${r}`,col:c,row:r});
+    midNodes.push(col);
+  }
+  const edges=[];
+  let eid=0;
+  function layerNodes(c){
+    if(c===-1) return [startNode];
+    if(c===cols) return [endNode];
+    return midNodes[c];
+  }
+  for(let c=-1;c<cols;c++){
+    const from=layerNodes(c), to=layerNodes(c+1);
+    from.forEach(fn=>{ to.forEach(tn=>{ edges.push({id:`E${eid++}`,from:fn.id,to:tn.id,op:nextOp(),state:'idle'}); }); });
+  }
+  let startVal;
+  if(roundIdx<2) startVal=randInt(2,6);
+  else if(roundIdx<5) startVal=randInt(2,10);
+  else startVal=randInt(3,15);
+  let cur='START', val=startVal;
+  const correctPath=[];
+  for(let step=0;step<=cols;step++){
+    const outEdges=edges.filter(e=>e.from===cur);
+    const chosen=randFrom(outEdges);
+    correctPath.push(chosen.id);
+    val=applyOp(chosen.op,val);
+    cur=chosen.to;
+  }
+  const targetVal=val;
+  if(!Number.isInteger(targetVal)||targetVal<=0||targetVal>9999) return null;
+  if(!force&&targetVal===startVal) return null;
+  return {
+    startNode,endNode,midNodes,edges,startVal,targetVal,cfg,
+    selectedEdge:Array(cols+1).fill(null),
+    allNodes:[startNode,...midNodes.flat(),endNode],
+    cols,rows
+  };
+}
+
+/* ─── LAYOUT ─── */
+const PC=document.getElementById('pipe-canvas');
+const PX=PC.getContext('2d');
+let CW,CH;
+
+function layoutNet(){
+  if(!NET) return;
+  const {cols,rows}=NET;
+  const PAD_X=52,PAD_Y=44;
+  const usW=CW-PAD_X*2, usH=CH-PAD_Y*2;
+  const totalCols=cols+2;
+  const xStep=usW/(totalCols-1);
+  function nodeX(col){ return PAD_X+(col+1)*xStep; }
+  function nodeY(row,totalRows){
+    if(totalRows===1) return CH/2;
+    return PAD_Y+row*(usH/(totalRows-1));
+  }
+  NET.startNode.x=PAD_X; NET.startNode.y=CH/2;
+  NET.endNode.x=CW-PAD_X; NET.endNode.y=CH/2;
+  NET.midNodes.forEach((col,c)=>{
+    col.forEach((n,r)=>{ n.x=nodeX(c); n.y=nodeY(r,col.length); });
+  });
+  NET.edges.forEach(e=>{
+    const fn=NET.allNodes.find(n=>n.id===e.from);
+    const tn=NET.allNodes.find(n=>n.id===e.to);
+    e.fn=fn; e.tn=tn;
+    const dx=tn.x-fn.x;
+    e.cp1x=fn.x+dx*.42; e.cp1y=fn.y;
+    e.cp2x=fn.x+dx*.58; e.cp2y=tn.y;
+    e.mx=(fn.x+tn.x)/2; e.my=(fn.y+tn.y)/2;
+  });
+}
+
+function resizeCanvas(){
+  const area=document.querySelector('.game-area');
+  if(!area) return;
+  CW=Math.min(area.clientWidth-36,760);
+  const rows=NET?NET.rows:2;
+  CH=Math.max(200,Math.min(innerHeight*.5,100+rows*90));
+  PC.width=CW; PC.height=CH;
+  if(NET) layoutNet();
+}
+
+/* ─── DRAW ─── */
+function draw(){
+  if(!NET) return;
+  PX.clearRect(0,0,CW,CH);
+  PX.fillStyle='rgba(30,50,90,0.4)';
+  for(let x=18;x<CW;x+=28) for(let y=18;y<CH;y+=28){
+    PX.beginPath(); PX.arc(x,y,1.2,0,Math.PI*2); PX.fill();
+  }
+  NET.edges.forEach(e=>{
+    const sel=isEdgeSelected(e.id);
+    const hov=hoverEdgeId===e.id;
+    const avail=isEdgeAvailable(e);
+    PX.save();
+    PX.beginPath();
+    PX.moveTo(e.fn.x,e.fn.y);
+    PX.bezierCurveTo(e.cp1x,e.cp1y,e.cp2x,e.cp2y,e.tn.x,e.tn.y);
+    if(sel){
+      PX.strokeStyle='#00e5ff'; PX.lineWidth=6;
+      PX.shadowColor='#00e5ff'; PX.shadowBlur=18;
+      PX.setLineDash([14,7]);
+      PX.lineDashOffset=-(Date.now()*.045%21);
+    } else if(hov&&avail){
+      PX.strokeStyle='rgba(255,0,110,0.75)'; PX.lineWidth=5;
+      PX.shadowColor='#ff006e'; PX.shadowBlur=14;
+      PX.setLineDash([]);
+    } else if(avail){
+      PX.strokeStyle='rgba(42,80,140,0.9)'; PX.lineWidth=3.5;
+      PX.shadowColor='rgba(0,229,255,0.15)'; PX.shadowBlur=4;
+      PX.setLineDash([]);
+    } else {
+      PX.strokeStyle='rgba(20,38,70,0.6)'; PX.lineWidth=2.5;
+      PX.shadowColor='transparent'; PX.shadowBlur=0;
+      PX.setLineDash([]);
+    }
+    PX.stroke(); PX.restore();
+    drawEdgeLabel(e,sel,hov&&avail,avail);
+  });
+  particles.forEach(p=>{
+    PX.save();
+    PX.beginPath(); PX.arc(p.x,p.y,p.r,0,Math.PI*2);
+    PX.fillStyle=p.col;
+    PX.shadowColor=p.col; PX.shadowBlur=14;
+    PX.fill(); PX.restore();
+  });
+  NET.allNodes.forEach(n=>{
+    const isStart=n.id==='START', isEnd=n.id==='END';
+    drawNode(n,isStart,isEnd,getNodeValue(n.id));
+  });
+}
+
+function drawEdgeLabel(e,sel,hov,avail){
+  const lw=48,lh=22,lx=e.mx,ly=e.my;
+  PX.save();
+  const bg  =sel?'rgba(0,229,255,0.16)':hov?'rgba(255,0,110,0.14)':avail?'rgba(23,32,53,0.92)':'rgba(12,18,30,0.7)';
+  const bord=sel?'#00e5ff':hov?'#ff006e':avail?'#2a3f6b':'#131f35';
+  rrect(PX,lx-lw/2,ly-lh/2,lw,lh,6,bg,bord,1.5);
+  PX.font=`bold 12px 'Courier New',monospace`;
+  PX.textAlign='center'; PX.textBaseline='middle';
+  PX.fillStyle=sel?'#00e5ff':hov?'#ff006e':avail?'#ffd60a':'#2a4070';
+  if(sel){ PX.shadowColor='#00e5ff'; PX.shadowBlur=8; }
+  PX.fillText(e.op,lx,ly); PX.restore();
+}
+
+function drawNode(n,isStart,isEnd,val){
+  const r=(isStart||isEnd)?24:17;
+  const col=isStart?'#00e5ff':isEnd?'#b8ff00':(val!==null?'#00e5ff':'#1e3358');
+  const bg=isStart?'#0d2a3d':isEnd?'#1a2a0d':(val!==null?'#0d1f3a':'#0a1020');
+  PX.save();
+  PX.beginPath(); PX.arc(n.x,n.y,r+5,0,Math.PI*2);
+  PX.fillStyle=`${col}18`; PX.fill();
+  PX.beginPath(); PX.arc(n.x,n.y,r,0,Math.PI*2);
+  PX.fillStyle=bg; PX.fill();
+  PX.strokeStyle=col; PX.lineWidth=2;
+  PX.shadowColor=col; PX.shadowBlur=10; PX.stroke();
+  if(val!==null){
+    PX.font=`bold ${isStart||isEnd?14:11}px 'Courier New',monospace`;
+    PX.textAlign='center'; PX.textBaseline='middle';
+    PX.fillStyle=col; PX.shadowColor=col; PX.shadowBlur=6;
+    PX.fillText(String(val),n.x,n.y);
+  } else if(isEnd){
+    PX.font=`bold 10px 'Courier New',monospace`;
+    PX.textAlign='center'; PX.textBaseline='middle';
+    PX.fillStyle='#3a6020'; PX.fillText('?',n.x,n.y);
+  }
+  PX.restore();
+}
+
+function rrect(ctx,x,y,w,h,r,fill,stroke,sw){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=sw||1;ctx.stroke();}
+}
+
+/* ─── PATH LOGIC ─── */
+function gapForEdge(edge){
+  const fn=NET.allNodes.find(n=>n.id===edge.from);
+  return fn.col+1;
+}
+function isEdgeSelected(id){ return NET.selectedEdge.includes(id); }
+function isEdgeAvailable(edge){
+  const gap=gapForEdge(edge);
+  for(let g=0;g<gap;g++) if(!NET.selectedEdge[g]) return false;
+  if(NET.selectedEdge[gap]) return false;
+  if(gap===0) return edge.from==='START';
+  const prevEdge=NET.edges.find(e=>e.id===NET.selectedEdge[gap-1]);
+  return prevEdge&&edge.from===prevEdge.to;
+}
+function getCurrentNode(){
+  let lastFilled=-1;
+  for(let g=NET.selectedEdge.length-1;g>=0;g--){ if(NET.selectedEdge[g]){lastFilled=g;break;} }
+  if(lastFilled===-1) return 'START';
+  const e=NET.edges.find(e2=>e2.id===NET.selectedEdge[lastFilled]);
+  return e?e.to:'START';
+}
+function getNodeValue(nodeId){
+  let cur='START',val=NET.startVal;
+  if(nodeId==='START') return val;
+  for(let g=0;g<NET.selectedEdge.length;g++){
+    const eid=NET.selectedEdge[g];
+    if(!eid) return null;
+    const edge=NET.edges.find(e=>e.id===eid);
+    if(!edge) return null;
+    val=applyOp(edge.op,val);
+    cur=edge.to;
+    if(cur===nodeId) return val;
+  }
+  return null;
+}
+function isPathComplete(){ return NET.selectedEdge.every(e=>e!==null); }
+function computeFinalValue(){
+  if(!isPathComplete()) return null;
+  let val=NET.startVal;
+  NET.selectedEdge.forEach(eid=>{
+    const edge=NET.edges.find(e=>e.id===eid);
+    if(edge) val=applyOp(edge.op,val);
+  });
+  return val;
+}
+
+/* ─── INTERACTION ─── */
+function canvasPos(ev){
+  const rect=PC.getBoundingClientRect();
+  const sx=PC.width/rect.width, sy=PC.height/rect.height;
+  const cx=ev.touches?ev.touches[0].clientX:ev.clientX;
+  const cy=ev.touches?ev.touches[0].clientY:ev.clientY;
+  return{x:(cx-rect.left)*sx,y:(cy-rect.top)*sy};
+}
+function edgeAtPoint(mx,my){
+  for(const e of NET.edges){ if(Math.abs(mx-e.mx)<26&&Math.abs(my-e.my)<14) return e; }
+  for(const e of NET.edges){
+    for(let t=0;t<=1;t+=0.04){
+      const p=bezPt(e,t);
+      if(Math.abs(mx-p.x)<12&&Math.abs(my-p.y)<12) return e;
+    }
+  }
+  return null;
+}
+function bezPt(e,t){
+  const m=1-t;
+  return{
+    x:m*m*m*e.fn.x+3*m*m*t*e.cp1x+3*m*t*t*e.cp2x+t*t*t*e.tn.x,
+    y:m*m*m*e.fn.y+3*m*m*t*e.cp1y+3*m*t*t*e.cp2y+t*t*t*e.tn.y
+  };
+}
+
+PC.addEventListener('mousemove',ev=>{
+  if(!NET||G.animating||G.gameOver) return;
+  const pos=canvasPos(ev);
+  const e=edgeAtPoint(pos.x,pos.y);
+  hoverEdgeId=e&&isEdgeAvailable(e)?e.id:null;
+  PC.style.cursor=hoverEdgeId?'pointer':'default';
+});
+PC.addEventListener('click',ev=>{
+  if(!NET||G.animating||G.gameOver) return;
+  resumeAC();
+  const pos=canvasPos(ev);
+  const e=edgeAtPoint(pos.x,pos.y);
+  if(e&&isEdgeAvailable(e)) clickEdge(e);
+});
+PC.addEventListener('touchstart',ev=>{
+  ev.preventDefault();
+  if(!NET||G.animating||G.gameOver) return;
+  resumeAC();
+  const pos=canvasPos(ev);
+  const e=edgeAtPoint(pos.x,pos.y);
+  if(e&&isEdgeAvailable(e)) clickEdge(e);
+},{passive:false});
+
+function clickEdge(edge){
+  const gap=gapForEdge(edge);
+  for(let g=gap;g<NET.selectedEdge.length;g++) NET.selectedEdge[g]=null;
+  NET.selectedEdge[gap]=edge.id;
+  sfx.click(); sfx.flow(); spawnParticles();
+  const cur=getCurrentNode();
+  const val=getNodeValue(cur);
+  const done=isPathComplete();
+  if(done){
+    const final=computeFinalValue();
+    if(final===NET.targetVal) setMsg(`Path complete! Result = ${final}. Hit SEND! 🎯`,'ok');
+    else setMsg(`Path complete — result is ${final}, target is ${NET.targetVal}. Try a different route!`,'hint');
+  } else {
+    setMsg(`Current value: ${val} — now choose the next pipe.`,'hint');
+  }
+}
+
+/* ─── PARTICLES ─── */
+function spawnParticles(){
+  particles=[];
+  const selEdges=NET.selectedEdge.filter(Boolean).map(id=>NET.edges.find(e=>e.id===id)).filter(Boolean);
+  if(!selEdges.length) return;
+  const cols=['#00e5ff','#ffffff','#b8ff00'];
+  selEdges.forEach((edge,i)=>{
+    particles.push({edgeObj:edge,t:(i%3)*.33,speed:.013+Math.random()*.005,r:3.5+Math.random()*1.5,col:cols[i%cols.length],x:edge.fn.x,y:edge.fn.y});
+  });
+}
+function updateParticles(){
+  particles.forEach(p=>{
+    p.t+=p.speed;
+    if(p.t>1){
+      const idx=NET.selectedEdge.findIndex(id=>id===p.edgeObj.id);
+      if(idx>=0&&idx<NET.selectedEdge.length-1&&NET.selectedEdge[idx+1])
+        p.edgeObj=NET.edges.find(e=>e.id===NET.selectedEdge[idx+1]);
+      p.t=0;
+    }
+    if(p.edgeObj){ const pt=bezPt(p.edgeObj,p.t); p.x=pt.x; p.y=pt.y; }
+  });
+}
+
+/* ─── DRAW LOOP ─── */
+function startDrawLoop(){
+  if(drawLoopId) cancelAnimationFrame(drawLoopId);
+  function loop(){ updateParticles(); draw(); drawLoopId=requestAnimationFrame(loop); }
+  loop();
+}
+
+/* ═══════════════════════════════════════
+   STAR RATING
+   ─────────────────────────────────────
+   3 ⭐ : 9+ correct AND 2+ lives remaining
+   2 ⭐ : 6+ correct
+   1 ⭐ : 1+ correct (participated)
+   0 ⭐ : 0 correct
+═══════════════════════════════════════ */
+const STAR_LABELS = [
+  '',
+  'Keep Practicing!',
+  'Good Calculation!',
+  'Master of NumFlow! 🏆'
+];
+
+function computeStars(correct, lives){
+  if(correct>=9 && lives>=2) return 3;
+  if(correct>=6)             return 2;
+  if(correct>=1)             return 1;
+  return 0;
+}
+
+function animateStars(count){
+  ['estr-1','estr-2','estr-3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.className='end-star';
+    if(i<count){
+      setTimeout(()=>{
+        el.classList.add('earned');
+        sfx.star(i);
+      }, 500 + i*350);
+    }
+  });
+}
+
+/* ─── SCREENS ─── */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+function showHow(){
+  resumeAC();
+  goSlide(0); // reset to first slide
+  showScreen('how-screen');
+}
+function hideHow(){ showScreen('start-screen'); }
+
+/* ─── GAME FLOW ─── */
+function startGame(){
+  resumeAC();
+  Object.assign(G,{round:1,score:0,lives:3,totalCorrect:0,totalTimeBonus:0,animating:false,gameOver:false});
+  showScreen('game-screen');
+  startBgMusic();
+  loadRound();
+}
+
+function loadRound(){
+  G.animating=false; G.gameOver=false;
+  // remove any game-over overlay that might be lingering
+  const existingGO=document.querySelector('.gameover-overlay');
+  if(existingGO) existingGO.remove();
+
+  const r=G.round;
+  const cfg=RCFG[r-1];
+  G.timerMax=cfg.tmax; G.timeLeft=cfg.tmax;
+
+  document.getElementById('hud-round').textContent=`${r}/10`;
+  document.getElementById('hud-score').textContent=G.score;
+  document.getElementById('round-label').textContent=`Round ${r}`;
+  updateLives(); updateTimerUI();
+
+  NET=generateNet(r-1);
+  hoverEdgeId=null; particles=[];
+
+  document.getElementById('td-start').textContent=NET.startVal;
+  document.getElementById('td-target').textContent=NET.targetVal;
+
+  resizeCanvas(); layoutNet();
+  startDrawLoop(); startTimer();
+  sfx.round();
+  setMsg('Click any pipe from the left to start routing.','neutral');
+}
+
+function updateLives(){
+  const d=document.getElementById('hud-lives');
+  d.innerHTML='';
+  for(let i=0;i<3;i++){
+    const dot=document.createElement('div');
+    dot.className='life-dot'+(i>=G.lives?' lost':'');
+    d.appendChild(dot);
+  }
+}
+function updateTimerUI(){
+  const t=Math.ceil(G.timeLeft);
+  document.getElementById('hud-timer').textContent=t;
+  const pct=G.timeLeft/G.timerMax*100;
+  const bar=document.getElementById('tbar');
+  bar.style.width=pct+'%';
+  bar.className='tbar'+(pct<30?' danger':'');
+  if(t<=5&&t>0) sfx.tick();
+}
+function startTimer(){
+  clearInterval(G.timerInt);
+  G.timerInt=setInterval(()=>{
+    G.timeLeft-=.2; updateTimerUI();
+    if(G.timeLeft<=0){ clearInterval(G.timerInt); onTimeUp(); }
+  },200);
+}
+function stopTimer(){ clearInterval(G.timerInt); }
+
+function onTimeUp(){
+  if(G.animating||G.gameOver) return;
+  G.animating=true;
+  loseLife();
+  flash('fail'); sfx.fail();
+  setMsg(`⏱ Time's up! The answer was ${NET.targetVal}. Try again!`,'fail');
+  if(G.lives<=0){ triggerGameOver(); return; }
+  // Stay on same round — reset path and restart timer after brief pause
+  setTimeout(()=>{
+    NET.selectedEdge.fill(null);
+    particles=[];
+    G.animating=false;
+    const cfg=RCFG[G.round-1];
+    G.timerMax=cfg.tmax; G.timeLeft=cfg.tmax;
+    updateTimerUI();
+    startTimer();
+    setMsg(`Round ${G.round} — route the number to ${NET.targetVal}. Try again!`,'hint');
+  },1800);
+}
+
+function sendNumber(){
+  if(G.animating||G.gameOver) return;
+  resumeAC();
+  if(!isPathComplete()){
+    setMsg('⚠ Path is incomplete — select a pipe at every junction!','hint');
+    return;
+  }
+  stopTimer(); G.animating=true;
+  const result=computeFinalValue();
+  if(result===NET.targetVal){
+    const bonus=Math.max(0,Math.floor(G.timeLeft*10));
+    const pts=100+bonus;
+    G.score+=pts; G.totalCorrect++; G.totalTimeBonus+=bonus;
+    document.getElementById('hud-score').textContent=G.score;
+    flash('ok'); sfx.success();
+    setMsg(`✓ Correct! ${result} = ${NET.targetVal} 🎉  +${pts} pts`,'ok');
+    setTimeout(()=>{ G.animating=false; nextRound(); },1700);
+  } else {
+    loseLife(); flash('fail'); sfx.fail();
+    setMsg(`✗ Got ${result}, needed ${NET.targetVal}. Lose a life — try again!`,'fail');
+    if(G.lives<=0){ triggerGameOver(); return; }
+    // Stay on same round — reset path and restart timer
+    setTimeout(()=>{
+      NET.selectedEdge.fill(null);
+      particles=[];
+      G.animating=false;
+      const cfg=RCFG[G.round-1];
+      G.timerMax=cfg.tmax; G.timeLeft=cfg.tmax;
+      updateTimerUI();
+      startTimer();
+      setMsg(`Round ${G.round} — target is still ${NET.targetVal}. Try a different route!`,'hint');
+    },1800);
+  }
+}
+
+function resetPath(){
+  if(G.animating||G.gameOver) return;
+  resumeAC(); sfx.click();
+  NET.selectedEdge.fill(null);
+  particles=[];
+  setMsg('Path reset — pick your route from the start.','neutral');
+}
+
+function loseLife(){ G.lives=Math.max(0,G.lives-1); updateLives(); }
+
+/* ─── GAME OVER (lives = 0) ─── */
+function triggerGameOver(){
+  G.gameOver=true;
+  stopTimer();
+  sfx.gameover();
+  // Show overlay inside game area
+  const area=document.querySelector('.game-area');
+  const overlay=document.createElement('div');
+  overlay.className='gameover-overlay';
+  overlay.innerHTML=`
+    <div class="go-title">GAME OVER</div>
+    <div class="go-sub">All 3 lives lost — showing results…</div>
+  `;
+  area.appendChild(overlay);
+  setTimeout(()=>{ endGame(); },2000);
+}
+
+function flash(type){
+  const el=document.getElementById('flash-overlay');
+  el.className=`flash-overlay flash-${type} flash-on`;
+  setTimeout(()=>el.classList.remove('flash-on'),400);
+}
+function setMsg(txt,cls){
+  const el=document.getElementById('game-msg');
+  el.textContent=txt;
+  el.className=`msg-row msg-${cls}`;
+}
+
+function nextRound(){
+  if(drawLoopId){ cancelAnimationFrame(drawLoopId); drawLoopId=null; }
+  if(G.round>=10){ endGame(); return; }
+  G.round++;
+  loadRound();
+}
+
+function endGame(){
+  stopBgMusic(); stopTimer();
+  if(drawLoopId){ cancelAnimationFrame(drawLoopId); drawLoopId=null; }
+
+  const stars=computeStars(G.totalCorrect, G.lives);
+
+  document.getElementById('end-score').textContent=G.score;
+  document.getElementById('e-correct').textContent=`${G.totalCorrect}/10`;
+  document.getElementById('e-lives').textContent=G.lives;
+  document.getElementById('e-bonus').textContent=G.totalTimeBonus;
+
+  const p=G.totalCorrect/10;
+  let trophy,title,grade;
+  if(p===1&&G.lives>=2){ trophy='🏆';title='PERFECT!'; grade='Flawless — master of the pipes!'; }
+  else if(p>=.9)        { trophy='🥇';title='EXCELLENT!'; grade=`Outstanding — ${G.totalCorrect}/10 correct!`; }
+  else if(p>=.6)        { trophy='🥈';title='WELL DONE!'; grade=`Solid work — ${G.totalCorrect}/10 correct.`; }
+  else if(p>=.4)        { trophy='🥉';title='GAME COMPLETE'; grade=`Keep practising — ${G.totalCorrect}/10 correct.`; }
+  else                  { trophy='💪';title='GAME OVER'; grade=`Don't give up — ${G.totalCorrect}/10 correct. Try again!`; }
+
+  document.getElementById('end-trophy').textContent=trophy;
+  document.getElementById('end-title').textContent=title;
+  document.getElementById('end-grade').innerHTML=`<strong>${grade}</strong>`;
+  document.getElementById('star-grade-label').textContent=STAR_LABELS[stars];
+
+  showScreen('end-screen');
+  animateStars(stars);
+}
+
+function restartGame(){ stopBgMusic(); stopTimer(); showScreen('start-screen'); }
+</script>
+</body>
+</html>

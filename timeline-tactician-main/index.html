@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timeline Tactician - History Minigame</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+
+  html, body {
+    height: 100%;
+    background: #2b1d0e;
+    overflow: hidden;
+  }
+
+  #game-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(135deg, #3a2818, #1c120a);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .screen {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+  }
+  .hidden { display: none !important; }
+
+  /* START / INSTRUCTIONS / END SCREENS */
+  #start-screen h1, #end-screen h1, #instructions-screen h1 {
+    font-size: 2.4em;
+    margin-bottom: 14px;
+    color: #ffd166;
+    text-shadow: 2px 2px 0 #4a2e10;
+  }
+  #start-screen p, #instructions-screen p { margin: 8px 0; font-size: 1.05em; max-width: 600px; line-height: 1.6; }
+
+  .btn {
+    margin-top: 20px;
+    padding: 14px 36px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(180deg, #ff8c42, #ff5e62);
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #b33a3a;
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #b33a3a; }
+  .btn-secondary {
+    background: linear-gradient(180deg, #4fb0ff, #2378d6);
+    box-shadow: 0 5px 0 #1a5599;
+  }
+  .btn-secondary:active { box-shadow: 0 1px 0 #1a5599; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #instructions-screen ul {
+    text-align: left;
+    margin: 14px 0;
+    line-height: 1.8;
+    max-width: 620px;
+    font-size: 1.05em;
+  }
+  #instructions-screen li { margin-bottom: 8px; }
+
+  /* GAME SCREEN */
+  #game-screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  #hud {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .stat-box {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 8px 12px;
+    text-align: center;
+  }
+  .stat-box .label { display: block; opacity: 0.65; font-size: 0.75em; }
+  .stat-box .value { font-size: 1.2em; font-weight: bold; }
+
+  #timer-bar-bg {
+    width: 100%;
+    max-width: 900px;
+    height: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  #timer-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #7CFC00, #ffd166, #ff5e62);
+    width: 100%;
+    transition: width 0.2s linear;
+  }
+
+  #category-title {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #ffd166;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  #category-instruction {
+    font-size: 0.95em;
+    opacity: 0.8;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* TIMELINE */
+  #timeline {
+    width: 100%;
+    max-width: 900px;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  #timeline::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    height: 4px;
+    background: #ffd166;
+    opacity: 0.3;
+    z-index: 0;
+  }
+
+  .timeline-card {
+    flex: 1;
+    min-width: 110px;
+    background: linear-gradient(180deg, #f5e6c8, #e3cba0);
+    color: #2b1d0e;
+    border-radius: 12px;
+    padding: 14px 8px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 4px 0 #8a6a3f;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.3s;
+    user-select: none;
+  }
+  .timeline-card:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a6a3f; }
+  .timeline-card .emoji { font-size: 2.2em; display: block; margin-bottom: 6px; }
+  .timeline-card .name { font-size: 0.95em; font-weight: bold; line-height: 1.3; }
+  .timeline-card .pos-label {
+    position: absolute;
+    top: -10px; left: 50%;
+    transform: translateX(-50%);
+    background: #ffd166;
+    color: #2b1d0e;
+    font-size: 0.75em;
+    font-weight: bold;
+    border-radius: 10px;
+    padding: 1px 8px;
+    box-shadow: 0 2px 0 #8a6a3f;
+  }
+
+  .timeline-card.selected {
+    background: linear-gradient(180deg, #7ee8fa, #38b6ff);
+    transform: translateY(-6px);
+    box-shadow: 0 8px 0 #1f7aa8;
+  }
+  .timeline-card.correct {
+    background: linear-gradient(180deg, #b6f7a0, #7CFC00);
+    box-shadow: 0 4px 0 #4a9c1f;
+  }
+  .timeline-card.incorrect {
+    background: linear-gradient(180deg, #ffb3a7, #ff5e62);
+    box-shadow: 0 4px 0 #b33a3a;
+  }
+  .timeline-card.shake { animation: shake 0.3s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  #submit-btn {
+    margin-top: 26px;
+    padding: 14px 40px;
+    font-size: 1.15em;
+    font-weight: bold;
+    color: #2b1d0e;
+    background: linear-gradient(180deg, #ffd166, #f4a531);
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #a86f1c;
+    transition: transform 0.1s;
+  }
+  #submit-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #a86f1c; }
+  #submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #feedback-text {
+    min-height: 26px;
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-top: 14px;
+    text-align: center;
+  }
+
+  /* ROUND BANNER */
+  #round-banner {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: #fff;
+    font-size: 1.8em;
+    font-weight: bold;
+    z-index: 10;
+    text-align: center;
+    padding: 20px;
+  }
+  #round-banner span { color: #ffd166; font-size: 1.1em; margin-top: 10px; max-width: 85%; }
+
+  /* END SCREEN */
+  #stars { font-size: 3em; margin: 16px 0; letter-spacing: 8px; }
+  .star { color: #4a2e10; transition: color 0.3s, transform 0.3s; display: inline-block; }
+  .star.filled { color: #ffd166; transform: scale(1.2); text-shadow: 0 0 12px #ffd166; }
+  #end-stats { font-size: 1.2em; line-height: 1.9; margin-bottom: 10px; }
+
+  /* SOUND TOGGLE */
+  #sound-toggle {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: rgba(0,0,0,0.4);
+    border: none;
+    color: #fff;
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    font-size: 1.2em;
+    cursor: pointer;
+    z-index: 20;
+  }
+
+  @media (max-width: 700px) {
+    .timeline-card { min-width: 80px; padding: 10px 4px; }
+    .timeline-card .emoji { font-size: 1.6em; }
+    .timeline-card .name { font-size: 0.8em; }
+    #timeline { gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+
+  <button id="sound-toggle" title="Mute/Unmute">🔊</button>
+
+  <!-- START SCREEN -->
+  <div id="start-screen" class="screen">
+    <h1>📜 Timeline Tactician</h1>
+    <p>Put history in order! Each round gives you 5 events or inventions in a random order —
+    swap their positions until they're arranged from <b>oldest to newest</b>, then submit before time runs out.</p>
+    <button class="btn" id="btn-start">Start Game</button>
+    <button class="btn btn-secondary" id="btn-instructions">How to Play</button>
+  </div>
+
+  <!-- INSTRUCTIONS SCREEN -->
+  <div id="instructions-screen" class="screen hidden">
+    <h1>How to Play</h1>
+    <ul>
+      <li>🗂️ Each round shows 5 cards representing events, inventions, or milestones — shuffled randomly.</li>
+      <li>👆 Tap/click one card to <b>select</b> it (it lifts up).</li>
+      <li>👆 Tap/click a second card to <b>swap</b> their positions.</li>
+      <li>🎯 Arrange the cards from <b>OLDEST (left) to NEWEST (right)</b>.</li>
+      <li>✅ Press <b>Submit</b> to check your order — correct positions turn green, incorrect ones turn red.</li>
+      <li>❌ An incorrect submission costs 1 life (❤️) — but you can keep adjusting and resubmit.</li>
+      <li>⏱️ Each round has a time limit shown by the bar at the top.</li>
+      <li>🏆 Complete all 4 rounds before running out of lives. Your score determines your star rating!</li>
+    </ul>
+    <button class="btn" id="btn-back">Back</button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen hidden">
+    <div id="hud">
+      <div class="stat-box"><span class="label">Score</span><span class="value" id="hud-score">0</span></div>
+      <div class="stat-box"><span class="label">Round</span><span class="value" id="hud-round">1 / 4</span></div>
+      <div class="stat-box"><span class="label">Lives</span><span class="value" id="hud-lives">❤️❤️❤️</span></div>
+    </div>
+    <div id="timer-bar-bg"><div id="timer-bar"></div></div>
+
+    <div id="category-title"></div>
+    <div id="category-instruction">Tap two cards to swap them — arrange OLDEST (left) → NEWEST (right)</div>
+
+    <div id="timeline"></div>
+
+    <button id="submit-btn">✅ Submit Order</button>
+    <div id="feedback-text"></div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div id="end-screen" class="screen hidden">
+    <h1 id="end-title">Time Travel Complete!</h1>
+    <div id="stars">
+      <span class="star" id="star1">★</span>
+      <span class="star" id="star2">★</span>
+      <span class="star" id="star3">★</span>
+    </div>
+    <div id="end-stats"></div>
+    <button class="btn" id="btn-restart">Play Again</button>
+  </div>
+
+</div>
+
+<script>
+(() => {
+  // ====================== AUDIO ======================
+  let audioCtx = null;
+  let muted = false;
+  let bgInterval = null;
+
+  function getCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function beep(freq, duration, type = 'sine', volume = 0.15) {
+    if (muted) return;
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.value = volume;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+    osc.stop(ctx.currentTime + duration);
+  }
+
+  const sounds = {
+    select: () => { beep(523, 0.08, 'triangle', 0.12); },
+    swap: () => { beep(659, 0.08, 'triangle', 0.12); },
+    correct: () => { beep(880, 0.15, 'triangle', 0.18); setTimeout(()=>beep(1320,0.15,'triangle',0.12), 100); },
+    wrong: () => { beep(180, 0.3, 'sawtooth', 0.2); },
+    roundWin: () => { [659,784,988,1318].forEach((f,i)=>setTimeout(()=>beep(f,0.15,'triangle',0.15), i*100)); },
+    start: () => { beep(523, 0.12); setTimeout(()=>beep(659,0.12),120); setTimeout(()=>beep(784,0.18),240); },
+    gameOver: () => { beep(300, 0.25,'sawtooth',0.2); setTimeout(()=>beep(200,0.4,'sawtooth',0.2),200); },
+    win: () => { [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.2,'triangle',0.15), i*150)); }
+  };
+
+  // Mysterious, ticking "old clock" style background loop
+  function startBgMusic() {
+    stopBgMusic();
+    const melody = [220, 220, 277, 220, 196, 196, 247, 196];
+    let i = 0;
+    bgInterval = setInterval(() => {
+      if (!muted) beep(melody[i % melody.length], 0.3, 'triangle', 0.035);
+      i++;
+    }, 500);
+  }
+  function stopBgMusic() {
+    if (bgInterval) clearInterval(bgInterval);
+    bgInterval = null;
+  }
+
+  document.getElementById('sound-toggle').addEventListener('click', () => {
+    muted = !muted;
+    document.getElementById('sound-toggle').textContent = muted ? '🔇' : '🔊';
+  });
+
+  // ====================== GAME DATA ======================
+  const TOTAL_ROUNDS = 4;
+  const STARTING_LIVES = 3;
+  const ROUND_TIME = 45; // seconds
+
+  const categories = [
+    {
+      title: "📡 Communication Inventions",
+      items: [
+        { name: "Printing Press", year: 1440, emoji: "🖨️" },
+        { name: "Telegraph", year: 1837, emoji: "⚡" },
+        { name: "Telephone", year: 1876, emoji: "☎️" },
+        { name: "Television", year: 1927, emoji: "📺" },
+        { name: "The Internet", year: 1983, emoji: "🌐" },
+      ]
+    },
+    {
+      title: "🚀 Space Exploration Milestones",
+      items: [
+        { name: "Sputnik 1 Launched", year: 1957, emoji: "🛰️" },
+        { name: "First Human in Space", year: 1961, emoji: "👨‍🚀" },
+        { name: "Moon Landing", year: 1969, emoji: "🌕" },
+        { name: "Hubble Telescope Launch", year: 1990, emoji: "🔭" },
+        { name: "Mars Rover Curiosity Lands", year: 2012, emoji: "🤖" },
+      ]
+    },
+    {
+      title: "🚗 Transportation Breakthroughs",
+      items: [
+        { name: "Steam Locomotive", year: 1804, emoji: "🚂" },
+        { name: "First Powered Flight", year: 1903, emoji: "✈️" },
+        { name: "Ford Model T", year: 1908, emoji: "🚗" },
+        { name: "First Jet Airliner", year: 1952, emoji: "🛩️" },
+        { name: "Mainstream Electric Car", year: 2012, emoji: "🔋" },
+      ]
+    },
+    {
+      title: "💻 Computing & Internet Era",
+      items: [
+        { name: "ENIAC Computer", year: 1945, emoji: "💻" },
+        { name: "First Personal Computer", year: 1975, emoji: "🖥️" },
+        { name: "World Wide Web Invented", year: 1989, emoji: "🌐" },
+        { name: "Social Media Goes Mainstream", year: 2004, emoji: "📲" },
+        { name: "First Smartphone (iPhone)", year: 2007, emoji: "📱" },
+      ]
+    },
+  ];
+
+  // ====================== STATE ======================
+  let score = 0;
+  let lives = STARTING_LIVES;
+  let round = 0;
+  let timeLeft = ROUND_TIME;
+  let timerInterval = null;
+  let roundActive = false;
+  let currentItems = [];   // current shuffled/working order
+  let correctOrder = [];   // sorted-by-year order
+  let selectedIndex = null;
+
+  // ====================== DOM ======================
+  const startScreen = document.getElementById('start-screen');
+  const instructionsScreen = document.getElementById('instructions-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const endScreen = document.getElementById('end-screen');
+
+  const hudScore = document.getElementById('hud-score');
+  const hudRound = document.getElementById('hud-round');
+  const hudLives = document.getElementById('hud-lives');
+  const timerBar = document.getElementById('timer-bar');
+  const categoryTitle = document.getElementById('category-title');
+  const timelineEl = document.getElementById('timeline');
+  const submitBtn = document.getElementById('submit-btn');
+  const feedbackText = document.getElementById('feedback-text');
+
+  function showScreen(el) {
+    [startScreen, instructionsScreen, gameScreen, endScreen].forEach(s => s.classList.add('hidden'));
+    el.classList.remove('hidden');
+  }
+
+  // ====================== NAVIGATION ======================
+  document.getElementById('btn-instructions').addEventListener('click', () => showScreen(instructionsScreen));
+  document.getElementById('btn-back').addEventListener('click', () => showScreen(startScreen));
+  document.getElementById('btn-start').addEventListener('click', () => { sounds.start(); startGame(); });
+  document.getElementById('btn-restart').addEventListener('click', () => { sounds.start(); startGame(); });
+  submitBtn.addEventListener('click', handleSubmit);
+
+  // ====================== GAME SETUP ======================
+  function startGame() {
+    score = 0;
+    lives = STARTING_LIVES;
+    round = 0;
+    updateHud();
+    showScreen(gameScreen);
+    startBgMusic();
+    nextRound();
+  }
+
+  function updateHud() {
+    hudScore.textContent = score;
+    hudRound.textContent = `${Math.min(round, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}`;
+    hudLives.textContent = '❤️'.repeat(Math.max(lives,0)) + '🖤'.repeat(Math.max(STARTING_LIVES-lives,0));
+  }
+
+  // ====================== ROUND FLOW ======================
+  function nextRound() {
+    round++;
+    if (round > TOTAL_ROUNDS) {
+      endGame(true);
+      return;
+    }
+    updateHud();
+    feedbackText.textContent = '';
+    selectedIndex = null;
+
+    const category = categories[round - 1];
+    categoryTitle.textContent = category.title;
+
+    correctOrder = [...category.items].sort((a,b) => a.year - b.year);
+    currentItems = shuffle([...category.items]);
+    // Ensure it's not already fully correct (re-shuffle if so)
+    let attempts = 0;
+    while (isFullyCorrect(currentItems) && attempts < 10) {
+      currentItems = shuffle([...currentItems]);
+      attempts++;
+    }
+
+    renderTimeline();
+    submitBtn.disabled = false;
+
+    showRoundBanner(`Round ${round} / ${TOTAL_ROUNDS}`, category.title, () => {
+      roundActive = true;
+      timeLeft = ROUND_TIME;
+      startTimer();
+    });
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function isFullyCorrect(items) {
+    return items.every((item, i) => item.year === correctOrder[i].year);
+  }
+
+  function showRoundBanner(title, subtitle, callback) {
+    const banner = document.createElement('div');
+    banner.id = 'round-banner';
+    banner.innerHTML = `<div>${title}</div><span>${subtitle}</span>`;
+    document.getElementById('game-container').appendChild(banner);
+    setTimeout(() => {
+      banner.remove();
+      callback();
+    }, 1400);
+  }
+
+  // ====================== TIMELINE RENDERING ======================
+  function renderTimeline() {
+    timelineEl.innerHTML = '';
+    currentItems.forEach((item, index) => {
+      const card = document.createElement('div');
+      card.className = 'timeline-card';
+      card.dataset.index = index;
+      card.innerHTML = `
+        <div class="pos-label">${index + 1}</div>
+        <span class="emoji">${item.emoji}</span>
+        <span class="name">${item.name}</span>
+      `;
+      card.addEventListener('click', () => handleCardClick(index, card));
+      timelineEl.appendChild(card);
+    });
+  }
+
+  function handleCardClick(index, cardEl) {
+    if (!roundActive) return;
+
+    if (selectedIndex === null) {
+      selectedIndex = index;
+      cardEl.classList.add('selected');
+      sounds.select();
+    } else if (selectedIndex === index) {
+      // Deselect
+      cardEl.classList.remove('selected');
+      selectedIndex = null;
+    } else {
+      // Swap
+      [currentItems[selectedIndex], currentItems[index]] = [currentItems[index], currentItems[selectedIndex]];
+      sounds.swap();
+      selectedIndex = null;
+      renderTimeline();
+    }
+  }
+
+  // ====================== TIMER ======================
+  function startTimer() {
+    clearInterval(timerInterval);
+    timerBar.style.transition = 'none';
+    timerBar.style.width = '100%';
+    requestAnimationFrame(() => {
+      timerBar.style.transition = `width ${ROUND_TIME}s linear`;
+      timerBar.style.width = '0%';
+    });
+
+    timerInterval = setInterval(() => {
+      timeLeft -= 1;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        handleRoundFail("⏰ Time's up!");
+      }
+    }, 1000);
+  }
+  function stopTimer() {
+    clearInterval(timerInterval);
+    timerBar.style.transition = 'none';
+  }
+
+  // ====================== SUBMIT / CHECK ======================
+  function handleSubmit() {
+    if (!roundActive) return;
+
+    const cards = Array.from(timelineEl.children);
+    let correctCount = 0;
+
+    currentItems.forEach((item, i) => {
+      const correct = item.year === correctOrder[i].year;
+      if (correct) correctCount++;
+      cards[i].classList.remove('correct', 'incorrect');
+      cards[i].classList.add(correct ? 'correct' : 'incorrect');
+    });
+
+    if (correctCount === currentItems.length) {
+      // Round success
+      roundActive = false;
+      stopTimer();
+      submitBtn.disabled = true;
+      sounds.roundWin();
+
+      const timeBonus = timeLeft * 2;
+      score += 50 + timeBonus;
+      updateHud();
+      feedbackText.textContent = `🎉 Perfect order! +${50 + timeBonus} pts`;
+      feedbackText.style.color = '#7CFC00';
+
+      setTimeout(() => { if (gameScreen) nextRound(); }, 1500);
+    } else {
+      // Partial / incorrect
+      sounds.wrong();
+      score += correctCount * 5;
+      updateHud();
+      feedbackText.textContent = `${correctCount}/${currentItems.length} correct. -1 life — keep adjusting!`;
+      feedbackText.style.color = '#ff5e62';
+
+      cards.forEach(c => {
+        if (c.classList.contains('incorrect')) {
+          c.classList.add('shake');
+          setTimeout(() => c.classList.remove('shake'), 300);
+        }
+      });
+
+      lives -= 1;
+      updateHud();
+
+      // Reset card colors after a brief moment so player can keep trying
+      setTimeout(() => {
+        cards.forEach(c => c.classList.remove('correct', 'incorrect'));
+      }, 800);
+
+      if (lives <= 0) {
+        roundActive = false;
+        stopTimer();
+        submitBtn.disabled = true;
+        setTimeout(() => endGame(false), 1000);
+      }
+    }
+  }
+
+  function handleRoundFail(message) {
+    if (!roundActive) return;
+    roundActive = false;
+    stopTimer();
+    submitBtn.disabled = true;
+    lives -= 1;
+    sounds.wrong();
+    updateHud();
+    feedbackText.textContent = `${message} -1 life`;
+    feedbackText.style.color = '#ff5e62';
+
+    if (lives <= 0) {
+      setTimeout(() => endGame(false), 1000);
+    } else {
+      setTimeout(() => { nextRound(); }, 1300);
+    }
+  }
+
+  // ====================== END GAME ======================
+  function endGame(completedAll) {
+    roundActive = false;
+    stopTimer();
+    stopBgMusic();
+    submitBtn.disabled = true;
+
+    const maxScore = TOTAL_ROUNDS * (50 + ROUND_TIME * 2);
+    let starCount = 0;
+    if (score >= maxScore * 0.6) starCount = 3;
+    else if (score >= maxScore * 0.35) starCount = 2;
+    else if (score > 0) starCount = 1;
+
+    document.getElementById('end-title').textContent =
+      lives > 0 ? '🎉 Time Travel Complete!' : '💥 Out of Lives!';
+    document.getElementById('end-stats').innerHTML =
+      `Final Score: <b>${score}</b><br>Rounds Completed: <b>${Math.min(round, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}</b><br>Lives Remaining: <b>${Math.max(lives,0)}</b>`;
+
+    for (let i = 1; i <= 3; i++) document.getElementById('star' + i).classList.remove('filled');
+
+    if (lives > 0 && starCount >= 2) sounds.win(); else sounds.gameOver();
+
+    showScreen(endScreen);
+
+    for (let i = 1; i <= starCount; i++) {
+      setTimeout(() => {
+        document.getElementById('star' + i).classList.add('filled');
+        beep(700 + i*150, 0.2, 'triangle', 0.15);
+      }, i * 400);
+    }
+  }
+
+})();
+</script>
+</body>
+</html>

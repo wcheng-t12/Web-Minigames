@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🕵️ Debug Detective</title>
+<style>
+  :root{
+    --bg1:#0b0f1e; --bg2:#151b30; --panel:#1b2340; --panel2:#212a4d;
+    --amber:#ffb02e; --amber2:#ffd580; --red:#ff5c5c; --green:#4ade80;
+    --text:#eef1ff; --muted:#8b93b8; --line:#2c355c;
+    --font: 'Courier New', monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{height:100%;}
+  body{
+    margin:0; min-height:100vh; overflow-x:hidden;
+    background: radial-gradient(ellipse at 50% -10%, #26305c 0%, var(--bg1) 55%, #05070f 100%);
+    color:var(--text); font-family: 'Segoe UI', Arial, sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+  }
+  #fog{position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden;}
+  .fog-puff{position:absolute; bottom:-50px; width:300px; height:120px; border-radius:50%;
+    background:radial-gradient(ellipse, rgba(255,255,255,0.05), transparent 70%);
+    animation: drift 18s linear infinite;}
+  @keyframes drift{ from{transform:translateX(-10vw) translateY(0);} to{transform:translateX(110vw) translateY(-40px);} }
+
+  .app{position:relative; z-index:1; width:100%; max-width:720px; min-height:100vh;
+    display:flex; flex-direction:column; padding:16px; margin:0 auto;}
+
+  .screen{display:none; flex:1; flex-direction:column; animation:fadeIn .4s ease;}
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+
+  h1,h2,h3{margin:0; font-family:'Segoe UI',sans-serif;}
+  .glow-title{
+    font-size:clamp(28px,7vw,46px); text-align:center; color:var(--amber);
+    text-shadow:0 0 18px rgba(255,176,46,.55), 0 0 40px rgba(255,176,46,.25);
+    letter-spacing:1px; margin-top:6vh;
+  }
+  .subtitle{text-align:center; color:var(--muted); margin-top:10px; font-size:15px;}
+
+  /* ---------- Detective badge art (pure CSS/SVG) ---------- */
+  .badge-wrap{display:flex; justify-content:center; margin:34px 0;}
+  .magnifier{width:120px; height:120px; position:relative; animation:swing 3.2s ease-in-out infinite;}
+  @keyframes swing{0%,100%{transform:rotate(-8deg);} 50%{transform:rotate(8deg);}}
+  .magnifier .lens{width:70px; height:70px; border-radius:50%; border:8px solid var(--amber);
+    background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.25), rgba(255,255,255,0) 60%), rgba(255,255,255,.04);
+    position:absolute; top:0; left:0; box-shadow:0 0 25px rgba(255,176,46,.4), inset 0 0 15px rgba(255,255,255,.08);}
+  .magnifier .handle{width:14px; height:55px; background:linear-gradient(#8a5a1f,#5c3a10); border-radius:8px;
+    position:absolute; top:62px; left:70px; transform:rotate(45deg); box-shadow:0 0 10px rgba(0,0,0,.4);}
+
+  .btn{
+    appearance:none; border:none; cursor:pointer; border-radius:14px; padding:16px 26px;
+    font-size:17px; font-weight:700; letter-spacing:.3px; color:#1a1305;
+    background:linear-gradient(180deg,var(--amber2),var(--amber));
+    box-shadow:0 6px 0 #a56a09, 0 10px 18px rgba(0,0,0,.35);
+    transition:transform .08s ease;
+  }
+  .btn:active{transform:translateY(4px); box-shadow:0 2px 0 #a56a09, 0 4px 10px rgba(0,0,0,.35);}
+  .btn.secondary{background:linear-gradient(180deg,#3a4576,#2a3360); color:var(--text);
+    box-shadow:0 6px 0 #182047, 0 10px 18px rgba(0,0,0,.35);}
+  .btn.secondary:active{box-shadow:0 2px 0 #182047, 0 4px 10px rgba(0,0,0,.35);}
+  .btn-row{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:auto; padding-top:20px;}
+  .center-col{display:flex; flex-direction:column; align-items:center; flex:1; justify-content:center;}
+
+  .icon-btn{width:44px; height:44px; border-radius:50%; border:2px solid var(--line); background:var(--panel);
+    color:var(--text); font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+
+  .top-mini{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;}
+
+  /* ---------- How To Play (slides) ---------- */
+  .slides-wrap{flex:1; display:flex; flex-direction:column;}
+  .slide-viewport{position:relative; flex:1; overflow:hidden; border-radius:18px; background:var(--panel);
+    border:1px solid var(--line); min-height:360px;}
+  .slide{position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding:22px; text-align:center; animation:slideIn .35s ease;}
+  .slide.active{display:flex;}
+  @keyframes slideIn{from{opacity:0; transform:translateX(24px);} to{opacity:1; transform:translateX(0);}}
+  .slide-art{width:100%; max-width:320px; height:170px; margin-bottom:16px; position:relative;}
+  .slide h3{color:var(--amber); font-size:20px; margin-bottom:8px;}
+  .slide p{color:var(--muted); font-size:14.5px; line-height:1.5; max-width:340px;}
+  .dots{display:flex; justify-content:center; gap:8px; margin:14px 0;}
+  .dot{width:9px; height:9px; border-radius:50%; background:var(--line); cursor:pointer; transition:.2s;}
+  .dot.active{background:var(--amber); width:22px; border-radius:6px;}
+  .slide-nav{display:flex; justify-content:space-between; gap:10px;}
+
+  /* mini illustration pieces */
+  .mini-code{background:#10142a; border:1px solid var(--line); border-radius:10px; padding:10px 14px; text-align:left;
+    font-family:var(--font); font-size:12px; color:#9fb0ff; width:100%;}
+  .mini-code .ln{opacity:.55; display:inline-block; width:16px;}
+  .mini-code .bad{color:var(--red); text-decoration: wavy underline var(--red);}
+  .mini-code .good{color:var(--green);}
+  .pointer-hand{font-size:28px; position:absolute; animation:tap 1.4s ease-in-out infinite;}
+  @keyframes tap{0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(6px) scale(0.92);}}
+  .tile-demo{display:flex; gap:8px; justify-content:center; margin-top:10px; flex-wrap:wrap;}
+  .tile{padding:8px 14px; border-radius:9px; background:var(--panel2); border:1px solid var(--line);
+    font-family:var(--font); font-size:13px;}
+  .tile.correctTile{border-color:var(--green); color:var(--green);}
+  .heart-row,.star-row{display:flex; gap:6px; font-size:22px; justify-content:center;}
+
+  /* ---------- Game HUD ---------- */
+  .hud{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;}
+  .hud-item{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 12px;
+    display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700;}
+  .hud-item .lbl{color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:.5px;}
+  #livesDisplay{font-size:18px; letter-spacing:2px;}
+  .timerbar-wrap{width:100%; height:10px; background:var(--panel); border-radius:6px; overflow:hidden; margin-bottom:10px; border:1px solid var(--line);}
+  #timerbar{height:100%; width:100%; background:linear-gradient(90deg,var(--green),var(--amber)); transition:width .1s linear, background .3s;}
+
+  .case-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:10px;}
+  .case-title{color:var(--amber); font-size:16px; margin-bottom:4px;}
+  .case-flavor{color:var(--muted); font-size:13px; line-height:1.4;}
+
+  .code-panel{background:#0d1126; border:1px solid var(--line); border-radius:14px; padding:10px 4px; font-family:var(--font);
+    font-size:clamp(12.5px,3.2vw,15px); overflow-x:auto; margin-bottom:12px;}
+  .code-line{display:flex; align-items:flex-start; padding:7px 10px; border-radius:8px; cursor:pointer;
+    transition:background .15s; white-space:pre; gap:10px;}
+  .code-line:hover{background:rgba(255,255,255,.04);}
+  .code-line .num{color:#48507a; width:18px; flex-shrink:0; user-select:none;}
+  .code-line .txt{color:#c7cff5;}
+  .code-line.wrongflash{animation:flashRed .5s;}
+  .code-line.correctflash{animation:flashGreen .6s;}
+  @keyframes flashRed{0%,100%{background:transparent;}30%{background:rgba(255,92,92,.35);}}
+  @keyframes flashGreen{0%,100%{background:transparent;}30%{background:rgba(74,222,128,.35);}}
+  .code-line.foundline{background:rgba(255,176,46,.12); border:1px dashed var(--amber);}
+  .blankslot{display:inline-block; min-width:38px; padding:1px 8px; border-radius:6px; border:2px dashed var(--amber);
+    color:var(--amber); text-align:center; margin:0 2px; animation:pulseBlank 1.1s infinite;}
+  @keyframes pulseBlank{0%,100%{box-shadow:0 0 0 rgba(255,176,46,0);}50%{box-shadow:0 0 12px rgba(255,176,46,.5);}}
+  .filledtoken{color:var(--green); font-weight:700;}
+
+  .hint-banner{text-align:center; font-size:13px; color:var(--amber2); margin:2px 0 10px; min-height:18px;}
+
+  .tray{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:12px;}
+  .evidence-tile{background:linear-gradient(180deg,#232c52,#181f3d); border:1px solid var(--line); border-radius:10px;
+    padding:12px 16px; font-family:var(--font); font-size:15px; color:var(--text); cursor:pointer;
+    box-shadow:0 4px 0 #0d1230; transition:transform .1s;}
+  .evidence-tile:active{transform:translateY(3px); box-shadow:0 1px 0 #0d1230;}
+  .evidence-tile.picked{opacity:0; transform:scale(0.3); pointer-events:none;}
+  .evidence-tile.wrongpick{animation:shake .4s;}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+
+  .result-boards{display:flex; gap:10px; margin-bottom:8px;}
+  .result-board{flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center;}
+  .result-board .lbl{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;}
+  .result-board .val{font-size:15px; min-height:26px; display:flex; align-items:center; justify-content:center; flex-wrap:wrap;}
+  .result-board.target .val{color:var(--amber2);}
+  .result-board.live .val{color:#dfe4ff;}
+  .result-board.live.match{border-color:var(--green); box-shadow:0 0 14px rgba(74,222,128,.35);}
+  .result-board.live.match .val{color:var(--green);}
+
+  #particles{position:fixed; inset:0; pointer-events:none; z-index:5;}
+  .confetti{position:absolute; width:8px; height:8px; opacity:.9; border-radius:2px; top:-10px;}
+
+  .screenshake{animation:screenshake .35s;}
+  @keyframes screenshake{0%,100%{transform:translateX(0);}20%{transform:translateX(-10px);}40%{transform:translateX(8px);}60%{transform:translateX(-6px);}80%{transform:translateX(4px);}}
+
+  /* End screen */
+  .stars-final{display:flex; gap:10px; justify-content:center; font-size:56px; margin:14px 0;}
+  .stars-final span{opacity:.2; transform:scale(.6); transition:.4s; display:inline-block;}
+  .stars-final span.lit{opacity:1; transform:scale(1); filter:drop-shadow(0 0 12px rgba(255,176,46,.7));}
+  .rank-title{text-align:center; color:var(--amber); font-size:20px; margin-top:4px;}
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:18px 0;}
+  .stat-box{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; text-align:center;}
+  .stat-box .num{font-size:22px; font-weight:800; color:var(--amber);}
+  .stat-box .lbl{font-size:11px; color:var(--muted); text-transform:uppercase;}
+
+  .mute-btn{position:absolute; top:14px; right:14px;}
+  @media (max-width:420px){
+    .glow-title{margin-top:8vh;}
+    .result-boards{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+<div id="fog"></div>
+<div id="particles"></div>
+
+<div class="app" id="app">
+
+  <!-- START SCREEN -->
+  <div class="screen active" id="start-screen">
+    <div class="center-col">
+      <h1 class="glow-title">🕵️ Debug Detective</h1>
+      <p class="subtitle">Broken code. 10 cases. Only sharp eyes crack them.</p>
+      <div class="badge-wrap">
+        <div class="magnifier"><div class="lens"></div><div class="handle"></div></div>
+      </div>
+      <div class="btn-row" style="padding-top:0;">
+        <button class="btn" id="btnStart">Start Investigation</button>
+        <button class="btn secondary" id="btnHowTo">How To Play</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY (SLIDES) -->
+  <div class="screen" id="howto-screen">
+    <div class="top-mini">
+      <button class="icon-btn" id="closeHowTo">✕</button>
+      <h2 style="color:var(--amber); font-size:18px;">How To Play</h2>
+      <div style="width:44px;"></div>
+    </div>
+    <div class="slides-wrap">
+      <div class="slide-viewport" id="slideViewport"></div>
+      <div class="dots" id="slideDots"></div>
+      <div class="slide-nav">
+        <button class="btn secondary" id="prevSlide">◀ Prev</button>
+        <button class="btn" id="nextSlide">Next ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div class="screen" id="game-screen">
+    <div class="hud">
+      <div class="hud-item"><span class="lbl">Round</span>&nbsp;<span id="hudRound">1/10</span></div>
+      <div class="hud-item"><span class="lbl">Score</span>&nbsp;<span id="hudScore">0</span></div>
+      <div class="hud-item"><span class="lbl">Lives</span>&nbsp;<span id="livesDisplay">❤️❤️❤️</span></div>
+      <button class="icon-btn" id="muteBtn">🔊</button>
+    </div>
+    <div class="hud-item" style="justify-content:center; margin-bottom:4px;">
+      <span class="lbl">Time</span>&nbsp;<span id="hudTimer">30</span>s
+    </div>
+    <div class="timerbar-wrap"><div id="timerbar"></div></div>
+
+    <div class="case-card">
+      <div class="case-title" id="caseTitle">Case #1</div>
+      <div class="case-flavor" id="caseFlavor">...</div>
+    </div>
+
+    <div class="hint-banner" id="hintBanner">🔍 Tap the line that's causing the bug.</div>
+
+    <div class="code-panel" id="codePanel"></div>
+
+    <div class="tray" id="tray"></div>
+
+    <div class="result-boards">
+      <div class="result-board target">
+        <div class="lbl">🎯 Expected</div>
+        <div class="val" id="targetVal">—</div>
+      </div>
+      <div class="result-board live" id="liveBoard">
+        <div class="lbl">📟 Live Output</div>
+        <div class="val" id="liveVal">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div class="screen" id="end-screen">
+    <div class="center-col">
+      <h2 style="color:var(--amber); font-size:26px;" id="endTitle">Case Closed</h2>
+      <div class="stars-final" id="finalStars"><span>★</span><span>★</span><span>★</span></div>
+      <div class="rank-title" id="rankTitle">Rookie Detective</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="num" id="statScore">0</div><div class="lbl">Score</div></div>
+        <div class="stat-box"><div class="num" id="statRounds">0/10</div><div class="lbl">Cases Solved</div></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="btnReplay">Play Again</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= AUDIO ================= */
+let actx=null, muted=false, musicNodes=[], musicTimer=null;
+function ensureAudio(){ if(!actx){ try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } if(actx&&actx.state==='suspended'){actx.resume();} }
+function tone(freq,dur,type,gainVal,delay){
+  if(muted||!actx) return;
+  delay=delay||0;
+  const t0=actx.currentTime+delay;
+  const osc=actx.createOscillator(); const g=actx.createGain();
+  osc.type=type||'sine'; osc.frequency.setValueAtTime(freq,t0);
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(gainVal||0.15,t0+0.02);
+  g.gain.exponentialRampToValueAtTime(0.001,t0+dur);
+  osc.connect(g); g.connect(actx.destination);
+  osc.start(t0); osc.stop(t0+dur+0.05);
+}
+const SFX={
+  click:()=>tone(520,0.08,'square',0.08),
+  correctLine:()=>{tone(660,0.09,'triangle',0.12); tone(880,0.12,'triangle',0.1,0.08);},
+  wrong:()=>{tone(180,0.25,'sawtooth',0.14); tone(120,0.3,'sawtooth',0.12,0.05);},
+  place:()=>tone(740,0.1,'square',0.1),
+  roundWin:()=>{[523,659,784,1046].forEach((f,i)=>tone(f,0.18,'triangle',0.12,i*0.09));},
+  lifeLost:()=>{tone(220,0.15,'sawtooth',0.15); tone(160,0.25,'sawtooth',0.15,0.12);},
+  gameOver:()=>{[392,330,262,196].forEach((f,i)=>tone(f,0.3,'sawtooth',0.1,i*0.18));},
+  finalFanfare:()=>{[523,659,784,1046,1318].forEach((f,i)=>tone(f,0.22,'triangle',0.12,i*0.11));},
+  tick:()=>tone(880,0.04,'square',0.05)
+};
+function startMusic(){
+  if(muted||!actx||musicTimer) return;
+  const bass=[130.8,130.8,146.8,110.0];
+  let step=0;
+  musicTimer=setInterval(()=>{
+    if(muted) return;
+    tone(bass[step%bass.length],0.5,'sine',0.05);
+    tone(bass[step%bass.length]*2,0.35,'triangle',0.025,0.15);
+    step++;
+  },900);
+}
+function stopMusic(){ if(musicTimer){clearInterval(musicTimer); musicTimer=null;} }
+function toggleMute(){
+  ensureAudio();
+  muted=!muted;
+  document.getElementById('muteBtn').textContent = muted? '🔇':'🔊';
+  if(muted){stopMusic();} else {startMusic();}
+}
+
+/* ================= PARTICLES / FX ================= */
+function confettiBurst(x,y,count,colors){
+  const root=document.getElementById('particles');
+  count=count||24;
+  colors=colors||['#ffb02e','#4ade80','#7dd3fc','#f472b6'];
+  for(let i=0;i<count;i++){
+    const el=document.createElement('div');
+    el.className='confetti';
+    el.style.left=x+'px'; el.style.top=y+'px';
+    el.style.background=colors[Math.floor(Math.random()*colors.length)];
+    const ang=Math.random()*Math.PI*2, dist=60+Math.random()*140;
+    const dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist - 60;
+    el.style.transition='transform 1s cubic-bezier(.2,.8,.3,1), opacity 1s';
+    root.appendChild(el);
+    requestAnimationFrame(()=>{
+      el.style.transform=`translate(${dx}px, ${dy+220}px) rotate(${Math.random()*720}deg)`;
+      el.style.opacity='0';
+    });
+    setTimeout(()=>el.remove(),1050);
+  }
+}
+function shakeScreen(){
+  const app=document.getElementById('app');
+  app.classList.remove('screenshake'); void app.offsetWidth;
+  app.classList.add('screenshake');
+}
+for(let i=0;i<6;i++){
+  const p=document.createElement('div'); p.className='fog-puff';
+  p.style.left=(Math.random()*100)+'vw'; p.style.animationDelay=(Math.random()*18)+'s';
+  p.style.animationDuration=(14+Math.random()*10)+'s';
+  document.getElementById('fog').appendChild(p);
+}
+
+/* ================= HOW TO PLAY SLIDES ================= */
+const slidesData=[
+  {
+    title:"1. Read the Case File",
+    text:"Each round shows real code with a hidden bug inside. Read it like a detective reading a clue.",
+    art:`<div class="mini-code">
+      <div><span class="ln">1</span>let coins = 5;</div>
+      <div><span class="ln">2</span>let total = coins + 3;</div>
+      <div><span class="ln">3</span>console.log(<span class="bad">coin</span>);</div>
+    </div>`
+  },
+  {
+    title:"2. Tap The Buggy Line",
+    text:"Every line is clickable. Find the ONE line causing the problem and tap it. Wrong guess costs a life!",
+    art:`<div class="mini-code" style="position:relative;">
+      <div><span class="ln">1</span>let coins = 5;</div>
+      <div><span class="ln">2</span>let total = coins + 3;</div>
+      <div style="background:rgba(255,176,46,.18); border-radius:6px;"><span class="ln">3</span>console.log(<span class="bad">coin</span>);</div>
+      <div class="pointer-hand" style="right:20px; bottom:6px;">👆</div>
+    </div>`
+  },
+  {
+    title:"3. Place The Fix Tile",
+    text:"Once found, pick the correct evidence tile to slot into the blank. Choose wisely — there are decoys!",
+    art:`<div class="mini-code">
+      <div><span class="ln">3</span>console.log(<span class="blankslot" style="animation:none;">?</span>);</div>
+    </div>
+    <div class="tile-demo">
+      <div class="tile correctTile">total</div>
+      <div class="tile">coins</div>
+      <div class="tile">bonus</div>
+    </div>`
+  },
+  {
+    title:"4. Watch The Output Change",
+    text:"Compare the Expected result with your Live Output. A correct fix makes them match and the case closes!",
+    art:`<div class="tile-demo">
+      <div class="tile" style="border-color:#ffb02e;color:#ffd580;">🎯 8 coins</div>
+      <div class="tile correctTile">📟 8 coins ✔</div>
+    </div>`
+  },
+  {
+    title:"5. Survive & Earn Stars",
+    text:"You share 3 lives across all 10 rounds. Lose a life and just replay that round — no restart! Speed & accuracy earn stars 0–3 at the end.",
+    art:`<div>
+      <div class="heart-row">❤️❤️❤️</div>
+      <div class="star-row" style="margin-top:10px;">★ ★ ★</div>
+    </div>`
+  }
+];
+let slideIdx=0;
+function renderSlides(){
+  const vp=document.getElementById('slideViewport'); vp.innerHTML='';
+  const dots=document.getElementById('slideDots'); dots.innerHTML='';
+  slidesData.forEach((s,i)=>{
+    const div=document.createElement('div');
+    div.className='slide'+(i===0?' active':'');
+    div.innerHTML=`<div class="slide-art">${s.art}</div><h3>${s.title}</h3><p>${s.text}</p>`;
+    vp.appendChild(div);
+    const dot=document.createElement('div');
+    dot.className='dot'+(i===0?' active':'');
+    dot.addEventListener('click',()=>goSlide(i));
+    dots.appendChild(dot);
+  });
+}
+function goSlide(i){
+  slideIdx=Math.max(0,Math.min(slidesData.length-1,i));
+  document.querySelectorAll('.slide').forEach((s,idx)=>s.classList.toggle('active',idx===slideIdx));
+  document.querySelectorAll('.dot').forEach((d,idx)=>d.classList.toggle('active',idx===slideIdx));
+}
+let touchStartX=null;
+document.getElementById('slideViewport').addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;});
+document.getElementById('slideViewport').addEventListener('touchend',e=>{
+  if(touchStartX===null) return;
+  const dx=e.changedTouches[0].clientX-touchStartX;
+  if(dx>40) goSlide(slideIdx-1); else if(dx<-40) goSlide(slideIdx+1);
+  touchStartX=null;
+});
+document.getElementById('prevSlide').addEventListener('click',()=>goSlide(slideIdx-1));
+document.getElementById('nextSlide').addEventListener('click',()=>{
+  if(slideIdx===slidesData.length-1){ showScreen('start-screen'); } else { goSlide(slideIdx+1); }
+});
+
+/* ================= SCREEN MGMT ================= */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+document.getElementById('btnHowTo').addEventListener('click',()=>{ensureAudio(); renderSlides(); goSlide(0); showScreen('howto-screen');});
+document.getElementById('closeHowTo').addEventListener('click',()=>showScreen('start-screen'));
+document.getElementById('muteBtn').addEventListener('click',toggleMute);
+
+/* ================= GAME DATA ================= */
+// resultRender(fixedArr) -> string  where fixedArr = array of booleans, one per bug in order, true if that bug currently fixed
+const ROUNDS=[
+{
+  title:"Case 1: The Silent Receipt",
+  flavor:"The vending machine printed an error instead of the total. Somewhere, a variable went missing.",
+  code:[
+    "let coins = 5;",
+    "let bonus = 3;",
+    "let total = coins + bonus;",
+    "console.log(coin);"
+  ],
+  timeLimit:40, basePoints:80,
+  bugs:[{line:3, bad:"coin", correct:"total", distractors:["coins","bonus","sum"]}],
+  target:"🖨️ 8 coins",
+  live:(fixed)=> fixed[0] ? "🖨️ 8 coins" : "🖨️ ❓ Error: coin is not defined"
+},
+{
+  title:"Case 2: The Overgrown Bridge",
+  flavor:"The star bridge blueprint calls for exactly 5 stars — but the builder's loop keeps adding one too many.",
+  code:[
+    'let bridge = "";',
+    "for (let i = 0; i <= 5; i++) {",
+    '  bridge += "⭐";',
+    "}",
+    "console.log(bridge);"
+  ],
+  timeLimit:35, basePoints:90,
+  bugs:[{line:1, bad:"<=", correct:"<", distractors:[">","==","<="]}],
+  target:"⭐⭐⭐⭐⭐",
+  live:(fixed)=> fixed[0] ? "⭐⭐⭐⭐⭐" : "⭐⭐⭐⭐⭐⭐ (too many!)"
+},
+{
+  title:"Case 3: The Faulty Lock",
+  flavor:"This vault door unlocks for ANY code entered — the guard bot isn't really comparing anything.",
+  code:[
+    "let code = 1234;",
+    "let entered = 9999;",
+    "if (entered = code) {",
+    "  unlockDoor();",
+    "}"
+  ],
+  timeLimit:32, basePoints:95,
+  bugs:[{line:2, bad:"=", correct:"===", distractors:["!=","<","="]}],
+  target:"🔒 Locked (wrong code)",
+  live:(fixed)=> fixed[0] ? "🔒 Locked (wrong code)" : "🔓 UNLOCKED (always opens!)"
+},
+{
+  title:"Case 4: The Squished Greeting",
+  flavor:"The greeting robot's words are all mashed together — its voice module needs a proper join.",
+  code:[
+    'let name = "Alex";',
+    'let greeting = "Hello" + name;',
+    "console.log(greeting);"
+  ],
+  timeLimit:30, basePoints:90,
+  bugs:[{line:1, bad:"+", correct:'+ " " +', distractors:['- " " -','+ "," +','+']}],
+  target:"🤖 \"Hello Alex\"",
+  live:(fixed)=> fixed[0] ? '🤖 "Hello Alex"' : '🤖 "HelloAlex" 😵'
+},
+{
+  title:"Case 5: The Stuck Rocket",
+  flavor:"Mission control's countdown never reaches zero — the number keeps climbing instead of falling.",
+  code:[
+    "let t = 5;",
+    "while (t > 0) {",
+    "  console.log(t);",
+    "  t++;",
+    "}"
+  ],
+  timeLimit:28, basePoints:100,
+  bugs:[{line:3, bad:"++", correct:"--", distractors:["+=2","-=2","++"]}],
+  target:"🚀 5,4,3,2,1 LIFTOFF!",
+  live:(fixed)=> fixed[0] ? "🚀 5,4,3,2,1 LIFTOFF!" : "🚀 5,6,7,8,9... STUCK ♾️"
+},
+{
+  title:"Case 6: The Wrong Fruit",
+  flavor:"The detective needs the Mango from the basket, but the scanner keeps grabbing thin air.",
+  code:[
+    'let fruits = ["Apple","Banana","Mango","Grape"];',
+    "console.log(fruits[5]);"
+  ],
+  timeLimit:28, basePoints:100,
+  bugs:[{line:1, bad:"5", correct:"2", distractors:["0","1","3"]}],
+  target:"🥭 Mango",
+  live:(fixed)=> fixed[0] ? "🥭 Mango" : "❓ undefined"
+},
+{
+  title:"Case 7: The Broken Times-Table",
+  flavor:"This grid should print the first four multiples of 3. It stops one number too early.",
+  code:[
+    'let row = "";',
+    "for (let i = 1; i <= 3; i++) {",
+    '  row += (3 * i) + " ";',
+    "}",
+    "console.log(row);"
+  ],
+  timeLimit:26, basePoints:110,
+  bugs:[{line:1, bad:"3", correct:"4", distractors:["5","10","3"]}],
+  target:"3 6 9 12",
+  live:(fixed)=> fixed[0] ? "3 6 9 12" : "3 6 9  (missing one!)"
+},
+{
+  title:"Case 8: The Stubborn Treasure Chest",
+  flavor:"You only need the key OR the map to open this chest — right now it demands both, and you only have the key.",
+  code:[
+    "let hasKey = true;",
+    "let hasMap = false;",
+    "if (hasKey && hasMap) {",
+    "  openChest();",
+    "}"
+  ],
+  timeLimit:24, basePoints:110,
+  bugs:[{line:2, bad:"&&", correct:"||", distractors:["!","==","&&"]}],
+  target:"💰 Chest Opens",
+  live:(fixed)=> fixed[0] ? "💰 Chest Opens" : "🔒 Stays Locked"
+},
+{
+  title:"Case 9: The Empty-Handed Function",
+  flavor:"This function calculates the secret number perfectly... then hands back nothing at all.",
+  code:[
+    "function getSecret() {",
+    "  console.log(42);",
+    "}",
+    "console.log(getSecret());"
+  ],
+  timeLimit:24, basePoints:120,
+  bugs:[{line:1, bad:"console.log", correct:"return", distractors:["break","continue","console.log"]}],
+  target:"🔑 42",
+  live:(fixed)=> fixed[0] ? "🔑 42" : "🔑 undefined"
+},
+{
+  title:"Case 10: The Final Heist (Boss)",
+  flavor:"TWO traps guard this vault. A short loop bound AND a trap-door break condition. Disarm both to haul in the full treasure!",
+  code:[
+    "let vault = 0;",
+    "for (let i = 0; i < 6; i++) {",
+    "  if (i === 3) break;",
+    "  vault += 10;",
+    "}",
+    "console.log(vault);"
+  ],
+  timeLimit:45, basePoints:200,
+  bugs:[
+    {line:1, bad:"6", correct:"10", distractors:["5","12","6"]},
+    {line:2, bad:"3", correct:"99", distractors:["0","5","3"]}
+  ],
+  target:"💰 100 gold",
+  live:(fixed)=>{
+    if(fixed[0] && fixed[1]) return "💰 100 gold";
+    if(fixed[0] && !fixed[1]) return "💰 30 gold (trap door!)";
+    if(!fixed[0] && fixed[1]) return "💰 60 gold (short loop)";
+    return "💰 30 gold (both traps!)";
+  }
+}
+];
+
+/* ================= GAME STATE ================= */
+let state=null;
+function newGame(){
+  state={
+    roundIdx:0, score:0, lives:3, maxLives:3,
+    roundsCompleted:0,
+    bugIdx:0, fixedFlags:[], phase:'find', // 'find' | 'fix'
+    timer:0, timeLimit:0, timerInterval:null,
+    totalMaxScore: ROUNDS.reduce((s,r)=> s + r.basePoints + 50*(r.bugs.length), 0)
+  };
+}
+
+function livesHTML(){
+  let h='';
+  for(let i=0;i<state.maxLives;i++) h += i<state.lives ? '❤️' : '🖤';
+  return h;
+}
+
+function startGame(){
+  ensureAudio(); startMusic();
+  newGame();
+  showScreen('game-screen');
+  loadRound(0);
+}
+document.getElementById('btnStart').addEventListener('click',startGame);
+document.getElementById('btnReplay').addEventListener('click',startGame);
+
+function loadRound(idx){
+  state.roundIdx=idx;
+  const r=ROUNDS[idx];
+  state.bugIdx=0;
+  state.fixedFlags=r.bugs.map(()=>false);
+  state.phase='find';
+  state.timeLimit=r.timeLimit;
+  state.timer=r.timeLimit;
+
+  document.getElementById('hudRound').textContent=(idx+1)+"/10";
+  document.getElementById('hudScore').textContent=state.score;
+  document.getElementById('livesDisplay').textContent=livesHTML();
+  document.getElementById('caseTitle').textContent=r.title;
+  document.getElementById('caseFlavor').textContent=r.flavor;
+  document.getElementById('targetVal').textContent=r.target;
+  document.getElementById('hintBanner').textContent="🔍 Tap the line that's causing the bug.";
+  document.getElementById('tray').innerHTML='';
+  document.getElementById('liveBoard').classList.remove('match');
+
+  renderCode();
+  updateLiveOutput();
+  startTimer();
+}
+
+function currentRound(){ return ROUNDS[state.roundIdx]; }
+function currentBug(){ return currentRound().bugs[state.bugIdx]; }
+
+function renderCode(){
+  const r=currentRound();
+  const panel=document.getElementById('codePanel');
+  panel.innerHTML='';
+  r.code.forEach((lineText,i)=>{
+    const row=document.createElement('div');
+    row.className='code-line';
+    row.dataset.line=i;
+    const num=document.createElement('span'); num.className='num'; num.textContent=(i+1);
+    const txt=document.createElement('span'); txt.className='txt';
+
+    // determine if this line's bug (any bug in this round on this line) is already fixed -> show correct text
+    const bugOnLine = r.bugs.find(b=>b.line===i);
+    if(bugOnLine){
+      const bugArrIdx = r.bugs.indexOf(bugOnLine);
+      if(state.fixedFlags[bugArrIdx]){
+        txt.innerHTML = escapeHTML(lineText).replace(escapeHTML(bugOnLine.bad), '<span class="filledtoken">'+escapeHTML(bugOnLine.correct)+'</span>');
+      } else if (bugArrIdx===state.bugIdx && state.phase==='fix'){
+        txt.innerHTML = escapeHTML(lineText).replace(escapeHTML(bugOnLine.bad), '<span class="blankslot">?</span>');
+        row.classList.add('foundline');
+      } else {
+        txt.textContent = lineText;
+      }
+    } else {
+      txt.textContent = lineText;
+    }
+    row.appendChild(num); row.appendChild(txt);
+    if(state.phase==='find'){
+      row.addEventListener('click', ()=>onLineClick(i, row));
+    }
+    panel.appendChild(row);
+  });
+}
+function escapeHTML(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function onLineClick(lineIdx, rowEl){
+  if(state.phase!=='find') return;
+  SFX.click();
+  const bug=currentBug();
+  if(lineIdx===bug.line){
+    rowEl.classList.add('correctflash');
+    SFX.correctLine();
+    state.phase='fix';
+    document.getElementById('hintBanner').textContent="🧩 Found it! Now pick the right fix tile.";
+    renderCode();
+    renderTray();
+  } else {
+    rowEl.classList.add('wrongflash');
+    shakeScreen();
+    loseLife("Wrong line! That's not where the bug is.");
+  }
+}
+
+function renderTray(){
+  const bug=currentBug();
+  const options=shuffle([bug.correct, ...bug.distractors]);
+  const tray=document.getElementById('tray');
+  tray.innerHTML='';
+  options.forEach(opt=>{
+    const tile=document.createElement('div');
+    tile.className='evidence-tile';
+    tile.textContent=opt;
+    tile.addEventListener('click',()=>onTilePick(opt,tile));
+    tray.appendChild(tile);
+  });
+}
+
+function onTilePick(opt, tileEl){
+  if(state.phase!=='fix') return;
+  const bug=currentBug();
+  if(opt===bug.correct){
+    SFX.place();
+    tileEl.classList.add('picked');
+    state.fixedFlags[state.bugIdx]=true;
+    document.getElementById('tray').innerHTML='';
+    updateLiveOutput();
+
+    if(state.bugIdx < currentRound().bugs.length-1){
+      // more bugs remain in this round
+      state.bugIdx++;
+      state.phase='find';
+      document.getElementById('hintBanner').textContent="🔍 One more bug lurking! Tap the next buggy line.";
+      renderCode();
+    } else {
+      roundComplete();
+    }
+  } else {
+    tileEl.classList.add('wrongpick');
+    SFX.wrong();
+    shakeScreen();
+    setTimeout(()=>{ loseLife("Wrong fix! That tile doesn't belong there."); },250);
+  }
+}
+
+function updateLiveOutput(){
+  const r=currentRound();
+  const liveEl=document.getElementById('liveVal');
+  const board=document.getElementById('liveBoard');
+  const text=r.live(state.fixedFlags);
+  liveEl.textContent=text;
+  const solved = state.fixedFlags.every(f=>f);
+  board.classList.toggle('match', solved);
+}
+
+/* ---------- Timer ---------- */
+function startTimer(){
+  clearInterval(state.timerInterval);
+  updateTimerUI();
+  state.timerInterval=setInterval(()=>{
+    state.timer -= 0.1;
+    if(state.timer<=0){
+      state.timer=0;
+      updateTimerUI();
+      clearInterval(state.timerInterval);
+      loseLife("Time's up! The trail went cold.");
+      return;
+    }
+    updateTimerUI();
+    if(state.timer<=5.05 && Math.abs((state.timer*10)%10)<1) SFX.tick();
+  },100);
+}
+function updateTimerUI(){
+  document.getElementById('hudTimer').textContent=Math.ceil(state.timer);
+  const pct=Math.max(0,(state.timer/state.timeLimit)*100);
+  const bar=document.getElementById('timerbar');
+  bar.style.width=pct+'%';
+  if(pct<25) bar.style.background='linear-gradient(90deg,#ff5c5c,#ff8a5c)';
+  else if(pct<55) bar.style.background='linear-gradient(90deg,#ffb02e,#ffd580)';
+  else bar.style.background='linear-gradient(90deg,#4ade80,#a7f3d0)';
+}
+
+/* ---------- Life loss / round complete / game over ---------- */
+function loseLife(msg){
+  clearInterval(state.timerInterval);
+  state.lives--;
+  SFX.lifeLost();
+  document.getElementById('livesDisplay').textContent=livesHTML();
+  document.getElementById('hintBanner').textContent="💥 "+msg;
+
+  if(state.lives<=0){
+    setTimeout(()=>endGame(false),700);
+    return;
+  }
+  setTimeout(()=>{
+    // replay current round from scratch (same round, reset bug progress)
+    loadRound(state.roundIdx);
+  },900);
+}
+
+function roundComplete(){
+  clearInterval(state.timerInterval);
+  const r=currentRound();
+  const timeBonus=Math.round((state.timer/state.timeLimit)*50*r.bugs.length);
+  const gained=r.basePoints + timeBonus;
+  state.score += gained;
+  state.roundsCompleted++;
+  document.getElementById('hudScore').textContent=state.score;
+  document.getElementById('hintBanner').textContent=`✅ Case Closed! +${gained} pts`;
+  SFX.roundWin();
+
+  const panelRect=document.getElementById('codePanel').getBoundingClientRect();
+  confettiBurst(panelRect.left+panelRect.width/2, panelRect.top+20, 30);
+
+  setTimeout(()=>{
+    if(state.roundIdx < ROUNDS.length-1){
+      loadRound(state.roundIdx+1);
+    } else {
+      endGame(true);
+    }
+  },1400);
+}
+
+function endGame(won){
+  clearInterval(state.timerInterval);
+  stopMusic();
+  if(won) SFX.finalFanfare(); else SFX.gameOver();
+
+  const pct = state.totalMaxScore>0 ? state.score/state.totalMaxScore : 0;
+  let stars=0;
+  if(pct>=0.80) stars=3; else if(pct>=0.55) stars=2; else if(pct>0.15) stars=1; else stars=0;
+
+  document.getElementById('endTitle').textContent = won ? "🎉 All Cases Closed!" : "📁 Case File Suspended";
+  document.getElementById('statScore').textContent = state.score;
+  document.getElementById('statRounds').textContent = state.roundsCompleted+"/10";
+
+  const starEls=document.querySelectorAll('#finalStars span');
+  starEls.forEach((s,i)=> s.classList.toggle('lit', i<stars));
+
+  const ranks=["Rookie Detective","Junior Sleuth","Sharp Investigator","Master Debug Detective"];
+  document.getElementById('rankTitle').textContent = ranks[stars];
+
+  showScreen('end-screen');
+  setTimeout(()=>{
+    const rect=document.getElementById('finalStars').getBoundingClientRect();
+    confettiBurst(rect.left+rect.width/2, rect.top+20, stars*18+10);
+  },300);
+}
+
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+renderSlides();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Molecule Maze</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
+
+  :root {
+    --bg: #050a1a;
+    --panel: #0a1428;
+    --border: #1a3a6a;
+    --cyan: #00f5ff;
+    --green: #39ff14;
+    --yellow: #ffe600;
+    --red: #ff3366;
+    --purple: #b44fff;
+    --orange: #ff8c00;
+    --white: #e8f4ff;
+    --dim: #4a6a9a;
+    --cell: 52px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Exo 2', sans-serif;
+    color: var(--white);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    background: var(--bg);
+  }
+  .screen.active { display: flex; }
+
+  /* ─── START SCREEN ─── */
+  #startScreen { background: radial-gradient(ellipse at 50% 30%, #0a1f4a 0%, #050a1a 70%); }
+  .stars { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .star {
+    position: absolute; border-radius: 50%; background: white;
+    animation: twinkle var(--d, 3s) infinite ease-in-out;
+  }
+  @keyframes twinkle {
+    0%,100% { opacity: 0.1; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.5); }
+  }
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 50%, var(--green) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: logoGlow 3s ease-in-out infinite;
+    text-align: center;
+    line-height: 1.1;
+  }
+  @keyframes logoGlow {
+    0%,100% { filter: brightness(1) drop-shadow(0 0 20px #00f5ff88); }
+    50% { filter: brightness(1.3) drop-shadow(0 0 40px #b44fff88); }
+  }
+  .tagline { font-size: clamp(0.8rem, 2vw, 1.1rem); color: var(--dim); letter-spacing: 0.3em; text-transform: uppercase; margin-top: 0.5rem; font-weight: 300; }
+  .atom-orbit { position: relative; width: 160px; height: 160px; margin: 1.5rem 0; }
+  .nucleus {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 48px; height: 48px; border-radius: 50%;
+    background: radial-gradient(circle, #ffffff 0%, var(--cyan) 40%, #003a5a 100%);
+    box-shadow: 0 0 30px var(--cyan), 0 0 60px #00f5ff44;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', monospace; font-weight: 900; font-size: 1.1rem; color: var(--bg);
+  }
+  .orbit-ring { position: absolute; border: 2px solid; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+  .orbit-ring:nth-child(2) { width: 90px; height: 90px; border-color: #00f5ff44; animation: spin 3s linear infinite; }
+  .orbit-ring:nth-child(3) { width: 130px; height: 130px; border-color: #b44fff33; animation: spin 5s linear infinite reverse; }
+  .orbit-ring:nth-child(4) { width: 160px; height: 160px; border-color: #39ff1422; animation: spin 7s linear infinite; }
+  .electron { position: absolute; width: 10px; height: 10px; border-radius: 50%; top: -5px; left: calc(50% - 5px); }
+  .orbit-ring:nth-child(2) .electron { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  .orbit-ring:nth-child(3) .electron { background: var(--purple); box-shadow: 0 0 10px var(--purple); }
+  .orbit-ring:nth-child(4) .electron { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  @keyframes spin { from { transform: translate(-50%,-50%) rotate(0deg); } to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+  .btn {
+    padding: 0.9rem 2.5rem; border: 2px solid var(--cyan); background: transparent;
+    color: var(--cyan); font-family: 'Orbitron', monospace; font-size: 1rem; font-weight: 700;
+    letter-spacing: 0.15em; cursor: pointer; border-radius: 4px; transition: all 0.25s;
+    text-transform: uppercase; position: relative; overflow: hidden;
+  }
+  .btn::before { content: ''; position: absolute; inset: 0; background: var(--cyan); transform: translateX(-105%); transition: transform 0.25s; z-index: -1; }
+  .btn:hover::before { transform: translateX(0); }
+  .btn:hover { color: var(--bg); box-shadow: 0 0 30px var(--cyan); }
+  .btn.green { border-color: var(--green); color: var(--green); }
+  .btn.green::before { background: var(--green); }
+  .btn.green:hover { color: var(--bg); box-shadow: 0 0 30px var(--green); }
+  .btn.red { border-color: var(--red); color: var(--red); }
+  .btn.red::before { background: var(--red); }
+  .btn.red:hover { color: var(--bg); box-shadow: 0 0 30px var(--red); }
+  .btn-row { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+
+  /* ─── HOW TO PLAY — SLIDES ─── */
+  #howScreen { gap: 0; padding: 0; overflow: hidden; }
+  .slide-container {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative; padding: 2rem;
+  }
+  .slide {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 1.2rem; max-width: 560px; width: 100%;
+    animation: slideIn 0.4s ease;
+  }
+  .slide.active { display: flex; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  .slide-icon {
+    width: 110px; height: 110px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3.5rem; position: relative;
+    border: 3px solid;
+    flex-shrink: 0;
+  }
+  .slide-icon.cyan { background: rgba(0,245,255,0.08); border-color: var(--cyan); box-shadow: 0 0 30px rgba(0,245,255,0.2); }
+  .slide-icon.green { background: rgba(57,255,20,0.08); border-color: var(--green); box-shadow: 0 0 30px rgba(57,255,20,0.2); }
+  .slide-icon.yellow { background: rgba(255,230,0,0.08); border-color: var(--yellow); box-shadow: 0 0 30px rgba(255,230,0,0.2); }
+  .slide-icon.red { background: rgba(255,51,102,0.08); border-color: var(--red); box-shadow: 0 0 30px rgba(255,51,102,0.2); }
+  .slide-icon.purple { background: rgba(180,79,255,0.08); border-color: var(--purple); box-shadow: 0 0 30px rgba(180,79,255,0.2); }
+  .slide-icon.white { background: rgba(232,244,255,0.08); border-color: var(--white); box-shadow: 0 0 30px rgba(232,244,255,0.1); }
+
+  .slide-num {
+    font-family: 'Orbitron', monospace; font-size: 0.6rem; letter-spacing: 0.3em;
+    color: var(--dim); text-transform: uppercase;
+  }
+  .slide h2 { font-family: 'Orbitron', monospace; font-size: clamp(1.3rem, 3vw, 2rem); font-weight: 900; }
+  .slide h2.cyan { color: var(--cyan); text-shadow: 0 0 20px rgba(0,245,255,0.4); }
+  .slide h2.green { color: var(--green); text-shadow: 0 0 20px rgba(57,255,20,0.4); }
+  .slide h2.yellow { color: var(--yellow); text-shadow: 0 0 20px rgba(255,230,0,0.4); }
+  .slide h2.red { color: var(--red); text-shadow: 0 0 20px rgba(255,51,102,0.4); }
+  .slide h2.purple { color: var(--purple); text-shadow: 0 0 20px rgba(180,79,255,0.4); }
+  .slide h2.white { color: var(--white); }
+  .slide p { font-size: clamp(0.9rem, 2vw, 1.05rem); color: #8ab0d0; line-height: 1.7; max-width: 440px; }
+  .slide strong { color: var(--white); }
+
+  .slide-visual {
+    background: rgba(10,20,40,0.8); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem 1.5rem;
+    display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; justify-content: center;
+  }
+  .key {
+    background: var(--border); border: 1px solid var(--cyan); border-radius: 4px;
+    padding: 0.25rem 0.6rem; font-family: 'Orbitron', monospace; font-size: 0.8rem; color: var(--cyan);
+  }
+  .atom-pill {
+    padding: 0.3rem 0.9rem; border-radius: 20px; font-family: 'Orbitron', monospace;
+    font-size: 0.9rem; font-weight: 700; border: 2px solid;
+  }
+
+  /* Slide dots */
+  .slide-dots {
+    display: flex; gap: 8px; margin-top: 1.5rem;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); transition: all 0.3s; cursor: pointer;
+  }
+  .dot.active { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); transform: scale(1.3); }
+
+  .slide-nav {
+    display: flex; gap: 1rem; margin-top: 1rem; align-items: center;
+  }
+  .btn-sm {
+    padding: 0.5rem 1.5rem; border: 1px solid var(--border); background: transparent;
+    color: var(--dim); font-family: 'Orbitron', monospace; font-size: 0.75rem;
+    letter-spacing: 0.1em; cursor: pointer; border-radius: 4px; transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-sm:hover { border-color: var(--cyan); color: var(--cyan); }
+  .btn-sm.primary { border-color: var(--green); color: var(--green); }
+  .btn-sm.primary:hover { background: var(--green); color: var(--bg); box-shadow: 0 0 20px var(--green); }
+
+  /* ─── GAME SCREEN ─── */
+  #gameScreen { background: var(--bg); flex-direction: column; padding: 0; }
+  .hud {
+    width: 100%; background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 0.5rem 1rem; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 0.5rem; flex-shrink: 0;
+  }
+  .hud-item { display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+  .hud-label { font-family: 'Orbitron', monospace; font-size: 0.55rem; letter-spacing: 0.15em; color: var(--dim); text-transform: uppercase; }
+  .hud-value { font-family: 'Orbitron', monospace; font-size: 1.3rem; font-weight: 700; color: var(--cyan); line-height: 1; }
+  .lives-display { display: flex; gap: 3px; }
+  .heart { font-size: 1.1rem; transition: all 0.3s; }
+  .timer-bar { width: 100%; height: 3px; background: var(--border); flex-shrink: 0; }
+  .timer-fill { height: 100%; background: var(--cyan); transition: width 1s linear, background 0.5s; box-shadow: 0 0 8px var(--cyan); }
+
+  .target-bar {
+    width: 100%; background: #040810; border-bottom: 1px solid var(--border);
+    padding: 0.4rem 1rem; display: flex; align-items: center;
+    justify-content: space-between; flex-shrink: 0; gap: 1rem;
+  }
+  .target-label { font-family: 'Orbitron', monospace; font-size: 0.6rem; color: var(--dim); letter-spacing: 0.15em; white-space: nowrap; }
+  .target-formula { font-family: 'Orbitron', monospace; font-size: 1.4rem; font-weight: 900; color: var(--yellow); text-shadow: 0 0 20px var(--yellow); white-space: nowrap; }
+  .target-name { font-size: 0.75rem; color: #8ab0d0; white-space: nowrap; }
+  .collected-display { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; flex: 1; }
+  .collected-atom {
+    padding: 0.15rem 0.5rem; border-radius: 20px; font-family: 'Orbitron', monospace;
+    font-size: 0.8rem; font-weight: 700; border: 2px solid;
+    animation: popIn 0.3s ease;
+  }
+  @keyframes popIn { from { transform: scale(0) rotate(-20deg); } to { transform: scale(1) rotate(0); } }
+
+  .game-area { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+  #mazeCanvas { display: block; image-rendering: pixelated; }
+  .round-banner {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-family: 'Orbitron', monospace; font-size: clamp(2rem, 5vw, 4rem); font-weight: 900;
+    color: var(--cyan); text-shadow: 0 0 40px var(--cyan);
+    background: rgba(5,10,26,0.92); border: 2px solid var(--cyan);
+    padding: 1rem 3rem; border-radius: 8px; z-index: 20; text-align: center;
+    pointer-events: none; white-space: nowrap;
+  }
+  .round-banner.show { animation: bannerPop 2s ease forwards; }
+  @keyframes bannerPop {
+    0% { transform: translate(-50%,-50%) scale(0); opacity: 0; }
+    20% { transform: translate(-50%,-50%) scale(1.1); opacity: 1; }
+    30% { transform: translate(-50%,-50%) scale(1); }
+    70% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%,-50%) scale(0.8); opacity: 0; }
+  }
+
+  /* ─── END SCREEN — STAR RATING ─── */
+  #endScreen { gap: 1.2rem; padding: 2rem; text-align: center; }
+  .end-title { font-family: 'Orbitron', monospace; font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 900; }
+  .end-title.win { color: var(--green); text-shadow: 0 0 30px var(--green); }
+  .end-title.lose { color: var(--red); text-shadow: 0 0 30px var(--red); }
+
+  .star-rating {
+    display: flex; gap: 1rem; align-items: center; justify-content: center;
+    margin: 0.5rem 0;
+  }
+  .star-icon {
+    font-size: 3rem; transition: all 0.5s;
+    filter: grayscale(1) brightness(0.4);
+  }
+  .star-icon.earned {
+    filter: none;
+    animation: starPop 0.5s ease forwards;
+  }
+  @keyframes starPop {
+    0% { transform: scale(0) rotate(-30deg); filter: grayscale(1) brightness(0.4); }
+    60% { transform: scale(1.3) rotate(10deg); filter: none; }
+    100% { transform: scale(1) rotate(0); filter: none; }
+  }
+  .star-label { font-family: 'Orbitron', monospace; font-size: 0.9rem; color: var(--yellow); letter-spacing: 0.2em; margin-top: -0.2rem; }
+
+  .end-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+    max-width: 420px; width: 100%;
+  }
+  .end-stat { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; }
+  .end-stat-val { font-family: 'Orbitron', monospace; font-size: 1.8rem; font-weight: 900; color: var(--cyan); }
+  .end-stat-lbl { font-size: 0.65rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em; }
+  .molecules-learned { max-width: 440px; width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1.2rem; text-align: left; }
+  .molecules-learned h3 { font-family: 'Orbitron', monospace; font-size: 0.7rem; color: var(--dim); letter-spacing: 0.15em; margin-bottom: 0.6rem; }
+  .mol-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .mol-badge { padding: 0.25rem 0.7rem; border: 1px solid var(--yellow); border-radius: 20px; font-family: 'Orbitron', monospace; font-size: 0.75rem; color: var(--yellow); }
+
+  /* ─── PARTICLES ─── */
+  .particle {
+    position: fixed; pointer-events: none; border-radius: 50%; z-index: 100;
+    animation: particle-fade var(--dur, 1s) ease forwards;
+  }
+  @keyframes particle-fade {
+    0% { transform: translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx, 0), var(--ty, -60px)) scale(0); opacity: 0; }
+  }
+  .flash-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: 0; transition: opacity 0.1s; }
+  .flash-overlay.flash-red { background: rgba(255,51,102,0.35); }
+  .flash-overlay.flash-green { background: rgba(57,255,20,0.25); }
+  .flash-overlay.flash-cyan { background: rgba(0,245,255,0.2); }
+
+  /* ─── MOBILE CONTROLS ─── */
+  .mobile-controls {
+    display: none; flex-direction: column; align-items: center; gap: 2px;
+    padding: 0.5rem; flex-shrink: 0; background: var(--panel); border-top: 1px solid var(--border);
+  }
+  .mobile-row { display: flex; gap: 2px; }
+  .dpad {
+    width: 52px; height: 52px; background: var(--panel); border: 2px solid var(--border);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; cursor: pointer; transition: background 0.1s, border-color 0.1s;
+    touch-action: manipulation;
+  }
+  .dpad:active, .dpad.pressed { background: var(--border); border-color: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  .dpad.center { background: #0a1428; }
+  @media (hover: none) and (pointer: coarse) { .mobile-controls { display: flex; } }
+  @media (max-width: 600px) { .mobile-controls { display: flex; } .hud-value { font-size: 1rem; } .target-formula { font-size: 1rem; } }
+</style>
+</head>
+<body>
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<!-- ─── START SCREEN ─── -->
+<div class="screen active" id="startScreen">
+  <div class="stars" id="starsContainer"></div>
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:1.2rem;">
+    <div class="atom-orbit">
+      <div class="orbit-ring"><div class="electron"></div></div>
+      <div class="orbit-ring"><div class="electron"></div></div>
+      <div class="orbit-ring"><div class="electron"></div></div>
+      <div class="nucleus">⚗</div>
+    </div>
+    <div class="logo">MOLECULE<br>MAZE</div>
+    <div class="tagline">Navigate · Collect · React</div>
+    <div class="btn-row" style="margin-top:1rem;">
+      <button class="btn green" onclick="showHowToPlay()">▶ PLAY</button>
+      <button class="btn" onclick="showHowToPlay()">HOW TO PLAY</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── HOW TO PLAY — SLIDES ─── -->
+<div class="screen" id="howScreen">
+  <div class="slide-container">
+
+    <!-- Slide 1: Mission -->
+    <div class="slide active" id="slide-0">
+      <div class="slide-num">1 / 6</div>
+      <div class="slide-icon cyan">🎯</div>
+      <h2 class="cyan">YOUR MISSION</h2>
+      <p>Each round reveals a <strong>target molecule</strong>. Navigate through the maze, collect the exact atoms needed, and synthesize it at the reaction zone!</p>
+      <div class="slide-visual">
+        <span style="color:var(--dim);font-size:0.8rem;font-family:'Orbitron',monospace;">TARGET →</span>
+        <span style="font-family:'Orbitron',monospace;font-size:1.5rem;color:var(--yellow);text-shadow:0 0 15px var(--yellow);">H₂O</span>
+        <span style="color:#8ab0d0;font-size:0.85rem;">Water</span>
+      </div>
+    </div>
+
+    <!-- Slide 2: Collect atoms -->
+    <div class="slide" id="slide-1">
+      <div class="slide-num">2 / 6</div>
+      <div class="slide-icon green">⚗️</div>
+      <h2 class="green">COLLECT ATOMS</h2>
+      <p>Glowing atom tokens are scattered through the maze. Simply <strong>walk over them</strong> to pick them up. Collected atoms appear in your tray at the top.</p>
+      <div class="slide-visual">
+        <div class="atom-pill" style="background:#003060;border-color:#00a8ff;color:#66ccff;">H</div>
+        <div class="atom-pill" style="background:#400010;border-color:#ff3366;color:#ff6688;">O</div>
+        <div class="atom-pill" style="background:#151515;border-color:#aaaaaa;color:#dddddd;">C</div>
+        <div class="atom-pill" style="background:#002040;border-color:#00ccff;color:#44ddff;">N</div>
+        <div class="atom-pill" style="background:#302000;border-color:#ffaa00;color:#ffcc44;">Na</div>
+        <div class="atom-pill" style="background:#003020;border-color:#39ff14;color:#66ff44;">Cl</div>
+      </div>
+    </div>
+
+    <!-- Slide 3: React zone -->
+    <div class="slide" id="slide-2">
+      <div class="slide-num">3 / 6</div>
+      <div class="slide-icon yellow">⚡</div>
+      <h2 class="yellow">REACT ZONE</h2>
+      <p>Once you've collected <strong>all the correct atoms</strong>, find the golden ⚡ REACT zone in the maze. Step on it to synthesize your molecule and score points!</p>
+      <div class="slide-visual" style="flex-direction:column;gap:0.5rem;">
+        <div style="font-size:0.75rem;color:var(--dim);font-family:'Orbitron',monospace;letter-spacing:0.1em;">FASTER REACTION = MORE BONUS POINTS</div>
+        <div style="font-family:'Orbitron',monospace;font-size:1rem;color:var(--yellow);">BASE + TIME BONUS ⭐</div>
+      </div>
+    </div>
+
+    <!-- Slide 4: Wrong atoms -->
+    <div class="slide" id="slide-3">
+      <div class="slide-num">4 / 6</div>
+      <div class="slide-icon red">💥</div>
+      <h2 class="red">WRONG ATOMS</h2>
+      <p>Stepping on REACT with incorrect atoms causes an <strong>explosion</strong>! You lose one life and all atoms reset — but the maze stays open, so try again!</p>
+      <div class="slide-visual" style="flex-direction:column;gap:0.4rem;">
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <span style="font-size:1.2rem;">💚</span><span style="font-size:1.2rem;">💚</span><span style="font-size:1.2rem;">🖤</span>
+          <span style="color:var(--dim);font-size:0.85rem;margin-left:0.3rem;">3 lives total — use them wisely!</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 5: Timer -->
+    <div class="slide" id="slide-4">
+      <div class="slide-num">5 / 6</div>
+      <div class="slide-icon purple">⏱️</div>
+      <h2 class="purple">BEAT THE CLOCK</h2>
+      <p>Every round has a countdown timer. If time runs out, you lose a life and the round advances. Later rounds have <strong>bigger mazes and shorter timers!</strong></p>
+      <div class="slide-visual" style="flex-direction:column;gap:0.4rem;">
+        <div style="width:220px;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+          <div style="width:35%;height:100%;background:var(--red);box-shadow:0 0 8px var(--red);border-radius:4px;"></div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--red);font-family:'Orbitron',monospace;">⚠ TIME RUNNING OUT</div>
+      </div>
+    </div>
+
+    <!-- Slide 6: Controls -->
+    <div class="slide" id="slide-5">
+      <div class="slide-num">6 / 6</div>
+      <div class="slide-icon white">🕹️</div>
+      <h2 class="white">CONTROLS</h2>
+      <p>Move your character through the maze passages. Touch controls appear automatically on mobile!</p>
+      <div class="slide-visual" style="flex-direction:column;gap:0.8rem;">
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;justify-content:center;">
+          <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
+          <span style="color:var(--dim);font-size:0.85rem;">or</span>
+          <span class="key">↑</span><span class="key">←</span><span class="key">↓</span><span class="key">→</span>
+        </div>
+        <div style="font-size:0.8rem;color:#8ab0d0;">📱 On mobile: D-pad appears at the bottom</div>
+      </div>
+      <button class="btn green" onclick="startGame()" style="margin-top:0.5rem;">▶ START GAME</button>
+    </div>
+
+    <!-- Dots -->
+    <div class="slide-dots" id="slideDots"></div>
+
+    <!-- Nav -->
+    <div class="slide-nav">
+      <button class="btn-sm" id="prevBtn" onclick="changeSlide(-1)">◀ PREV</button>
+      <button class="btn-sm primary" id="nextBtn" onclick="changeSlide(1)">NEXT ▶</button>
+    </div>
+    <button class="btn-sm" style="margin-top:0.4rem;" onclick="showScreen('startScreen')">← BACK TO MENU</button>
+  </div>
+</div>
+
+<!-- ─── GAME SCREEN ─── -->
+<div class="screen" id="gameScreen">
+  <div class="hud">
+    <div class="hud-item">
+      <div class="hud-label">Round</div>
+      <div class="hud-value" id="hudRound">1/10</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Score</div>
+      <div class="hud-value" id="hudScore">0</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Lives</div>
+      <div class="hud-value"><div class="lives-display" id="hudLives"></div></div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Time</div>
+      <div class="hud-value" id="hudTimer">30</div>
+    </div>
+  </div>
+  <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+  <div class="target-bar">
+    <div>
+      <div class="target-label">Target Molecule</div>
+      <div style="display:flex;align-items:baseline;gap:0.5rem;">
+        <div class="target-formula" id="targetFormula">H₂O</div>
+        <div class="target-name" id="targetName">Water</div>
+      </div>
+    </div>
+    <div>
+      <div class="target-label" style="text-align:right;">Collected</div>
+      <div class="collected-display" id="collectedDisplay"></div>
+    </div>
+  </div>
+  <div class="game-area">
+    <canvas id="mazeCanvas"></canvas>
+    <div class="round-banner" id="roundBanner">ROUND 1</div>
+  </div>
+  <div class="mobile-controls">
+    <div class="mobile-row">
+      <div class="dpad center"></div>
+      <div class="dpad" id="dUp" data-dir="up">▲</div>
+      <div class="dpad center"></div>
+    </div>
+    <div class="mobile-row">
+      <div class="dpad" id="dLeft" data-dir="left">◀</div>
+      <div class="dpad center">●</div>
+      <div class="dpad" id="dRight" data-dir="right">▶</div>
+    </div>
+    <div class="mobile-row">
+      <div class="dpad center"></div>
+      <div class="dpad" id="dDown" data-dir="down">▼</div>
+      <div class="dpad center"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── END SCREEN ─── -->
+<div class="screen" id="endScreen">
+  <div class="end-title" id="endTitle">EXPERIMENT COMPLETE!</div>
+  <div id="endSubtitle" style="color:#8ab0d0;font-size:0.85rem;margin-top:-0.3rem;"></div>
+
+  <!-- Star Rating -->
+  <div>
+    <div class="star-rating" id="starRating">
+      <span class="star-icon" id="star1">⭐</span>
+      <span class="star-icon" id="star2">⭐</span>
+      <span class="star-icon" id="star3">⭐</span>
+    </div>
+    <div class="star-label" id="starLabel"></div>
+  </div>
+
+  <div class="end-stats">
+    <div class="end-stat">
+      <div class="end-stat-val" id="endScore">0</div>
+      <div class="end-stat-lbl">Final Score</div>
+    </div>
+    <div class="end-stat">
+      <div class="end-stat-val" id="endMols">0</div>
+      <div class="end-stat-lbl">Molecules Made</div>
+    </div>
+    <div class="end-stat">
+      <div class="end-stat-val" id="endLives">0</div>
+      <div class="end-stat-lbl">Lives Left</div>
+    </div>
+  </div>
+  <div class="molecules-learned">
+    <h3>⚗ MOLECULES YOU STUDIED</h3>
+    <div class="mol-list" id="molList"></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn green" onclick="startGame()">PLAY AGAIN</button>
+    <button class="btn" onclick="showScreen('startScreen')">MENU</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  SLIDE SHOW
+// ════════════════════════════════════════════════════════
+const TOTAL_SLIDES = 6;
+let currentSlide = 0;
+
+function buildDots() {
+  const dots = document.getElementById('slideDots');
+  dots.innerHTML = '';
+  for (let i = 0; i < TOTAL_SLIDES; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goToSlide(i);
+    dots.appendChild(d);
+  }
+}
+
+function goToSlide(n) {
+  document.getElementById('slide-' + currentSlide).classList.remove('active');
+  document.querySelectorAll('.dot')[currentSlide].classList.remove('active');
+  currentSlide = Math.max(0, Math.min(TOTAL_SLIDES - 1, n));
+  document.getElementById('slide-' + currentSlide).classList.add('active');
+  document.querySelectorAll('.dot')[currentSlide].classList.add('active');
+  document.getElementById('prevBtn').style.opacity = currentSlide === 0 ? '0.3' : '1';
+  document.getElementById('nextBtn').textContent = currentSlide === TOTAL_SLIDES - 1 ? 'START ▶' : 'NEXT ▶';
+  if (currentSlide === TOTAL_SLIDES - 1) {
+    document.getElementById('nextBtn').onclick = () => startGame();
+    document.getElementById('nextBtn').className = 'btn-sm primary';
+  } else {
+    document.getElementById('nextBtn').onclick = () => changeSlide(1);
+    document.getElementById('nextBtn').className = 'btn-sm primary';
+  }
+}
+
+function changeSlide(dir) {
+  if (currentSlide === TOTAL_SLIDES - 1 && dir === 1) { startGame(); return; }
+  goToSlide(currentSlide + dir);
+}
+
+function showHowToPlay() {
+  currentSlide = 0;
+  buildDots();
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  document.getElementById('slide-0').classList.add('active');
+  document.getElementById('prevBtn').style.opacity = '0.3';
+  document.getElementById('nextBtn').textContent = 'NEXT ▶';
+  document.getElementById('nextBtn').onclick = () => changeSlide(1);
+  showScreen('howScreen');
+}
+
+// ════════════════════════════════════════════════════════
+//  AUDIO ENGINE
+// ════════════════════════════════════════════════════════
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+function resumeAC() { if (AC.state === 'suspended') AC.resume(); }
+document.addEventListener('keydown', resumeAC, {once:true});
+document.addEventListener('click', resumeAC, {once:true});
+document.addEventListener('touchstart', resumeAC, {once:true});
+
+function playTone(freq, type, dur, vol=0.3, delay=0) {
+  if (AC.state === 'suspended') return;
+  const o = AC.createOscillator();
+  const g = AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type = type; o.frequency.setValueAtTime(freq, AC.currentTime + delay);
+  g.gain.setValueAtTime(0, AC.currentTime + delay);
+  g.gain.linearRampToValueAtTime(vol, AC.currentTime + delay + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + delay + dur);
+  o.start(AC.currentTime + delay);
+  o.stop(AC.currentTime + delay + dur);
+}
+
+function sfxCollect() { [520,660,800].forEach((f,i) => playTone(f,'sine',0.15,0.2,i*0.05)); }
+function sfxReact() { [262,330,392,523,659,784].forEach((f,i) => { playTone(f,'sine',0.4,0.25,i*0.07); playTone(f*2,'triangle',0.3,0.1,i*0.07); }); }
+function sfxExplode() {
+  const g = AC.createGain(); g.connect(AC.destination);
+  const buf = AC.createBuffer(1, AC.sampleRate*0.5, AC.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  const s = AC.createBufferSource(); s.buffer=buf; s.connect(g);
+  g.gain.setValueAtTime(0.6,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+0.5);
+  s.start(); s.stop(AC.currentTime+0.5);
+  playTone(80,'sawtooth',0.4,0.5);
+}
+function sfxTimeout() { [440,330,220].forEach((f,i) => playTone(f,'sawtooth',0.25,0.3,i*0.15)); }
+function sfxMove() { playTone(180+(Math.random()*40),'sine',0.03,0.05); }
+function sfxStar() { [523,659,784,1047].forEach((f,i) => playTone(f,'sine',0.3,0.2,i*0.12)); }
+
+let musicPlaying = false, musicScheduler;
+function startMusic() {
+  if (musicPlaying) return; musicPlaying = true;
+  const notes = [130.81,146.83,164.81,174.61,196,220,246.94,261.63];
+  const pattern = [0,2,4,5,7,5,4,2,0,2,4,7,5,4,2,0];
+  let step = 0; const bpm = 130; const beat = 60/bpm;
+  function scheduleBeat() {
+    if (!musicPlaying) return;
+    const n = pattern[step % pattern.length]; const freq = notes[n]; const t = AC.currentTime;
+    const b = AC.createOscillator(); const bg = AC.createGain();
+    b.connect(bg); bg.connect(AC.destination); b.type='triangle'; b.frequency.value=freq/2;
+    bg.gain.setValueAtTime(0.08,t); bg.gain.exponentialRampToValueAtTime(0.001,t+beat*0.9);
+    b.start(t); b.stop(t+beat);
+    if (step%2===0) {
+      const m=AC.createOscillator(); const mg=AC.createGain();
+      m.connect(mg); mg.connect(AC.destination); m.type='sine'; m.frequency.value=freq;
+      mg.gain.setValueAtTime(0.05,t+0.01); mg.gain.exponentialRampToValueAtTime(0.001,t+beat*1.5);
+      m.start(t+0.01); m.stop(t+beat*1.5);
+    }
+    step++;
+    musicScheduler = setTimeout(scheduleBeat, beat*1000);
+  }
+  scheduleBeat();
+}
+function stopMusic() { musicPlaying=false; clearTimeout(musicScheduler); }
+
+// ════════════════════════════════════════════════════════
+//  MOLECULES DATA
+// ════════════════════════════════════════════════════════
+const MOLECULES = [
+  { formula:'H₂O', name:'Water', atoms:{H:2,O:1} },
+  { formula:'CO₂', name:'Carbon Dioxide', atoms:{C:1,O:2} },
+  { formula:'O₂',  name:'Oxygen Gas', atoms:{O:2} },
+  { formula:'H₂',  name:'Hydrogen Gas', atoms:{H:2} },
+  { formula:'NaCl',name:'Table Salt', atoms:{Na:1,Cl:1} },
+  { formula:'NH₃', name:'Ammonia', atoms:{N:1,H:3} },
+  { formula:'CH₄', name:'Methane', atoms:{C:1,H:4} },
+  { formula:'HCl', name:'Hydrochloric Acid', atoms:{H:1,Cl:1} },
+  { formula:'H₂O₂',name:'Hydrogen Peroxide', atoms:{H:2,O:2} },
+  { formula:'N₂',  name:'Nitrogen Gas', atoms:{N:2} },
+];
+
+const ATOM_COLORS = {
+  H:  { bg:'#003060', border:'#00a8ff', text:'#66ccff', glow:'#00a8ff' },
+  O:  { bg:'#400010', border:'#ff3366', text:'#ff6688', glow:'#ff3366' },
+  C:  { bg:'#151515', border:'#aaaaaa', text:'#dddddd', glow:'#aaaaaa' },
+  N:  { bg:'#002040', border:'#00ccff', text:'#44ddff', glow:'#00ccff' },
+  Na: { bg:'#302000', border:'#ffaa00', text:'#ffcc44', glow:'#ffaa00' },
+  Cl: { bg:'#003020', border:'#39ff14', text:'#66ff44', glow:'#39ff14' },
+};
+
+// ════════════════════════════════════════════════════════
+//  MAZE GENERATOR
+// ════════════════════════════════════════════════════════
+function generateMaze(cols, rows) {
+  const W = Array.from({length:rows}, ()=> Array(cols).fill(15));
+  function carve(x,y) {
+    W[y][x] |= 16;
+    const dirs = [[0,-1,1,4],[1,0,2,8],[0,1,4,1],[-1,0,8,2]];
+    dirs.sort(()=>Math.random()-0.5);
+    for (const [dx,dy,bit,opp] of dirs) {
+      const nx=x+dx, ny=y+dy;
+      if (nx<0||ny<0||nx>=cols||ny>=rows) continue;
+      if (W[ny][nx]&16) continue;
+      W[y][x] &= ~bit; W[ny][nx] &= ~opp;
+      carve(nx,ny);
+    }
+  }
+  carve(0,0);
+  return W;
+}
+
+// ════════════════════════════════════════════════════════
+//  GAME STATE
+// ════════════════════════════════════════════════════════
+let state = {};
+function initState() { return { round:0, score:0, lives:3, running:false, moleculesMade:[], totalAtoms:0 }; }
+
+let COLS, ROWS, maze, player, atoms=[], reactZone, collected=[], roundTime, timerInterval, moveQueue=[], animFrame;
+
+function getRoundConfig(round) {
+  const r = Math.max(1, Math.min(10, round));
+  return {
+    // Larger cells for early rounds: start big, reduce as maze grows
+    cols: 5 + Math.floor(r/2),
+    rows: 5 + Math.floor(r/2),
+    time: Math.max(20, 50 - r*3),
+    mol: MOLECULES[r-1],
+    scoreBase: 100 + r*50,
+  };
+}
+
+// ─── BFS ───
+function mazeBFS(mazeW, cols, rows, sc, sr) {
+  const dist = new Map(); const queue = [[sc,sr,0]]; dist.set(`${sc},${sr}`,0);
+  const nbrs = [[0,-1,1],[1,0,2],[0,1,4],[-1,0,8]];
+  while (queue.length) {
+    const [x,y,d] = queue.shift(); const w = mazeW[y][x];
+    for (const [dx,dy,bit] of nbrs) {
+      const nx=x+dx, ny=y+dy;
+      if (nx<0||ny<0||nx>=cols||ny>=rows) continue;
+      if (w&bit) continue;
+      const nk=`${nx},${ny}`; if (dist.has(nk)) continue;
+      dist.set(nk, d+1); queue.push([nx,ny,d+1]);
+    }
+  }
+  return dist;
+}
+
+function findReactZone(mazeW, cols, rows) {
+  const distFromStart = mazeBFS(mazeW, cols, rows, 0, 0);
+  let bestCell = {col:cols-1, row:rows-1}; let bestDist = -1;
+  for (let r=0;r<rows;r++) {
+    for (let c=0;c<cols;c++) {
+      const w = mazeW[r][c] & 15;
+      const openWalls = [1,2,4,8].filter(bit => !(w & bit)).length;
+      if (openWalls !== 1) continue;
+      if (c===0 && r===0) continue;
+      const d = distFromStart.get(`${c},${r}`) || 0;
+      if (d > bestDist) { bestDist = d; bestCell = {col:c, row:r}; }
+    }
+  }
+  return bestCell;
+}
+
+function placeAtoms(mazeW, cols, rows, reactCol, reactRow, neededAtoms) {
+  const startK='0,0', goalK=`${reactCol},${reactRow}`;
+  const distMap = mazeBFS(mazeW, cols, rows, 0, 0);
+  const deadEnds=[], nonDeadEnds=[];
+  for (let r=0;r<rows;r++) {
+    for (let c=0;c<cols;c++) {
+      const k=`${c},${r}`; if (k===startK||k===goalK) continue;
+      const w = mazeW[r][c] & 15;
+      const openWalls = [1,2,4,8].filter(bit => !(w&bit)).length;
+      const d = distMap.get(k)||0;
+      if (openWalls===1) deadEnds.push({col:c,row:r,dist:d});
+      else nonDeadEnds.push({col:c,row:r,dist:d});
+    }
+  }
+  deadEnds.sort((a,b)=>b.dist-a.dist);
+  nonDeadEnds.sort((a,b)=>b.dist-a.dist);
+  const candidates = [...deadEnds, ...nonDeadEnds];
+  const placed=[]; const usedKeys=new Set([startK,goalK]);
+  const reqList=[];
+  for (const [sym,count] of Object.entries(neededAtoms)) for (let i=0;i<count;i++) reqList.push(sym);
+  for (const sym of reqList) {
+    for (const cell of candidates) {
+      const ck=`${cell.col},${cell.row}`; if (usedKeys.has(ck)) continue;
+      placed.push({col:cell.col,row:cell.row,sym}); usedKeys.add(ck); break;
+    }
+  }
+  return placed;
+}
+
+// ─── CELL SIZE — larger for small mazes ───
+function getCellSize(cols, rows) {
+  const maxW = Math.min(window.innerWidth - 20, 680);
+  const maxH = window.innerHeight - 200;
+  // For small grids (rounds 1-2), let cells be bigger
+  const maxCell = 72; // up from 52
+  return Math.floor(Math.min(maxW/cols, maxH/rows, maxCell));
+}
+
+function setupRound(roundNum) {
+  const cfg = getRoundConfig(roundNum);
+  COLS = cfg.cols; ROWS = cfg.rows;
+  maze = generateMaze(COLS, ROWS);
+  roundTime = cfg.time;
+
+  const cellSize = getCellSize(COLS, ROWS);
+  canvas.width = cellSize * COLS;
+  canvas.height = cellSize * ROWS;
+
+  player = {col:0,row:0,x:0,y:0,targetX:0,targetY:0,moving:false};
+  const rz = findReactZone(maze, COLS, ROWS);
+  reactZone = rz;
+
+  const placed = placeAtoms(maze, COLS, ROWS, rz.col, rz.row, cfg.mol.atoms);
+  atoms = placed.map(p => ({col:p.col,row:p.row,sym:p.sym,collected:false,pulse:Math.random()*Math.PI*2}));
+  collected=[]; moveQueue=[]; isMoving=false;
+  updateHUD(roundNum, cfg);
+  updateCollectedDisplay();
+}
+
+function startRoundTimer(cfg) {
+  clearInterval(timerInterval);
+  const totalTime = cfg.time; let remaining = roundTime;
+  timerInterval = setInterval(()=>{
+    remaining--; roundTime = remaining;
+    document.getElementById('hudTimer').textContent = remaining;
+    const pct = remaining/totalTime;
+    const fill = document.getElementById('timerFill');
+    fill.style.width = (pct*100)+'%';
+    fill.style.background = pct>0.5?'var(--cyan)':pct>0.25?'var(--yellow)':'var(--red)';
+    fill.style.boxShadow = `0 0 8px ${pct>0.5?'var(--cyan)':pct>0.25?'var(--yellow)':'var(--red)'}`;
+    if (remaining<=0) {
+      clearInterval(timerInterval);
+      sfxTimeout();
+      state.lives = Math.max(0, state.lives-1);
+      flashScreen('red'); shakeCanvas(); updateLivesDisplay();
+      if (state.lives<=0) { showBanner('💀 GAME OVER'); setTimeout(()=>endGame(), 1800); return; }
+      showBanner('⏱ Time Up!');
+      setTimeout(()=>{ hideBanner(); nextRound(); }, 1500);
+    }
+  }, 1000);
+}
+
+function updateHUD(roundNum, cfg) {
+  document.getElementById('hudRound').textContent = `${roundNum}/10`;
+  document.getElementById('hudScore').textContent = state.score;
+  document.getElementById('hudTimer').textContent = roundTime;
+  document.getElementById('timerFill').style.width = '100%';
+  document.getElementById('timerFill').style.background = 'var(--cyan)';
+  const mol = cfg.mol;
+  document.getElementById('targetFormula').textContent = mol.formula;
+  document.getElementById('targetName').textContent = mol.name;
+  updateLivesDisplay();
+}
+
+function updateLivesDisplay() {
+  const el = document.getElementById('hudLives');
+  el.innerHTML = '';
+  for (let i=0;i<3;i++) {
+    const h = document.createElement('span');
+    h.className = 'heart';
+    h.textContent = i < state.lives ? '💚' : '🖤';
+    el.appendChild(h);
+  }
+}
+
+function updateCollectedDisplay() {
+  const el = document.getElementById('collectedDisplay');
+  el.innerHTML = '';
+  if (collected.length === 0) { el.innerHTML = '<span style="color:var(--dim);font-size:0.75rem;">none yet</span>'; return; }
+  const counts = {};
+  collected.forEach(s=>{ counts[s]=(counts[s]||0)+1; });
+  for (const [sym,cnt] of Object.entries(counts)) {
+    const c = ATOM_COLORS[sym];
+    const el2 = document.createElement('div');
+    el2.className = 'collected-atom';
+    el2.style.background = c.bg; el2.style.borderColor = c.border; el2.style.color = c.text;
+    el2.textContent = cnt>1?`${cnt}${sym}`:sym;
+    el.appendChild(el2);
+  }
+}
+
+// ────────────────────────────────────────────────────────
+//  DRAW
+// ────────────────────────────────────────────────────────
+const canvas = document.getElementById('mazeCanvas');
+const ctx = canvas.getContext('2d');
+let glowPhase = 0;
+let isMoving = false;
+
+function draw() {
+  animFrame = requestAnimationFrame(draw);
+  glowPhase += 0.05;
+  const W = canvas.width, H = canvas.height;
+  const cs = W / COLS;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#050a1a'; ctx.fillRect(0,0,W,H);
+
+  // Maze walls
+  for (let r=0;r<ROWS;r++) {
+    for (let c=0;c<COLS;c++) {
+      const x=c*cs, y=r*cs, w=maze[r][c];
+      ctx.strokeStyle='#1a3a6a'; ctx.lineWidth=2;
+      if (w&1){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+cs,y);ctx.stroke();}
+      if (w&2){ctx.beginPath();ctx.moveTo(x+cs,y);ctx.lineTo(x+cs,y+cs);ctx.stroke();}
+      if (w&4){ctx.beginPath();ctx.moveTo(x,y+cs);ctx.lineTo(x+cs,y+cs);ctx.stroke();}
+      if (w&8){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+cs);ctx.stroke();}
+    }
+  }
+
+  // React zone
+  const rz = reactZone;
+  const rzX=rz.col*cs, rzY=rz.row*cs, rzGlow=0.6+0.4*Math.sin(glowPhase*1.5);
+  ctx.save();
+  ctx.fillStyle=`rgba(255,230,0,${0.06+0.04*rzGlow})`;
+  ctx.fillRect(rzX+2,rzY+2,cs-4,cs-4);
+  ctx.strokeStyle=`rgba(255,230,0,${rzGlow})`; ctx.lineWidth=2;
+  ctx.strokeRect(rzX+3,rzY+3,cs-6,cs-6);
+  ctx.font=`bold ${cs*0.35}px Orbitron,monospace`;
+  ctx.fillStyle=`rgba(255,230,0,${rzGlow})`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.shadowColor='#ffe600'; ctx.shadowBlur=10*rzGlow;
+  ctx.fillText('⚡',rzX+cs/2,rzY+cs/2-cs*0.08);
+  ctx.font=`bold ${cs*0.18}px Orbitron,monospace`;
+  ctx.fillText('REACT',rzX+cs/2,rzY+cs/2+cs*0.22);
+  ctx.shadowBlur=0; ctx.restore();
+
+  // Atoms
+  atoms.forEach(a=>{
+    if (a.collected) return;
+    const c2=ATOM_COLORS[a.sym];
+    const ax=a.col*cs+cs/2, ay=a.row*cs+cs/2;
+    const pulse=0.85+0.15*Math.sin(glowPhase*2+a.pulse);
+    const r2=cs*0.3*pulse;
+    const grad=ctx.createRadialGradient(ax,ay,0,ax,ay,r2*1.8);
+    grad.addColorStop(0,c2.border+'44'); grad.addColorStop(1,'transparent');
+    ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(ax,ay,r2*1.8,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ax,ay,r2,0,Math.PI*2);
+    ctx.fillStyle=c2.bg; ctx.fill();
+    ctx.strokeStyle=c2.border; ctx.lineWidth=2;
+    ctx.shadowColor=c2.glow; ctx.shadowBlur=8*pulse; ctx.stroke(); ctx.shadowBlur=0;
+    ctx.font=`bold ${Math.max(10,cs*0.26)}px Orbitron,monospace`;
+    ctx.fillStyle=c2.text; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(a.sym,ax,ay);
+  });
+
+  // Player
+  const px=player.x+cs/2, py=player.y+cs/2, pr=cs*0.32;
+  const pGrad=ctx.createRadialGradient(px,py,0,px,py,pr*2);
+  pGrad.addColorStop(0,'rgba(0,245,255,0.3)'); pGrad.addColorStop(1,'transparent');
+  ctx.fillStyle=pGrad; ctx.beginPath(); ctx.arc(px,py,pr*2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px,py,pr,0,Math.PI*2);
+  const pBG=ctx.createRadialGradient(px-pr*0.3,py-pr*0.3,0,px,py,pr);
+  pBG.addColorStop(0,'#80ffff'); pBG.addColorStop(0.5,'#00c8d4'); pBG.addColorStop(1,'#004455');
+  ctx.fillStyle=pBG; ctx.shadowColor='#00f5ff'; ctx.shadowBlur=14;
+  ctx.fill(); ctx.shadowBlur=0;
+  ctx.fillStyle='#ffffff'; ctx.font=`${cs*0.28}px serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🧪',px,py);
+
+  // Movement
+  if (player.moving) {
+    const speed=cs/8, dx=player.targetX-player.x, dy=player.targetY-player.y;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if (dist<=speed) { player.x=player.targetX; player.y=player.targetY; player.moving=false; onPlayerLand(); }
+    else { player.x+=dx/dist*speed; player.y+=dy/dist*speed; }
+  } else if (moveQueue.length>0) { processNextMove(); }
+}
+
+function tryMove(dir) { if (moveQueue.length>=3) return; moveQueue.push(dir); }
+
+function processNextMove() {
+  if (moveQueue.length===0||player.moving) return;
+  const dir=moveQueue.shift(); const cs=canvas.width/COLS;
+  const {col,row}=player; const w=maze[row][col];
+  let nc=col,nr=row,wallBit=0;
+  if (dir==='up'){nr=row-1;wallBit=1;}
+  else if (dir==='right'){nc=col+1;wallBit=2;}
+  else if (dir==='down'){nr=row+1;wallBit=4;}
+  else if (dir==='left'){nc=col-1;wallBit=8;}
+  if (nr<0||nr>=ROWS||nc<0||nc>=COLS) return;
+  if (w&wallBit) return;
+  player.col=nc; player.row=nr;
+  player.targetX=nc*cs; player.targetY=nr*cs;
+  player.moving=true; sfxMove();
+}
+
+function onPlayerLand() {
+  const {col,row}=player;
+  atoms.forEach(a=>{
+    if (!a.collected&&a.col===col&&a.row===row) {
+      a.collected=true; collected.push(a.sym); sfxCollect();
+      spawnParticles(ATOM_COLORS[a.sym].glow, player.x+canvas.width/COLS/2, player.y+canvas.width/COLS/2);
+      updateCollectedDisplay();
+    }
+  });
+  if (col===reactZone.col&&row===reactZone.row) attemptReaction();
+}
+
+// ────────────────────────────────────────────────────────
+//  REACTION LOGIC
+// ────────────────────────────────────────────────────────
+function attemptReaction() {
+  const cfg=getRoundConfig(state.round); const needed=cfg.mol.atoms;
+  const have={}; collected.forEach(s=>{have[s]=(have[s]||0)+1;});
+  let correct=true;
+  for (const sym of Object.keys(needed)) { if ((have[sym]||0)<needed[sym]){correct=false;break;} }
+  for (const sym of Object.keys(have)) { if (!needed[sym]){correct=false;break;} }
+
+  if (correct) {
+    clearInterval(timerInterval);
+    const bonus=Math.max(0,roundTime*10);
+    state.score+=cfg.scoreBase+bonus;
+    state.moleculesMade.push(cfg.mol);
+    sfxReact(); flashScreen('green'); bigParticlesBurst(canvas.width/2,canvas.height/2);
+    document.getElementById('hudScore').textContent=state.score;
+    showBanner(`✓ ${cfg.mol.formula}!`);
+    setTimeout(()=>nextRound(), 2200);
+  } else {
+    state.lives=Math.max(0,state.lives-1);
+    sfxExplode(); flashScreen('red'); shakeCanvas(); updateLivesDisplay();
+    if (state.lives<=0) { showBanner('💀 GAME OVER'); setTimeout(()=>endGame(), 1800); return; }
+    atoms.forEach(a=>{a.collected=false;}); collected=[];
+    updateCollectedDisplay();
+    player.col=0;player.row=0;
+    const cs=canvas.width/COLS;
+    player.x=0;player.y=0;player.targetX=0;player.targetY=0;player.moving=false;moveQueue=[];
+    showBanner('💥 Wrong Atoms!');
+    setTimeout(()=>{hideBanner();}, 1500);
+  }
+}
+
+// ────────────────────────────────────────────────────────
+//  ROUND FLOW
+// ────────────────────────────────────────────────────────
+function nextRound() {
+  hideBanner(); clearInterval(timerInterval);
+  state.round++;
+  if (state.round>10) { endGame(); return; }
+  setupRound(state.round); const cfg=getRoundConfig(state.round);
+  showBanner(`ROUND ${state.round}`);
+  setTimeout(()=>{ hideBanner(); startRoundTimer(cfg); }, 2000);
+}
+
+function showBanner(text) { const b=document.getElementById('roundBanner'); b.textContent=text; b.className='round-banner show'; }
+function hideBanner() { document.getElementById('roundBanner').className='round-banner'; }
+
+// ────────────────────────────────────────────────────────
+//  PARTICLES
+// ────────────────────────────────────────────────────────
+function spawnParticles(color,cx,cy) {
+  const rect=canvas.getBoundingClientRect();
+  for (let i=0;i<8;i++) {
+    const p=document.createElement('div'); p.className='particle';
+    const size=4+Math.random()*6, angle=Math.random()*Math.PI*2, dist=30+Math.random()*40;
+    p.style.cssText=`width:${size}px;height:${size}px;left:${rect.left+cx}px;top:${rect.top+cy}px;background:${color};box-shadow:0 0 6px ${color};--tx:${Math.cos(angle)*dist}px;--ty:${Math.sin(angle)*dist}px;--dur:${0.5+Math.random()*0.4}s;`;
+    document.body.appendChild(p); setTimeout(()=>p.remove(),1000);
+  }
+}
+
+function bigParticlesBurst(cx,cy) {
+  const rect=canvas.getBoundingClientRect();
+  const colors=['#00f5ff','#39ff14','#ffe600','#b44fff','#ff3366'];
+  for (let i=0;i<30;i++) {
+    const p=document.createElement('div'); p.className='particle';
+    const size=5+Math.random()*10, angle=Math.random()*Math.PI*2, dist=50+Math.random()*100;
+    const color=colors[Math.floor(Math.random()*colors.length)];
+    p.style.cssText=`width:${size}px;height:${size}px;left:${rect.left+cx}px;top:${rect.top+cy}px;background:${color};box-shadow:0 0 8px ${color};--tx:${Math.cos(angle)*dist}px;--ty:${Math.sin(angle)*dist-30}px;--dur:${0.8+Math.random()*0.6}s;`;
+    document.body.appendChild(p); setTimeout(()=>p.remove(),1500);
+  }
+}
+
+function flashScreen(color) {
+  const fl=document.getElementById('flashOverlay');
+  fl.className=`flash-overlay flash-${color}`; fl.style.opacity='1';
+  setTimeout(()=>{fl.style.opacity='0';fl.className='flash-overlay';},400);
+}
+
+function shakeCanvas() {
+  let times=0;
+  const interval=setInterval(()=>{
+    const dx=(Math.random()-0.5)*10, dy=(Math.random()-0.5)*10;
+    canvas.style.transform=`translate(${dx}px,${dy}px)`; times++;
+    if (times>8){clearInterval(interval);canvas.style.transform='';}
+  },50);
+}
+
+// ════════════════════════════════════════════════════════
+//  STAR RATING SYSTEM
+// ════════════════════════════════════════════════════════
+function computeStars(moleculesMade, livesLeft, totalRounds) {
+  // 3 stars: all 10 molecules + at least 2 lives left
+  // 2 stars: 7+ molecules OR finished with at least 1 life
+  // 1 star: any molecules made (participated)
+  // 0 stars: 0 molecules made
+  if (moleculesMade >= totalRounds && livesLeft >= 2) return 3;
+  if (moleculesMade >= 7 || (moleculesMade >= 5 && livesLeft >= 1)) return 2;
+  if (moleculesMade >= 1) return 1;
+  return 0;
+}
+
+const STAR_LABELS = ['', 'Keep Practicing!', 'Good Chemist!', 'Master Chemist! ⭐'];
+
+// ════════════════════════════════════════════════════════
+//  GAME LIFECYCLE
+// ════════════════════════════════════════════════════════
+function startGame() {
+  resumeAC();
+  state = initState(); state.running=true;
+  cancelAnimationFrame(animFrame);
+  showScreen('gameScreen');
+  startMusic();
+  nextRound();
+  draw();
+}
+
+function endGame() {
+  state.running=false; clearInterval(timerInterval);
+  cancelAnimationFrame(animFrame); stopMusic();
+
+  const molsMade = state.moleculesMade.length;
+  const livesLeft = state.lives;
+  const allGood = livesLeft > 0;
+
+  const title = document.getElementById('endTitle');
+  title.textContent = allGood ? '🎉 EXPERIMENT COMPLETE!' : '💀 LAB DESTROYED!';
+  title.className = 'end-title '+(allGood?'win':'lose');
+  document.getElementById('endSubtitle').textContent = allGood
+    ? `You synthesized ${molsMade}/10 molecules!`
+    : `You made ${molsMade} molecule${molsMade!==1?'s':''} before the lab was destroyed.`;
+
+  document.getElementById('endScore').textContent = state.score;
+  document.getElementById('endMols').textContent = molsMade;
+  document.getElementById('endLives').textContent = livesLeft;
+
+  const molList = document.getElementById('molList');
+  molList.innerHTML='';
+  MOLECULES.forEach(mol=>{
+    const badge=document.createElement('div'); badge.className='mol-badge';
+    const made=state.moleculesMade.some(m=>m.formula===mol.formula);
+    badge.style.borderColor=made?'var(--green)':'var(--dim)';
+    badge.style.color=made?'var(--green)':'var(--dim)';
+    badge.textContent=mol.formula; badge.title=mol.name;
+    molList.appendChild(badge);
+  });
+
+  // Star rating
+  const stars = computeStars(molsMade, livesLeft, 10);
+  document.getElementById('starLabel').textContent = STAR_LABELS[stars] || '';
+  const starEls = ['star1','star2','star3'];
+  starEls.forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.className='star-icon';
+    if (i < stars) {
+      setTimeout(()=>{
+        el.classList.add('earned');
+        sfxStar();
+      }, 400 + i*500);
+    }
+  });
+
+  if (allGood && stars===3) sfxReact();
+  showScreen('endScreen');
+}
+
+// ════════════════════════════════════════════════════════
+//  INPUT
+// ════════════════════════════════════════════════════════
+const keyMap = {ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',KeyW:'up',KeyS:'down',KeyA:'left',KeyD:'right',w:'up',s:'down',a:'left',d:'right'};
+document.addEventListener('keydown',e=>{
+  if (!state.running) return;
+  const dir=keyMap[e.code]||keyMap[e.key];
+  if (dir){e.preventDefault();tryMove(dir);}
+});
+document.querySelectorAll('.dpad[data-dir]').forEach(btn=>{
+  const dir=btn.dataset.dir;
+  btn.addEventListener('touchstart',e=>{e.preventDefault();tryMove(dir);btn.classList.add('pressed');});
+  btn.addEventListener('touchend',e=>{e.preventDefault();btn.classList.remove('pressed');});
+  btn.addEventListener('mousedown',e=>{tryMove(dir);btn.classList.add('pressed');});
+  btn.addEventListener('mouseup',e=>{btn.classList.remove('pressed');});
+});
+
+// ════════════════════════════════════════════════════════
+//  SCREENS
+// ════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ─── STAR FIELD ───
+(function makeStars(){
+  const c=document.getElementById('starsContainer');
+  for (let i=0;i<120;i++){
+    const s=document.createElement('div'); s.className='star';
+    const sz=1+Math.random()*2.5;
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;animation-delay:${Math.random()*4}s;`;
+    c.appendChild(s);
+  }
+})();
+
+// ─── RESIZE ───
+window.addEventListener('resize',()=>{
+  if (state.running&&state.round>0&&state.round<=10){
+    const cellSize=getCellSize(COLS,ROWS);
+    canvas.width=cellSize*COLS; canvas.height=cellSize*ROWS;
+    player.x=player.col*cellSize; player.y=player.row*cellSize;
+    player.targetX=player.x; player.targetY=player.y;
+  }
+});
+</script>
+</body>
+</html>

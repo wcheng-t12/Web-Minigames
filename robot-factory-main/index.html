@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Factory ⚙️ — Algebra Assembly Line</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg-deep: #0a0e1a;
+    --bg-panel: #111827;
+    --bg-card: #1a2235;
+    --neon-cyan: #00f5ff;
+    --neon-amber: #ffb300;
+    --neon-green: #39ff14;
+    --neon-red: #ff3864;
+    --neon-purple: #bf5af2;
+    --text-primary: #e8eaf6;
+    --text-dim: #7986cb;
+    --border-glow: rgba(0,245,255,0.3);
+    --gear-color: #2a3a5c;
+    --conveyor: #162032;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Exo 2', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── BACKGROUND FACTORY ── */
+  #bg-canvas {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:0; opacity:0.15;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    position: fixed; inset:0; z-index:10;
+    display: flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding: 20px;
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .screen.hidden { opacity:0; pointer-events:none; transform:scale(0.97); }
+
+  /* ── START SCREEN ── */
+  #start-screen {
+    background: radial-gradient(ellipse at center, #0f1e3a 0%, #0a0e1a 70%);
+  }
+  .factory-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px var(--neon-cyan), 0 0 60px rgba(0,245,255,0.4);
+    letter-spacing: 4px;
+    text-align:center;
+    margin-bottom: 8px;
+  }
+  .factory-subtitle {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    color: var(--neon-amber);
+    letter-spacing: 6px;
+    text-align:center;
+    margin-bottom: 50px;
+    text-shadow: 0 0 10px var(--neon-amber);
+  }
+  .robot-showcase {
+    position: relative; width:180px; height:200px;
+    margin-bottom: 40px;
+  }
+  .btn-primary {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem; font-weight: 700;
+    color: var(--bg-deep);
+    background: linear-gradient(135deg, var(--neon-cyan), #0080ff);
+    border: none; border-radius: 4px;
+    padding: 16px 48px; cursor: pointer;
+    letter-spacing: 3px; text-transform:uppercase;
+    box-shadow: 0 0 20px rgba(0,245,255,0.5);
+    transition: all 0.2s;
+    margin: 8px;
+  }
+  .btn-primary:hover {
+    transform:translateY(-2px);
+    box-shadow: 0 0 30px rgba(0,245,255,0.8), 0 6px 20px rgba(0,0,0,0.4);
+  }
+  .btn-secondary {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem; font-weight:700;
+    color: var(--neon-amber);
+    background: transparent;
+    border: 2px solid var(--neon-amber);
+    border-radius: 4px;
+    padding: 12px 36px; cursor:pointer;
+    letter-spacing: 2px; text-transform:uppercase;
+    box-shadow: 0 0 10px rgba(255,179,0,0.3);
+    transition: all 0.2s;
+    margin: 8px;
+  }
+  .btn-secondary:hover {
+    background: rgba(255,179,0,0.1);
+    box-shadow: 0 0 20px rgba(255,179,0,0.5);
+    transform:translateY(-2px);
+  }
+  .btn-row { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
+
+  /* ── HOW TO PLAY ── */
+  #howto-screen {
+    background: radial-gradient(ellipse at center, #0f1e3a 0%, #0a0e1a 70%);
+  }
+  .slide-container {
+    width: 100%; max-width: 700px;
+    position:relative;
+  }
+  .slide {
+    display:none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 0 30px rgba(0,245,255,0.1);
+    min-height: 380px;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    animation: slideIn 0.3s ease;
+  }
+  .slide.active { display:flex; }
+  @keyframes slideIn {
+    from { opacity:0; transform:translateX(30px); }
+    to { opacity:1; transform:translateX(0); }
+  }
+  .slide-icon { font-size: 4rem; margin-bottom:20px; }
+  .slide h2 {
+    font-family:'Orbitron',monospace;
+    color: var(--neon-cyan); font-size:1.3rem;
+    margin-bottom:16px; letter-spacing:2px;
+  }
+  .slide p { color: var(--text-primary); line-height:1.8; font-size:1rem; max-width:500px; }
+  .slide .highlight { color: var(--neon-amber); font-weight:700; }
+  .slide-visual {
+    margin: 20px auto;
+    background: var(--bg-panel);
+    border-radius:8px; padding:16px;
+    border: 1px solid var(--border-glow);
+    font-family:'Orbitron',monospace;
+    font-size:1.1rem; color: var(--neon-green);
+    width: 100%; max-width:340px;
+  }
+  .slide-dots {
+    display:flex; justify-content:center; gap:8px; margin:20px 0;
+  }
+  .dot {
+    width:10px; height:10px; border-radius:50%;
+    background: var(--gear-color);
+    cursor:pointer; transition:all 0.2s;
+  }
+  .dot.active { background: var(--neon-cyan); box-shadow:0 0 8px var(--neon-cyan); }
+  .slide-nav {
+    display:flex; justify-content:space-between; align-items:center;
+    width:100%; max-width:700px; margin-top:16px;
+  }
+  .parts-demo {
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:16px;
+  }
+  .part-chip {
+    background: var(--bg-panel);
+    border:2px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    border-radius:6px; padding:8px 16px;
+    font-family:'Orbitron',monospace; font-size:0.85rem;
+    cursor:default;
+  }
+  .part-chip.wrong { border-color:var(--neon-red); color:var(--neon-red); }
+  .part-chip.correct { border-color:var(--neon-green); color:var(--neon-green); }
+
+  /* ── HUD ── */
+  #hud {
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    background: rgba(10,14,26,0.95);
+    border-bottom: 1px solid var(--border-glow);
+    padding: 10px 20px;
+    display:none;
+    align-items:center; justify-content:space-between;
+    gap:10px; flex-wrap:wrap;
+    backdrop-filter: blur(10px);
+  }
+  .hud-block {
+    display:flex; flex-direction:column; align-items:center; min-width:60px;
+  }
+  .hud-label {
+    font-family:'Orbitron',monospace; font-size:0.55rem;
+    color: var(--text-dim); letter-spacing:2px; margin-bottom:2px;
+  }
+  .hud-value {
+    font-family:'Orbitron',monospace; font-size:1.1rem;
+    font-weight:700; color: var(--neon-cyan);
+  }
+  .hud-value.warn { color: var(--neon-amber); }
+  .hud-value.danger { color: var(--neon-red); animation: pulse 0.5s infinite alternate; }
+  @keyframes pulse { from{opacity:1} to{opacity:0.4} }
+  .lives-display { display:flex; gap:4px; }
+  .life-icon { font-size:1.1rem; transition:all 0.3s; }
+  .life-icon.lost { opacity:0.2; filter:grayscale(1); }
+  .round-bar {
+    display:flex; gap:4px; align-items:center;
+  }
+  .round-pip {
+    width:16px; height:16px; border-radius:3px;
+    background: var(--gear-color);
+    transition: all 0.3s;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .round-pip.done { background: var(--neon-green); box-shadow:0 0 6px var(--neon-green); }
+  .round-pip.current { background: var(--neon-cyan); box-shadow:0 0 8px var(--neon-cyan); animation: pipPulse 1s infinite alternate; }
+  @keyframes pipPulse { from{box-shadow:0 0 4px var(--neon-cyan)} to{box-shadow:0 0 12px var(--neon-cyan)} }
+  .timer-ring {
+    position:relative; width:44px; height:44px;
+  }
+  .timer-ring svg { transform:rotate(-90deg); }
+  .timer-ring-text {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:'Orbitron',monospace; font-size:0.8rem; font-weight:700;
+    color: var(--neon-cyan);
+  }
+
+  /* ── GAME SCREEN ── */
+  #game-screen {
+    padding-top: 80px;
+    background: linear-gradient(180deg, #0a0e1a 0%, #0d1520 100%);
+    justify-content:flex-start;
+    overflow-y: auto;
+  }
+  .game-area {
+    width:100%; max-width:900px;
+    display:flex; flex-direction:column; align-items:center;
+    gap:20px; padding:20px;
+  }
+
+  /* ── EQUATION DISPLAY ── */
+  .equation-banner {
+    background: var(--bg-card);
+    border: 2px solid var(--neon-cyan);
+    border-radius: 8px;
+    padding: 20px 32px;
+    text-align:center;
+    box-shadow: 0 0 20px rgba(0,245,255,0.2);
+    width:100%;
+    position:relative;
+    overflow:hidden;
+  }
+  .equation-banner::before {
+    content:'';
+    position:absolute; inset:0;
+    background: linear-gradient(135deg, rgba(0,245,255,0.03) 0%, transparent 60%);
+  }
+  .equation-label {
+    font-family:'Orbitron',monospace; font-size:0.65rem;
+    color: var(--text-dim); letter-spacing:3px; margin-bottom:8px;
+  }
+  .equation-text {
+    font-family:'Orbitron',monospace;
+    font-size: clamp(1.4rem, 4vw, 2.2rem);
+    color: var(--text-primary); font-weight:700;
+    letter-spacing:2px;
+  }
+  .equation-text span.var { color: var(--neon-amber); }
+  .equation-hint {
+    font-size:0.8rem; color: var(--text-dim); margin-top:8px;
+    font-style:italic;
+  }
+  .part-target {
+    font-size:0.85rem; margin-top:6px;
+    color: var(--neon-purple);
+    font-family:'Orbitron',monospace; letter-spacing:1px;
+  }
+
+  /* ── ROBOT BLUEPRINT ── */
+  .blueprint-area {
+    display:flex; gap:30px; align-items:flex-start; justify-content:center;
+    flex-wrap:wrap; width:100%;
+  }
+  .robot-blueprint {
+    background: var(--bg-card);
+    border: 2px dashed rgba(0,245,255,0.3);
+    border-radius:12px;
+    padding:24px;
+    min-width:200px;
+    display:flex; flex-direction:column; align-items:center;
+    position:relative;
+  }
+  .blueprint-title {
+    font-family:'Orbitron',monospace; font-size:0.6rem;
+    color: var(--text-dim); letter-spacing:3px; margin-bottom:16px;
+  }
+
+  /* ── SVG ROBOT ── */
+  .robot-svg-wrap { width:140px; height:180px; position:relative; }
+
+  /* ── PART CHOICES ── */
+  .parts-panel {
+    flex:1; min-width:280px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .parts-title {
+    font-family:'Orbitron',monospace; font-size:0.65rem;
+    color: var(--text-dim); letter-spacing:3px;
+  }
+  .parts-grid {
+    display:grid; grid-template-columns: repeat(2, 1fr); gap:12px;
+  }
+  .part-btn {
+    background: var(--bg-card);
+    border: 2px solid rgba(0,245,255,0.3);
+    border-radius:8px; padding:16px 12px;
+    cursor:pointer; transition:all 0.15s;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    position:relative; overflow:hidden;
+  }
+  .part-btn:hover:not(:disabled) {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 16px rgba(0,245,255,0.3);
+    transform:translateY(-2px);
+  }
+  .part-btn:disabled { cursor:default; }
+  .part-btn .part-num {
+    font-family:'Orbitron',monospace; font-size:1.6rem; font-weight:900;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px var(--neon-cyan);
+  }
+  .part-btn .part-label {
+    font-size:0.7rem; color: var(--text-dim); letter-spacing:1px;
+  }
+  .part-btn.correct-flash {
+    border-color: var(--neon-green) !important;
+    background: rgba(57,255,20,0.1) !important;
+    animation: correctFlash 0.6s ease;
+  }
+  .part-btn.wrong-flash {
+    border-color: var(--neon-red) !important;
+    background: rgba(255,56,100,0.1) !important;
+    animation: wrongFlash 0.4s ease;
+  }
+  @keyframes correctFlash {
+    0%{transform:scale(1)} 30%{transform:scale(1.08)} 100%{transform:scale(1)}
+  }
+  @keyframes wrongFlash {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap {
+    width:100%; background: var(--bg-panel);
+    border-radius:4px; height:6px; overflow:hidden;
+    border: 1px solid rgba(0,245,255,0.1);
+  }
+  .progress-fill {
+    height:100%; border-radius:4px;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+    transition: width 0.3s ease;
+    box-shadow: 0 0 8px var(--neon-cyan);
+  }
+  .part-progress-label {
+    font-family:'Orbitron',monospace; font-size:0.6rem;
+    color:var(--text-dim); letter-spacing:2px; margin-bottom:4px;
+  }
+
+  /* ── FEEDBACK OVERLAY ── */
+  #feedback-overlay {
+    position:fixed; inset:0; z-index:100;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    pointer-events:none; opacity:0;
+    transition: opacity 0.2s;
+  }
+  #feedback-overlay.show { opacity:1; }
+  .feedback-msg {
+    font-family:'Orbitron',monospace; font-size:clamp(1.5rem,5vw,3rem); font-weight:900;
+    text-align:center; padding: 20px 40px; border-radius:8px;
+    background: rgba(10,14,26,0.85); backdrop-filter:blur(8px);
+    border: 3px solid currentColor;
+    animation: feedbackPop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  @keyframes feedbackPop {
+    from{transform:scale(0.5)} to{transform:scale(1)}
+  }
+  .feedback-msg.correct { color: var(--neon-green); box-shadow:0 0 40px rgba(57,255,20,0.4); }
+  .feedback-msg.wrong { color: var(--neon-red); box-shadow:0 0 40px rgba(255,56,100,0.4); }
+  .feedback-msg.roundclear { color: var(--neon-cyan); box-shadow:0 0 40px rgba(0,245,255,0.5); }
+
+  /* ── ROUND TRANSITION ── */
+  #round-banner {
+    position:fixed; inset:0; z-index:80;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background: rgba(10,14,26,0.9); backdrop-filter:blur(12px);
+    opacity:0; pointer-events:none;
+    transition: opacity 0.3s;
+  }
+  #round-banner.show { opacity:1; pointer-events:all; }
+  .round-banner-num {
+    font-family:'Orbitron',monospace; font-size:clamp(2rem,8vw,5rem); font-weight:900;
+    color: var(--neon-cyan); text-shadow:0 0 40px var(--neon-cyan);
+    animation: roundNumIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  .round-banner-label {
+    font-family:'Orbitron',monospace; font-size:1rem; color:var(--text-dim);
+    letter-spacing:4px; margin-bottom:8px;
+  }
+  .round-banner-topic {
+    font-size:0.9rem; color:var(--neon-amber); margin-top:12px; letter-spacing:2px;
+  }
+  @keyframes roundNumIn {
+    from{transform:scale(0.2) rotate(-10deg); opacity:0}
+    to{transform:scale(1) rotate(0); opacity:1}
+  }
+
+  /* ── END SCREEN — see scoreboard block below ── */
+
+  /* ── CONVEYOR BELT ANIMATION ── */
+  .conveyor-belt {
+    width:100%; height:24px;
+    background: repeating-linear-gradient(90deg, var(--conveyor) 0px, var(--conveyor) 30px, #1a2840 30px, #1a2840 40px);
+    border-top: 3px solid #2a3a5c; border-bottom: 3px solid #2a3a5c;
+    animation: conveyorMove 1s linear infinite;
+    border-radius:2px;
+  }
+  @keyframes conveyorMove {
+    from { background-position: 0 0; }
+    to { background-position: 40px 0; }
+  }
+
+  /* ── PARTICLES ── */
+  .particle {
+    position:fixed; pointer-events:none; z-index:200;
+    border-radius:50%; animation: particleFly 0.8s ease-out forwards;
+  }
+  @keyframes particleFly {
+    0%{transform:translate(0,0) scale(1); opacity:1}
+    100%{transform:translate(var(--tx),var(--ty)) scale(0); opacity:0}
+  }
+
+  /* ── EQUATION STEPS ── */
+  .step-display {
+    background: var(--bg-panel);
+    border-radius:8px; padding:12px 16px;
+    font-family:'Orbitron',monospace; font-size:0.75rem;
+    color: var(--text-dim); margin-top:8px; text-align:left;
+    border-left:3px solid var(--neon-purple); width:100%;
+  }
+  .step-display span { color: var(--neon-amber); }
+
+  /* ── DIFFICULTY BADGE ── */
+  .diff-badge {
+    display:inline-block; padding:3px 10px; border-radius:20px;
+    font-family:'Orbitron',monospace; font-size:0.6rem; letter-spacing:2px;
+    font-weight:700; margin-top:4px;
+  }
+  .diff-badge.easy { background:rgba(57,255,20,0.15); color:var(--neon-green); border:1px solid var(--neon-green); }
+  .diff-badge.medium { background:rgba(255,179,0,0.15); color:var(--neon-amber); border:1px solid var(--neon-amber); }
+  .diff-badge.hard { background:rgba(255,56,100,0.15); color:var(--neon-red); border:1px solid var(--neon-red); }
+  .diff-badge.expert { background:rgba(191,90,242,0.15); color:var(--neon-purple); border:1px solid var(--neon-purple); }
+
+  /* ── ROBOT BUILT ANIMATION ── */
+  @keyframes robotPartIn {
+    from{opacity:0; transform:translateY(-20px) scale(0.5)}
+    to{opacity:1; transform:translateY(0) scale(1)}
+  }
+  .robot-part-anim { animation: robotPartIn 0.4s ease forwards; }
+
+  /* ── MISC ── */
+  .glow-cyan { text-shadow:0 0 10px var(--neon-cyan); }
+  .glow-amber { text-shadow:0 0 10px var(--neon-amber); }
+  .section-divider {
+    width:60px; height:3px;
+    background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    margin:16px auto;
+  }
+  .gear-icon { display:inline-block; animation:spin 8s linear infinite; }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  .gear-icon-rev { display:inline-block; animation:spinRev 6s linear infinite; }
+  @keyframes spinRev { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
+
+  /* ══ END SCREEN SCOREBOARD ══ */
+  #end-screen {
+    background: radial-gradient(ellipse at center, #0f1e3a 0%, #0a0e1a 70%);
+    overflow-y: auto;
+  }
+  .end-screen-inner {
+    width: 100%; max-width: 580px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 18px;
+    padding: 20px 10px;
+  }
+  .end-header { text-align: center; }
+  .end-title {
+    font-family:'Orbitron',monospace; font-size:clamp(1.4rem,4vw,2.2rem); font-weight:900;
+    color: var(--neon-cyan); letter-spacing:3px;
+    text-shadow:0 0 20px var(--neon-cyan);
+  }
+  .end-subtitle { color:var(--text-dim); font-size:0.85rem; letter-spacing:2px; margin-top:4px; font-family:'Orbitron',monospace; }
+
+  .end-top-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 32px; flex-wrap: wrap; width: 100%;
+  }
+  .end-robot-display { flex-shrink: 0; }
+
+  /* Stars */
+  .end-star-block { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .stars-display { display:flex; gap:10px; justify-content:center; }
+  .star-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .star-icon {
+    font-size: 3.2rem; line-height:1;
+    color: #2a3a5c;
+    text-shadow: none;
+    transition: all 0.05s;
+    display: block;
+    user-select: none;
+  }
+  .star-icon.earned {
+    color: #ffd700;
+    text-shadow: 0 0 16px #ffd700, 0 0 40px rgba(255,215,0,0.6);
+  }
+  .star-score-label {
+    font-family:'Orbitron',monospace; font-size:0.58rem;
+    color: var(--text-dim); letter-spacing:1px;
+  }
+  @keyframes starPop {
+    0%  { transform: scale(0) rotate(-30deg); }
+    55% { transform: scale(1.35) rotate(8deg); }
+    75% { transform: scale(0.9) rotate(-4deg); }
+    100%{ transform: scale(1)   rotate(0deg); }
+  }
+  .star-icon.pop { animation: starPop 0.55s cubic-bezier(0.175,0.885,0.32,1.275) forwards; }
+
+  /* Rank badge */
+  .rank-badge {
+    font-family:'Orbitron',monospace; font-size:0.85rem; font-weight:900;
+    letter-spacing:3px; padding: 8px 22px; border-radius: 30px;
+    border: 2px solid var(--neon-cyan); color: var(--neon-cyan);
+    background: rgba(0,245,255,0.08);
+    box-shadow: 0 0 14px rgba(0,245,255,0.25);
+    text-align:center;
+  }
+  .rank-badge.rank-0 { border-color:#4a5568; color:#4a5568; background:transparent; box-shadow:none; }
+  .rank-badge.rank-1 { border-color:var(--neon-amber); color:var(--neon-amber); background:rgba(255,179,0,0.08); box-shadow:0 0 14px rgba(255,179,0,0.25); }
+  .rank-badge.rank-2 { border-color:var(--neon-cyan); color:var(--neon-cyan); background:rgba(0,245,255,0.08); box-shadow:0 0 14px rgba(0,245,255,0.25); }
+  .rank-badge.rank-3 { border-color:var(--neon-green); color:var(--neon-green); background:rgba(57,255,20,0.08); box-shadow:0 0 14px rgba(57,255,20,0.3); }
+  .rank-desc { font-size:0.78rem; color:var(--text-dim); text-align:center; letter-spacing:1px; }
+
+  /* Score meter */
+  .score-meter-wrap { width:100%; }
+  .score-meter-labels {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:6px;
+  }
+  .score-meter-val {
+    font-family:'Orbitron',monospace; font-size:1.4rem; font-weight:900;
+    color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan);
+  }
+  .score-meter-track {
+    width:100%; height:22px; background: var(--bg-card);
+    border-radius:11px; border:1px solid var(--border-glow);
+    position:relative; overflow:visible;
+  }
+  .score-meter-fill {
+    height:100%; border-radius:11px;
+    background: linear-gradient(90deg, #0080ff, var(--neon-cyan), var(--neon-green));
+    transition: width 1.2s cubic-bezier(0.22,1,0.36,1);
+    box-shadow: 0 0 12px rgba(0,245,255,0.5);
+    position:relative; z-index:1;
+  }
+  .score-meter-marker {
+    position:absolute; top:-2px; bottom:-2px; transform:translateX(-50%);
+    width:2px; background:rgba(255,255,255,0.15); z-index:2;
+  }
+  .score-meter-marker span {
+    position:absolute; bottom:-18px; left:50%; transform:translateX(-50%);
+    font-family:'Orbitron',monospace; font-size:0.55rem; color:var(--text-dim);
+    white-space:nowrap;
+  }
+
+  /* Stats grid */
+  .end-stats {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+    width:100%;
+  }
+  @media(max-width:480px) { .end-stats { grid-template-columns:repeat(2,1fr); } }
+  .end-stat {
+    background:var(--bg-card); border:1px solid var(--border-glow);
+    border-radius:8px; padding:14px 8px; text-align:center;
+  }
+  .end-stat-val {
+    font-family:'Orbitron',monospace; font-size:1.5rem; font-weight:900;
+    color: var(--neon-cyan);
+  }
+  .end-stat-label { font-size:0.6rem; color:var(--text-dim); letter-spacing:2px; margin-top:4px; text-transform:uppercase; }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:600px) {
+    .parts-grid { grid-template-columns: repeat(2,1fr); }
+    .blueprint-area { gap:16px; }
+    .robot-blueprint { padding:16px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- ══════════════ START SCREEN ══════════════ -->
+<div class="screen" id="start-screen">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px">
+    <span class="gear-icon" style="font-size:2rem">⚙️</span>
+    <div class="factory-title">ROBOT FACTORY</div>
+    <span class="gear-icon-rev" style="font-size:1.5rem">⚙️</span>
+  </div>
+  <div class="factory-subtitle">ALGEBRA ASSEMBLY LINE</div>
+
+  <div class="robot-showcase" id="start-robot"></div>
+
+  <div style="text-align:center;max-width:500px;margin-bottom:30px;line-height:1.7;color:#9aa8c7;font-size:0.95rem">
+    Solve equations to find the right components.<br>
+    Build robots. Survive 10 rounds. Become the Master Engineer.
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-primary" onclick="startGame()">⚡ BUILD ROBOTS</button>
+    <button class="btn-secondary" onclick="showHowTo()">📖 HOW TO PLAY</button>
+  </div>
+</div>
+
+<!-- ══════════════ HOW TO PLAY ══════════════ -->
+<div class="screen hidden" id="howto-screen">
+  <div style="font-family:'Orbitron',monospace;font-size:0.7rem;color:var(--text-dim);letter-spacing:3px;margin-bottom:16px">HOW TO PLAY</div>
+
+  <div class="slide-container">
+    <!-- SLIDE 1 -->
+    <div class="slide active" id="slide-1">
+      <div class="slide-icon">🏭</div>
+      <h2>THE FACTORY</h2>
+      <p>You are an engineer in a <span class="highlight">Robot Factory</span>. Each robot needs 4 parts: Head, Torso, Arms & Legs. To find the right part number, you must <span class="highlight">solve an algebra equation</span>.</p>
+      <div class="slide-visual">3x + 2 = 14 → x = <span style="color:var(--neon-amber)">4</span></div>
+    </div>
+    <!-- SLIDE 2 -->
+    <div class="slide" id="slide-2">
+      <div class="slide-icon">🔧</div>
+      <h2>PICK THE RIGHT PART</h2>
+      <p>After solving, <span class="highlight">click the button</span> showing the correct answer. The part installs on the robot blueprint. Solve all 4 parts to <span class="highlight">complete the robot!</span></p>
+      <div class="parts-demo">
+        <div class="part-chip wrong">x = 2</div>
+        <div class="part-chip correct">x = 4 ✓</div>
+        <div class="part-chip wrong">x = 7</div>
+        <div class="part-chip wrong">x = 1</div>
+      </div>
+    </div>
+    <!-- SLIDE 3 -->
+    <div class="slide" id="slide-3">
+      <div class="slide-icon">❤️</div>
+      <h2>LIVES & TIMER</h2>
+      <p>You have <span class="highlight">3 lives shared across all rounds</span>. Each wrong answer or timeout costs 1 life. Lose all 3 lives and the <span class="highlight">game ends immediately</span> — no matter which round you're on! Protect your lives!</p>
+      <div class="slide-visual" style="display:flex;gap:8px;justify-content:center;font-size:1.5rem">🤖 🤖 🤖</div>
+    </div>
+    <!-- SLIDE 4 -->
+    <div class="slide" id="slide-4">
+      <div class="slide-icon">📈</div>
+      <h2>DIFFICULTY RISES</h2>
+      <p>Each round brings <span class="highlight">harder equations</span>. Early rounds use one-step equations. Later rounds include <span class="highlight">two-step equations and negative numbers</span>. Stay sharp!</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px">
+        <span class="diff-badge easy">ROUNDS 1–2: EASY</span>
+        <span class="diff-badge medium">ROUNDS 3–5: MEDIUM</span>
+        <span class="diff-badge hard">ROUNDS 6–8: HARD</span>
+        <span class="diff-badge expert">ROUNDS 9–10: EXPERT</span>
+      </div>
+    </div>
+    <!-- SLIDE 5 -->
+    <div class="slide" id="slide-5">
+      <div class="slide-icon">⭐</div>
+      <h2>SCORING & STARS</h2>
+      <p>Earn points for correct answers. <span class="highlight">Speed bonuses</span> reward fast solvers. At the end, earn up to <span class="highlight">3 stars</span> based on your total score!</p>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:16px">
+        <div style="text-align:center"><div style="font-size:2rem">⭐</div><div style="font-size:0.7rem;color:var(--text-dim)">200+ pts</div></div>
+        <div style="text-align:center"><div style="font-size:2rem">⭐⭐</div><div style="font-size:0.7rem;color:var(--text-dim)">500+ pts</div></div>
+        <div style="text-align:center"><div style="font-size:2rem">⭐⭐⭐</div><div style="font-size:0.7rem;color:var(--text-dim)">800+ pts</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-dots" id="slide-dots">
+    <div class="dot active" onclick="goSlide(0)"></div>
+    <div class="dot" onclick="goSlide(1)"></div>
+    <div class="dot" onclick="goSlide(2)"></div>
+    <div class="dot" onclick="goSlide(3)"></div>
+    <div class="dot" onclick="goSlide(4)"></div>
+  </div>
+
+  <div class="slide-nav">
+    <button class="btn-secondary" onclick="prevSlide()">← PREV</button>
+    <span style="font-family:'Orbitron',monospace;font-size:0.7rem;color:var(--text-dim)" id="slide-counter">1 / 5</span>
+    <button class="btn-secondary" id="next-btn" onclick="nextSlide()">NEXT →</button>
+  </div>
+  <button class="btn-secondary" style="margin-top:16px;border-color:rgba(121,134,203,0.4);color:var(--text-dim)" onclick="closeHowTo()">← BACK</button>
+</div>
+
+<!-- ══════════════ HUD ══════════════ -->
+<div id="hud">
+  <div class="hud-block">
+    <div class="hud-label">ROUND</div>
+    <div class="hud-value" id="hud-round">1/10</div>
+  </div>
+  <div class="hud-block">
+    <div class="hud-label">PROGRESS</div>
+    <div class="round-bar" id="hud-pips"></div>
+  </div>
+  <div class="hud-block">
+    <div class="hud-label">LIVES</div>
+    <div class="lives-display" id="hud-lives"></div>
+  </div>
+  <div class="hud-block">
+    <div class="hud-label">SCORE</div>
+    <div class="hud-value glow-cyan" id="hud-score">0</div>
+  </div>
+  <div class="hud-block">
+    <div class="hud-label">TIMER</div>
+    <div class="timer-ring">
+      <svg width="44" height="44" viewBox="0 0 44 44">
+        <circle cx="22" cy="22" r="18" fill="none" stroke="#1a2235" stroke-width="4"/>
+        <circle id="timer-arc" cx="22" cy="22" r="18" fill="none" stroke="var(--neon-cyan)" stroke-width="4"
+          stroke-dasharray="113" stroke-dashoffset="0" stroke-linecap="round"/>
+      </svg>
+      <div class="timer-ring-text" id="hud-timer">15</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ GAME SCREEN ══════════════ -->
+<div class="screen hidden" id="game-screen">
+  <div class="game-area">
+    <div class="conveyor-belt"></div>
+
+    <!-- Equation -->
+    <div class="equation-banner" id="eq-banner">
+      <div class="equation-label">INSTALL COMPONENT — SOLVE FOR <span style="color:var(--neon-amber)">x</span></div>
+      <div class="equation-text" id="eq-display"></div>
+      <div class="equation-hint" id="eq-hint"></div>
+      <div class="part-target" id="part-target"></div>
+    </div>
+
+    <!-- Blueprint + Parts -->
+    <div class="blueprint-area">
+      <div class="robot-blueprint">
+        <div class="blueprint-title">⚡ ROBOT BLUEPRINT</div>
+        <div class="robot-svg-wrap">
+          <svg id="robot-svg" viewBox="0 0 140 180" width="140" height="180" xmlns="http://www.w3.org/2000/svg">
+            <!-- Head -->
+            <g id="part-head" opacity="0.15">
+              <rect x="42" y="8" width="56" height="44" rx="8" fill="#1a2a4a" stroke="#00f5ff" stroke-width="2"/>
+              <circle cx="62" cy="28" r="7" fill="#ffb300" opacity="0.7"/>
+              <circle cx="78" cy="28" r="7" fill="#ffb300" opacity="0.7"/>
+              <rect x="55" y="42" width="30" height="5" rx="2" fill="#00f5ff" opacity="0.5"/>
+              <text x="70" y="22" text-anchor="middle" font-size="8" fill="#00f5ff" font-family="monospace">HEAD</text>
+            </g>
+            <!-- Torso -->
+            <g id="part-torso" opacity="0.15">
+              <rect x="30" y="60" width="80" height="60" rx="6" fill="#1a2a4a" stroke="#bf5af2" stroke-width="2"/>
+              <rect x="45" y="72" width="50" height="16" rx="3" fill="#0d1520" stroke="#bf5af2" stroke-width="1"/>
+              <rect x="48" y="75" width="14" height="10" rx="2" fill="#39ff14" opacity="0.6"/>
+              <rect x="66" y="75" width="14" height="10" rx="2" fill="#ffb300" opacity="0.6"/>
+              <rect x="84" y="75" width="8" height="10" rx="2" fill="#00f5ff" opacity="0.6"/>
+              <rect x="45" y="96" width="50" height="16" rx="3" fill="#0d1520" stroke="#bf5af2" stroke-width="1"/>
+              <circle cx="70" cy="104" r="6" fill="#bf5af2" opacity="0.5"/>
+              <text x="70" y="68" text-anchor="middle" font-size="7" fill="#bf5af2" font-family="monospace">TORSO</text>
+            </g>
+            <!-- Arms -->
+            <g id="part-arms" opacity="0.15">
+              <rect x="4" y="62" width="22" height="48" rx="6" fill="#1a2a4a" stroke="#39ff14" stroke-width="2"/>
+              <circle cx="15" cy="110" r="8" fill="#0d1520" stroke="#39ff14" stroke-width="1.5"/>
+              <rect x="114" y="62" width="22" height="48" rx="6" fill="#1a2a4a" stroke="#39ff14" stroke-width="2"/>
+              <circle cx="125" cy="110" r="8" fill="#0d1520" stroke="#39ff14" stroke-width="1.5"/>
+              <text x="15" y="78" text-anchor="middle" font-size="6" fill="#39ff14" font-family="monospace" transform="rotate(-90,15,78)">ARM</text>
+              <text x="125" y="78" text-anchor="middle" font-size="6" fill="#39ff14" font-family="monospace" transform="rotate(90,125,78)">ARM</text>
+            </g>
+            <!-- Legs -->
+            <g id="part-legs" opacity="0.15">
+              <rect x="36" y="128" width="28" height="44" rx="6" fill="#1a2a4a" stroke="#ffb300" stroke-width="2"/>
+              <rect x="76" y="128" width="28" height="44" rx="6" fill="#1a2a4a" stroke="#ffb300" stroke-width="2"/>
+              <rect x="30" y="168" width="40" height="10" rx="4" fill="#0d1520" stroke="#ffb300" stroke-width="1.5"/>
+              <rect x="70" y="168" width="40" height="10" rx="4" fill="#0d1520" stroke="#ffb300" stroke-width="1.5"/>
+              <text x="70" y="150" text-anchor="middle" font-size="7" fill="#ffb300" font-family="monospace">LEGS</text>
+            </g>
+          </svg>
+        </div>
+        <div class="part-progress-label" style="margin-top:12px">PARTS INSTALLED</div>
+        <div class="progress-wrap" style="width:100%;margin-top:4px">
+          <div class="progress-fill" id="part-progress" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="parts-panel">
+        <div class="parts-title">⚙️ SELECT COMPONENT VALUE</div>
+        <div class="parts-grid" id="parts-grid"></div>
+        <div class="step-display" id="step-hint" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="conveyor-belt"></div>
+  </div>
+</div>
+
+<!-- ══════════════ ROUND BANNER ══════════════ -->
+<div id="round-banner">
+  <div class="round-banner-label">INITIATING</div>
+  <div class="round-banner-num" id="round-banner-num">ROUND 1</div>
+  <div class="round-banner-topic" id="round-banner-topic">One-Step Equations</div>
+</div>
+
+<!-- ══════════════ FEEDBACK ══════════════ -->
+<div id="feedback-overlay">
+  <div class="feedback-msg" id="feedback-msg"></div>
+</div>
+
+<!-- ══════════════ END SCREEN ══════════════ -->
+<div class="screen hidden" id="end-screen">
+  <div class="end-screen-inner">
+
+    <!-- Header -->
+    <div class="end-header">
+      <div class="end-title" id="end-title">FACTORY COMPLETE!</div>
+      <div class="end-subtitle" id="end-subtitle">ALL 10 ROBOTS BUILT</div>
+    </div>
+
+    <!-- Robot + Stars side by side -->
+    <div class="end-top-row">
+      <div class="end-robot-display" id="end-robot"></div>
+      <div class="end-star-block">
+        <div class="stars-display" id="stars-display">
+          <div class="star-wrap" id="star-wrap-1">
+            <div class="star-icon" id="star-1">★</div>
+            <div class="star-score-label" id="star-label-1">200+</div>
+          </div>
+          <div class="star-wrap" id="star-wrap-2">
+            <div class="star-icon" id="star-2">★</div>
+            <div class="star-score-label" id="star-label-2">500+</div>
+          </div>
+          <div class="star-wrap" id="star-wrap-3">
+            <div class="star-icon" id="star-3">★</div>
+            <div class="star-score-label" id="star-label-3">800+</div>
+          </div>
+        </div>
+        <div class="rank-badge" id="rank-badge">APPRENTICE</div>
+        <div class="rank-desc" id="rank-desc">Keep practising!</div>
+      </div>
+    </div>
+
+    <!-- Score bar -->
+    <div class="score-meter-wrap">
+      <div class="score-meter-labels">
+        <span style="color:var(--text-dim);font-size:0.65rem;font-family:'Orbitron',monospace;letter-spacing:2px">SCORE</span>
+        <span class="score-meter-val" id="score-meter-val">0</span>
+      </div>
+      <div class="score-meter-track">
+        <div class="score-meter-fill" id="score-meter-fill" style="width:0%"></div>
+        <div class="score-meter-marker" style="left:20%"><span>200</span></div>
+        <div class="score-meter-marker" style="left:50%"><span>500</span></div>
+        <div class="score-meter-marker" style="left:80%"><span>800</span></div>
+      </div>
+    </div>
+
+    <!-- Stats grid -->
+    <div class="end-stats" id="end-stats"></div>
+
+    <!-- Buttons -->
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn-primary" onclick="restartGame()">⚡ PLAY AGAIN</button>
+      <button class="btn-secondary" onclick="showHowTo()">📖 HOW TO PLAY</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  AUDIO ENGINE
+// ══════════════════════════════════════════
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTone(freq, type, dur, gain=0.3, delay=0) {
+  const o = AC.createOscillator();
+  const g = AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type = type; o.frequency.setValueAtTime(freq, AC.currentTime + delay);
+  g.gain.setValueAtTime(0, AC.currentTime + delay);
+  g.gain.linearRampToValueAtTime(gain, AC.currentTime + delay + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + delay + dur);
+  o.start(AC.currentTime + delay);
+  o.stop(AC.currentTime + delay + dur + 0.05);
+}
+
+function sfxCorrect() {
+  playTone(523,  'sine',   0.1, 0.25);
+  playTone(659,  'sine',   0.1, 0.25, 0.1);
+  playTone(784,  'sine',   0.15,0.25, 0.2);
+  playTone(1046, 'sine',   0.2, 0.2,  0.32);
+}
+function sfxWrong() {
+  playTone(220, 'sawtooth', 0.2, 0.3);
+  playTone(180, 'sawtooth', 0.2, 0.3, 0.15);
+}
+function sfxRoundClear() {
+  [523,659,784,1046,1319].forEach((f,i) => playTone(f,'sine',0.2,0.2,i*0.08));
+}
+function sfxTick() { playTone(880, 'square', 0.05, 0.08); }
+function sfxTimeout() {
+  playTone(300, 'sawtooth', 0.4, 0.35);
+  playTone(200, 'sawtooth', 0.4, 0.35, 0.2);
+}
+function sfxGameOver() {
+  playTone(440,'sawtooth',0.3,0.4);
+  playTone(350,'sawtooth',0.3,0.4,0.2);
+  playTone(250,'sawtooth',0.5,0.4,0.5);
+}
+
+// Background music
+let bgNodes = [];
+let bgPlaying = false;
+function startBGMusic() {
+  if (bgPlaying) return;
+  bgPlaying = true;
+  const melody = [130.8,146.8,164.8,174.6,196,174.6,164.8,146.8];
+  let step = 0;
+  function playNext() {
+    if (!bgPlaying) return;
+    const o = AC.createOscillator();
+    const g = AC.createGain();
+    o.connect(g); g.connect(AC.destination);
+    o.type = 'triangle';
+    o.frequency.value = melody[step % melody.length];
+    g.gain.setValueAtTime(0.04, AC.currentTime);
+    g.gain.linearRampToValueAtTime(0.08, AC.currentTime + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.55);
+    o.start(); o.stop(AC.currentTime + 0.6);
+    step++;
+    setTimeout(playNext, 480);
+  }
+  playNext();
+}
+function stopBGMusic() { bgPlaying = false; }
+
+// ══════════════════════════════════════════
+//  BACKGROUND CANVAS (gears + grid)
+// ══════════════════════════════════════════
+const bgC = document.getElementById('bg-canvas');
+const bCtx = bgC.getContext('2d');
+let bgGears = [];
+function initBG() {
+  bgC.width = window.innerWidth; bgC.height = window.innerHeight;
+  bgGears = [];
+  for (let i=0; i<8; i++) {
+    bgGears.push({
+      x: Math.random()*window.innerWidth,
+      y: Math.random()*window.innerHeight,
+      r: 30+Math.random()*80,
+      teeth: 8+Math.floor(Math.random()*8),
+      rot: Math.random()*Math.PI*2,
+      speed: (Math.random()-0.5)*0.004,
+      color: Math.random()>0.5 ? '#00f5ff' : '#ffb300'
+    });
+  }
+}
+function drawGear(ctx, g) {
+  ctx.save();
+  ctx.translate(g.x, g.y);
+  ctx.rotate(g.rot);
+  ctx.strokeStyle = g.color;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.4;
+  ctx.beginPath();
+  const toothH = g.r * 0.18;
+  for (let i=0; i<g.teeth; i++) {
+    const a1 = (i/g.teeth)*Math.PI*2;
+    const a2 = ((i+0.4)/g.teeth)*Math.PI*2;
+    const a3 = ((i+0.6)/g.teeth)*Math.PI*2;
+    const a4 = ((i+1)/g.teeth)*Math.PI*2;
+    ctx.moveTo(Math.cos(a1)*g.r, Math.sin(a1)*g.r);
+    ctx.lineTo(Math.cos(a1)*(g.r+toothH), Math.sin(a1)*(g.r+toothH));
+    ctx.lineTo(Math.cos(a2)*(g.r+toothH), Math.sin(a2)*(g.r+toothH));
+    ctx.lineTo(Math.cos(a3)*(g.r+toothH), Math.sin(a3)*(g.r+toothH));
+    ctx.lineTo(Math.cos(a4)*g.r, Math.sin(a4)*g.r);
+  }
+  ctx.closePath(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,0,g.r*0.3,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+function animateBG() {
+  bCtx.clearRect(0,0,bgC.width,bgC.height);
+  bgGears.forEach(g => { g.rot += g.speed; drawGear(bCtx, g); });
+  requestAnimationFrame(animateBG);
+}
+window.addEventListener('resize', initBG);
+initBG(); animateBG();
+
+// ══════════════════════════════════════════
+//  DRAW START SCREEN ROBOT
+// ══════════════════════════════════════════
+function drawStartRobot() {
+  const container = document.getElementById('start-robot');
+  container.innerHTML = `
+  <svg viewBox="0 0 180 200" width="180" height="200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <!-- Legs -->
+    <rect x="42" y="148" width="34" height="46" rx="7" fill="#1a2a4a" stroke="#ffb300" stroke-width="2.5" filter="url(#glow)"/>
+    <rect x="104" y="148" width="34" height="46" rx="7" fill="#1a2a4a" stroke="#ffb300" stroke-width="2.5" filter="url(#glow)"/>
+    <rect x="35" y="187" width="48" height="11" rx="5" fill="#0d1520" stroke="#ffb300" stroke-width="2"/>
+    <rect x="97" y="187" width="48" height="11" rx="5" fill="#0d1520" stroke="#ffb300" stroke-width="2"/>
+    <!-- Body -->
+    <rect x="36" y="72" width="108" height="80" rx="8" fill="#1a2a4a" stroke="#bf5af2" stroke-width="2.5" filter="url(#glow)"/>
+    <rect x="52" y="86" width="76" height="20" rx="4" fill="#0d1520" stroke="#bf5af2" stroke-width="1.5"/>
+    <rect x="56" y="89" width="20" height="14" rx="3" fill="#39ff14" opacity="0.8"/>
+    <rect x="80" y="89" width="20" height="14" rx="3" fill="#ffb300" opacity="0.8"/>
+    <rect x="104" y="89" width="12" height="14" rx="3" fill="#00f5ff" opacity="0.8"/>
+    <rect x="52" y="116" width="76" height="26" rx="4" fill="#0d1520" stroke="#bf5af2" stroke-width="1.5"/>
+    <circle cx="90" cy="129" r="10" fill="#bf5af2" opacity="0.6"/>
+    <circle cx="90" cy="129" r="5" fill="#bf5af2" opacity="0.8"/>
+    <!-- Arms -->
+    <rect x="6" y="74" width="26" height="60" rx="8" fill="#1a2a4a" stroke="#39ff14" stroke-width="2.5" filter="url(#glow)"/>
+    <circle cx="19" cy="133" r="11" fill="#0d1520" stroke="#39ff14" stroke-width="2"/>
+    <rect x="148" y="74" width="26" height="60" rx="8" fill="#1a2a4a" stroke="#39ff14" stroke-width="2.5" filter="url(#glow)"/>
+    <circle cx="161" cy="133" r="11" fill="#0d1520" stroke="#39ff14" stroke-width="2"/>
+    <!-- Head -->
+    <rect x="50" y="8" width="80" height="60" rx="10" fill="#1a2a4a" stroke="#00f5ff" stroke-width="2.5" filter="url(#glow)"/>
+    <circle cx="74" cy="32" r="11" fill="#ffb300" opacity="0.85"/>
+    <circle cx="106" cy="32" r="11" fill="#ffb300" opacity="0.85"/>
+    <circle cx="74" cy="32" r="5" fill="#0d1520"/>
+    <circle cx="106" cy="32" r="5" fill="#0d1520"/>
+    <rect x="64" y="52" width="52" height="8" rx="4" fill="#00f5ff" opacity="0.6"/>
+    <rect x="82" y="62" width="16" height="14" rx="0" fill="#1a2a4a" stroke="#00f5ff" stroke-width="1.5"/>
+    <!-- Antenna -->
+    <line x1="90" y1="8" x2="90" y2="-4" stroke="#00f5ff" stroke-width="2"/>
+    <circle cx="90" cy="-6" r="4" fill="#00f5ff" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.2;0.9" dur="1.2s" repeatCount="indefinite"/>
+    </circle>
+  </svg>`;
+}
+drawStartRobot();
+
+// ══════════════════════════════════════════
+//  HOW TO PLAY SLIDES
+// ══════════════════════════════════════════
+let currentSlide = 0;
+const totalSlides = 5;
+function goSlide(n) {
+  document.querySelectorAll('.slide').forEach((s,i) => {
+    s.classList.toggle('active', i===n);
+  });
+  document.querySelectorAll('.dot').forEach((d,i) => {
+    d.classList.toggle('active', i===n);
+  });
+  document.getElementById('slide-counter').textContent = `${n+1} / ${totalSlides}`;
+  const nextBtn = document.getElementById('next-btn');
+  nextBtn.textContent = n===totalSlides-1 ? 'PLAY →' : 'NEXT →';
+  currentSlide = n;
+}
+function nextSlide() {
+  if (currentSlide < totalSlides-1) goSlide(currentSlide+1);
+  else startGame();
+}
+function prevSlide() { if (currentSlide>0) goSlide(currentSlide-1); }
+function showHowTo() {
+  goSlide(0);
+  showScreen('howto-screen');
+}
+function closeHowTo() { showScreen('start-screen'); }
+
+// ══════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ══════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+//  EQUATION GENERATOR
+// ══════════════════════════════════════════
+const ROUND_DATA = [
+  { topic:'One-Step Addition',       diff:'easy',   time:18, pts:50  },
+  { topic:'One-Step Subtraction',    diff:'easy',   time:16, pts:50  },
+  { topic:'One-Step Multiplication', diff:'easy',   time:16, pts:60  },
+  { topic:'One-Step Division',       diff:'medium', time:15, pts:70  },
+  { topic:'Two-Step Equations (I)',   diff:'medium', time:14, pts:80  },
+  { topic:'Two-Step Equations (II)',  diff:'medium', time:12, pts:90  },
+  { topic:'Two-Step (Negatives)',     diff:'hard',   time:12, pts:100 },
+  { topic:'Multi-Step Equations',    diff:'hard',   time:10, pts:120 },
+  { topic:'Equations with Fractions',diff:'expert', time:9,  pts:140 },
+  { topic:'Combined Challenge',      diff:'expert', time:8,  pts:160 },
+];
+
+const PARTS = ['HEAD','TORSO','ARMS','LEGS'];
+const PART_IDS = ['part-head','part-torso','part-arms','part-legs'];
+
+function clamp(v,lo,hi) { return Math.max(lo, Math.min(hi,v)); }
+function rInt(lo,hi) { return lo + Math.floor(Math.random()*(hi-lo+1)); }
+
+function genEquation(round, partIndex) {
+  const diff = ROUND_DATA[round-1].diff;
+  let answer, text, hint, steps;
+  const varName = 'x';
+
+  const genSet = () => {
+    if (diff === 'easy') {
+      const type = round<=2 ? (round===1?'add':'sub') : 'mul';
+      if (type==='add') {
+        answer = rInt(1,12);
+        const b = rInt(1,10);
+        const result = answer+b;
+        text = `${varName} + ${b} = ${result}`;
+        hint = 'Subtract both sides';
+        steps = `${varName} = ${result} − ${b} = ${answer}`;
+      } else if (type==='sub') {
+        answer = rInt(2,12);
+        const b = rInt(1,answer-1);
+        const result = answer-b;
+        text = `${varName} − ${b} = ${result}`;
+        hint = 'Add to both sides';
+        steps = `${varName} = ${result} + ${b} = ${answer}`;
+      } else {
+        answer = rInt(2,9);
+        const b = rInt(2,8);
+        const result = answer*b;
+        text = `${b}${varName} = ${result}`;
+        hint = 'Divide both sides';
+        steps = `${varName} = ${result} ÷ ${b} = ${answer}`;
+      }
+    } else if (diff === 'medium') {
+      if (round<=5) {
+        // Two-step: ax + b = c
+        answer = rInt(1,10);
+        const a = rInt(2,6);
+        const b = rInt(1,9);
+        const c = a*answer+b;
+        text = `${a}${varName} + ${b} = ${c}`;
+        hint = 'Step 1: subtract, Step 2: divide';
+        steps = `${a}${varName} = ${c}−${b} = ${c-b} → ${varName}=${answer}`;
+      } else {
+        answer = rInt(1,10);
+        const a = rInt(2,6);
+        const b = rInt(2,10);
+        const c = a*answer-b;
+        text = `${a}${varName} − ${b} = ${c}`;
+        hint = 'Step 1: add, Step 2: divide';
+        steps = `${a}${varName} = ${c}+${b} = ${c+b} → ${varName}=${answer}`;
+      }
+    } else if (diff === 'hard') {
+      if (round<=7) {
+        // negatives: ax + b = c where some negative
+        answer = rInt(-8, 8);
+        const a = rInt(2,5);
+        const b = rInt(-8,8);
+        const c = a*answer+b;
+        text = `${a}${varName} ${b>=0?'+':''} ${b} = ${c}`;
+        hint = 'Watch the negatives!';
+        steps = `${a}${varName} = ${c}${b>=0?'−'+b:'+'+Math.abs(b)} = ${c-b} → ${varName}=${answer}`;
+      } else {
+        // x on both sides: ax + b = cx + d
+        answer = rInt(1,10);
+        const a = rInt(3,7);
+        const c = rInt(1,a-1);
+        const d = rInt(1,12);
+        const b = (c-a)*answer+d;
+        text = `${a}${varName} + ${b>=0?b:b} = ${c}${varName} + ${d}`;
+        hint = 'Collect x terms first';
+        steps = `(${a}−${c})${varName} = ${d}−${b} → ${varName}=${answer}`;
+      }
+    } else { // expert
+      if (round===9) {
+        // fractions: x/a + b = c
+        answer = rInt(2,10)*rInt(2,4);
+        const a = rInt(2,5);
+        const b = rInt(1,8);
+        const c = answer/a+b;
+        if (!Number.isInteger(c)) { return genSet(); }
+        text = `${varName}/${a} + ${b} = ${c}`;
+        hint = 'Multiply out the fraction first';
+        steps = `${varName}/${a} = ${c}−${b} = ${c-b} → ${varName}=${answer}`;
+      } else {
+        // combined: a(bx + c) = d
+        answer = rInt(1,8);
+        const a = rInt(2,4);
+        const b = rInt(2,4);
+        const c = rInt(-5,5);
+        const d = a*(b*answer+c);
+        text = `${a}(${b}${varName} ${c>=0?'+':''} ${c}) = ${d}`;
+        hint = 'Expand brackets first';
+        steps = `${a*b}${varName} ${a*c>=0?'+':''} ${a*c} = ${d} → ${varName}=${answer}`;
+      }
+    }
+  };
+  genSet();
+  return { answer, text, hint, steps };
+}
+
+function genOptions(correct) {
+  const opts = new Set([correct]);
+  while (opts.size < 4) {
+    const delta = rInt(-10, 10);
+    const candidate = correct + delta;
+    if (candidate !== correct && Math.abs(delta)>0) opts.add(candidate);
+  }
+  return [...opts].sort(() => Math.random()-0.5);
+}
+
+// ══════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════
+let state = {};
+
+function initState() {
+  state = {
+    round: 1,
+    score: 0,
+    partsInstalled: 0,  // 0–4 per round
+    lives: 3,
+    timerVal: 15,
+    timerInterval: null,
+    currentEq: null,
+    locked: false,
+    totalCorrect: 0,
+    totalWrong: 0,
+    roundsCompleted: 0,
+    gameOver: false,
+  };
+}
+
+// ══════════════════════════════════════════
+//  HUD UPDATE
+// ══════════════════════════════════════════
+function updateHUD() {
+  document.getElementById('hud-round').textContent = `${state.round}/10`;
+  document.getElementById('hud-score').textContent = state.score;
+  // Lives
+  const livesEl = document.getElementById('hud-lives');
+  livesEl.innerHTML = '';
+  for (let i=0; i<3; i++) {
+    const ic = document.createElement('span');
+    ic.className = 'life-icon' + (i >= state.lives ? ' lost' : '');
+    ic.textContent = '🤖';
+    livesEl.appendChild(ic);
+  }
+  // Score color
+  const scoreEl = document.getElementById('hud-score');
+  scoreEl.className = 'hud-value glow-cyan';
+  // Pips
+  const pipsEl = document.getElementById('hud-pips');
+  pipsEl.innerHTML = '';
+  for (let i=0; i<10; i++) {
+    const p = document.createElement('div');
+    p.className = 'round-pip';
+    if (i < state.round-1) p.classList.add('done');
+    else if (i === state.round-1) p.classList.add('current');
+    pipsEl.appendChild(p);
+  }
+}
+
+function updateTimer() {
+  const maxTime = ROUND_DATA[state.round-1].time;
+  document.getElementById('hud-timer').textContent = state.timerVal;
+  const timerEl = document.getElementById('hud-timer');
+  timerEl.className = state.timerVal <= 5 ? 'danger' : state.timerVal <= 9 ? 'warn' : '';
+  const arc = document.getElementById('timer-arc');
+  const pct = state.timerVal / maxTime;
+  arc.style.stroke = state.timerVal<=5?'var(--neon-red)':state.timerVal<=9?'var(--neon-amber)':'var(--neon-cyan)';
+  arc.style.strokeDashoffset = (1-pct)*113;
+}
+
+// ══════════════════════════════════════════
+//  ROBOT SVG UPDATE
+// ══════════════════════════════════════════
+function updateRobotParts() {
+  PART_IDS.forEach((id,i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (i < state.partsInstalled) {
+      el.style.opacity = '1';
+      el.style.transition = 'opacity 0.4s';
+    } else {
+      el.style.opacity = '0.12';
+    }
+  });
+  const pct = (state.partsInstalled/4)*100;
+  document.getElementById('part-progress').style.width = pct + '%';
+}
+
+// ══════════════════════════════════════════
+//  QUESTION SETUP
+// ══════════════════════════════════════════
+function showQuestion() {
+  if (state.locked) return;
+  const partName = PARTS[state.partsInstalled];
+  state.currentEq = genEquation(state.round, state.partsInstalled);
+  const { text, hint, steps } = state.currentEq;
+
+  // Display
+  document.getElementById('eq-display').innerHTML =
+    text.replace(/x/g, '<span class="var">x</span>');
+  document.getElementById('eq-hint').textContent = hint;
+  document.getElementById('part-target').textContent = `🔩 INSTALLING: ${partName}`;
+
+  // Step hint
+  const stepEl = document.getElementById('step-hint');
+  stepEl.style.display = 'block';
+  stepEl.innerHTML = `💡 STEPS: <span>${steps.replace(/x/g, 'x')}</span>`;
+
+  // Options
+  const opts = genOptions(state.currentEq.answer);
+  const grid = document.getElementById('parts-grid');
+  grid.innerHTML = '';
+  opts.forEach(val => {
+    const btn = document.createElement('button');
+    btn.className = 'part-btn';
+    btn.innerHTML = `<div class="part-num">${val}</div><div class="part-label">x = ${val}</div>`;
+    btn.onclick = () => handleAnswer(val, btn, opts);
+    grid.appendChild(btn);
+  });
+
+  updateRobotParts();
+  startTimer();
+}
+
+// ══════════════════════════════════════════
+//  TIMER
+// ══════════════════════════════════════════
+function startTimer() {
+  stopTimer();
+  state.timerVal = ROUND_DATA[state.round-1].time;
+  updateTimer();
+  state.timerInterval = setInterval(() => {
+    if (state.locked) return;
+    state.timerVal--;
+    if (state.timerVal <= 3) sfxTick();
+    updateTimer();
+    if (state.timerVal <= 0) {
+      stopTimer();
+      sfxTimeout();
+      handleAnswer(null, null, []);
+    }
+  }, 1000);
+}
+function stopTimer() {
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval=null; }
+}
+
+// ══════════════════════════════════════════
+//  ANSWER HANDLER
+// ══════════════════════════════════════════
+function handleAnswer(val, btn, opts) {
+  if (state.locked) return;
+  state.locked = true;
+  stopTimer();
+  const correct = state.currentEq.answer;
+  const isCorrect = val === correct;
+
+  if (isCorrect) {
+    sfxCorrect();
+    state.totalCorrect++;
+    // Points: base + time bonus
+    const timeBonus = state.timerVal * 3;
+    const roundPts = ROUND_DATA[state.round-1].pts + timeBonus;
+    state.score += roundPts;
+    if (btn) { btn.classList.add('correct-flash'); }
+    showFeedback(`✓ CORRECT! +${roundPts}`, 'correct');
+    spawnParticles(btn, true);
+    state.partsInstalled++;
+    updateRobotParts();
+    updateHUD();
+    setTimeout(() => {
+      hideFeedback();
+      if (state.partsInstalled >= 4) {
+        // Round complete!
+        roundComplete();
+      } else {
+        state.locked = false;
+        showQuestion();
+      }
+    }, 900);
+
+  } else {
+    sfxWrong();
+    state.totalWrong++;
+    state.lives--;
+    if (btn) { btn.classList.add('wrong-flash'); }
+    // highlight correct
+    const allBtns = document.querySelectorAll('.part-btn');
+    allBtns.forEach(b => {
+      if (parseInt(b.querySelector('.part-num').textContent) === correct) {
+        b.style.borderColor = 'var(--neon-green)';
+        b.style.background = 'rgba(57,255,20,0.08)';
+      }
+      b.disabled = true;
+    });
+    updateHUD();
+
+    if (state.lives <= 0) {
+      showFeedback(`✗ WRONG! x=${correct}\nGAME OVER!`, 'wrong');
+      setTimeout(() => {
+        hideFeedback();
+        endGame(false);
+      }, 1400);
+    } else {
+      const msg = val===null ? `⏱ TIME'S UP! x=${correct}` : `✗ WRONG! x=${correct}\n${3-state.lives} life lost`;
+      showFeedback(msg, 'wrong');
+      setTimeout(() => {
+        hideFeedback();
+        state.locked = false;
+        showQuestion();
+      }, 1200);
+    }
+  }
+}
+
+function restartRound() {
+  state.partsInstalled = 0;
+  // lives are NOT reset — they are shared across all rounds
+  state.locked = false;
+  updateRobotParts();
+  updateHUD();
+  showRoundBanner(state.round, () => { showQuestion(); });
+}
+
+// ══════════════════════════════════════════
+//  ROUND COMPLETE
+// ══════════════════════════════════════════
+function roundComplete() {
+  sfxRoundClear();
+  state.roundsCompleted++;
+  showFeedback(`⚡ ROBOT BUILT!`, 'roundclear');
+  setTimeout(() => {
+    hideFeedback();
+    if (state.round >= 10) {
+      endGame(true);
+    } else {
+      state.round++;
+      state.partsInstalled = 0;
+      // lives carry over — no reset
+      state.locked = false;
+      updateHUD();
+      showRoundBanner(state.round, () => { showQuestion(); });
+    }
+  }, 1200);
+}
+
+// ══════════════════════════════════════════
+//  ROUND BANNER
+// ══════════════════════════════════════════
+function showRoundBanner(round, callback) {
+  const banner = document.getElementById('round-banner');
+  document.getElementById('round-banner-num').textContent = `ROUND ${round}`;
+  const rd = ROUND_DATA[round-1];
+  document.getElementById('round-banner-topic').textContent =
+    `${rd.diff.toUpperCase()} — ${rd.topic}`;
+  banner.classList.add('show');
+  setTimeout(() => {
+    banner.classList.remove('show');
+    setTimeout(callback, 300);
+  }, 1800);
+}
+
+// ══════════════════════════════════════════
+//  FEEDBACK
+// ══════════════════════════════════════════
+function showFeedback(msg, type) {
+  const overlay = document.getElementById('feedback-overlay');
+  const msgEl = document.getElementById('feedback-msg');
+  msgEl.textContent = msg;
+  msgEl.className = `feedback-msg ${type}`;
+  overlay.classList.add('show');
+}
+function hideFeedback() {
+  document.getElementById('feedback-overlay').classList.remove('show');
+}
+
+// ══════════════════════════════════════════
+//  PARTICLES
+// ══════════════════════════════════════════
+function spawnParticles(el, good) {
+  const colors = good
+    ? ['#39ff14','#00f5ff','#ffb300']
+    : ['#ff3864','#ff8800'];
+  const rect = el ? el.getBoundingClientRect() : {left:window.innerWidth/2,top:window.innerHeight/2,width:0,height:0};
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+  for (let i=0; i<14; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 4+Math.random()*8;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      left:${cx}px; top:${cy}px;
+      --tx:${(Math.random()-0.5)*120}px;
+      --ty:${(Math.random()-0.5)*120}px;
+    `;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 900);
+  }
+}
+
+// ══════════════════════════════════════════
+//  END GAME  — full scoreboard
+// ══════════════════════════════════════════
+const STAR_THRESHOLDS = [200, 500, 800];
+const RANKS = [
+  { label:'NO RANK',        desc:'You ran out of power…',          cls:'rank-0' },
+  { label:'APPRENTICE',     desc:'A solid start, engineer!',        cls:'rank-1' },
+  { label:'ENGINEER',       desc:'Nice work on the assembly line!', cls:'rank-2' },
+  { label:'MASTER ENGINEER',desc:'Factory running at full power!',  cls:'rank-3' },
+];
+
+function endGame(won) {
+  stopTimer(); stopBGMusic();
+  if (!won) sfxGameOver(); else sfxRoundClear();
+
+  showScreen('end-screen');
+  document.getElementById('hud').style.display = 'none';
+
+  /* ── Title / subtitle ── */
+  const title    = won ? '🏆 FACTORY COMPLETE!' : '💥 FACTORY OFFLINE';
+  const subtitle = won
+    ? `ALL 10 ROBOTS BUILT`
+    : `SHUT DOWN AT ROUND ${state.round}  •  ${state.roundsCompleted} ROBOTS BUILT`;
+  document.getElementById('end-title').textContent   = title;
+  document.getElementById('end-subtitle').textContent = subtitle;
+
+  /* ── Stars earned ── */
+  let stars = 0;
+  for (let i = 0; i < STAR_THRESHOLDS.length; i++) {
+    if (state.score >= STAR_THRESHOLDS[i]) stars = i + 1;
+  }
+
+  // Reset all stars first
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById(`star-${i}`);
+    el.classList.remove('earned','pop');
+  }
+
+  // Animate stars in sequence
+  for (let i = 1; i <= 3; i++) {
+    if (i <= stars) {
+      const el = document.getElementById(`star-${i}`);
+      setTimeout(() => {
+        el.classList.add('earned','pop');
+        sfxTick();
+      }, 300 + (i - 1) * 450);
+    }
+  }
+
+  /* ── Rank badge ── */
+  const rank = RANKS[stars];
+  const badge = document.getElementById('rank-badge');
+  badge.textContent  = rank.label;
+  badge.className    = `rank-badge ${rank.cls}`;
+  document.getElementById('rank-desc').textContent = rank.desc;
+
+  /* ── Score meter animation ── */
+  const MAX_METER = 1000;
+  const pct = Math.min(state.score / MAX_METER * 100, 100);
+  document.getElementById('score-meter-val').textContent = '0';
+  document.getElementById('score-meter-fill').style.width = '0%';
+
+  setTimeout(() => {
+    document.getElementById('score-meter-fill').style.width = pct + '%';
+    // count-up animation
+    const target = state.score;
+    const duration = 1200;
+    const start = performance.now();
+    function countUp(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      document.getElementById('score-meter-val').textContent =
+        Math.round(ease * target).toLocaleString();
+      if (progress < 1) requestAnimationFrame(countUp);
+    }
+    requestAnimationFrame(countUp);
+  }, 200);
+
+  /* ── Stats grid ── */
+  const acc = (state.totalCorrect + state.totalWrong) > 0
+    ? Math.round(state.totalCorrect / (state.totalCorrect + state.totalWrong) * 100)
+    : 0;
+  const nextThreshold = STAR_THRESHOLDS[stars] ?? null;
+  const toNext = nextThreshold ? nextThreshold - state.score : null;
+
+  document.getElementById('end-stats').innerHTML = `
+    <div class="end-stat">
+      <div class="end-stat-val" style="color:var(--neon-cyan)">${state.roundsCompleted}</div>
+      <div class="end-stat-label">Robots Built</div>
+    </div>
+    <div class="end-stat">
+      <div class="end-stat-val" style="color:var(--neon-green)">${state.totalCorrect}</div>
+      <div class="end-stat-label">Correct</div>
+    </div>
+    <div class="end-stat">
+      <div class="end-stat-val" style="color:var(--neon-red)">${state.totalWrong}</div>
+      <div class="end-stat-label">Wrong</div>
+    </div>
+    <div class="end-stat">
+      <div class="end-stat-val" style="color:var(--neon-amber)">${acc}%</div>
+      <div class="end-stat-label">Accuracy</div>
+    </div>
+  `;
+
+  /* ── End robot (broken if lost, glowing if won) ── */
+  const eyeColor   = won ? '#ffb300' : '#ff3864';
+  const bodyStroke = won ? '#bf5af2' : '#ff3864';
+  const glow       = won ? '#bf5af2' : '#ff3864';
+  document.getElementById('end-robot').innerHTML = `
+    <svg viewBox="0 0 100 120" width="110" height="132" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="eglow"><feGaussianBlur stdDeviation="2.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <rect x="28" y="88" width="18" height="28" rx="4" fill="#1a2a4a" stroke="#ffb300" stroke-width="2" filter="url(#eglow)"/>
+      <rect x="54" y="88" width="18" height="28" rx="4" fill="#1a2a4a" stroke="#ffb300" stroke-width="2" filter="url(#eglow)"/>
+      <rect x="22" y="44" width="56" height="48" rx="6" fill="#1a2a4a" stroke="${bodyStroke}" stroke-width="2" filter="url(#eglow)"/>
+      <rect x="32" y="54" width="36" height="12" rx="3" fill="#0d1520" stroke="${bodyStroke}" stroke-width="1"/>
+      <rect x="35" y="57" width="10" height="6" rx="2" fill="${won?'#39ff14':'#ff3864'}" opacity="0.9"/>
+      <rect x="49" y="57" width="10" height="6" rx="2" fill="#ffb300" opacity="0.9"/>
+      <circle cx="50" cy="79" r="8" fill="${glow}" opacity="0.5" filter="url(#eglow)"/>
+      <circle cx="50" cy="79" r="4" fill="${glow}" opacity="0.85"/>
+      <rect x="5"  y="46" width="14" height="34" rx="5" fill="#1a2a4a" stroke="#39ff14" stroke-width="2" filter="url(#eglow)"/>
+      <rect x="81" y="46" width="14" height="34" rx="5" fill="#1a2a4a" stroke="#39ff14" stroke-width="2" filter="url(#eglow)"/>
+      <rect x="28" y="4"  width="44" height="38" rx="7" fill="#1a2a4a" stroke="#00f5ff" stroke-width="2" filter="url(#eglow)"/>
+      <circle cx="42" cy="20" r="7" fill="${eyeColor}" opacity="0.9"/>
+      <circle cx="58" cy="20" r="7" fill="${eyeColor}" opacity="0.9"/>
+      <circle cx="42" cy="20" r="3" fill="#0d1520"/>
+      <circle cx="58" cy="20" r="3" fill="#0d1520"/>
+      <rect x="36" y="34" width="28" height="5" rx="2" fill="#00f5ff" opacity="0.7"/>
+      ${won ? `<line x1="50" y1="0" x2="50" y2="-6" stroke="#00f5ff" stroke-width="2"/>
+               <circle cx="50" cy="-8" r="3.5" fill="#00f5ff" opacity="0.9">
+                 <animate attributeName="opacity" values="1;0.2;1" dur="0.8s" repeatCount="indefinite"/>
+               </circle>` : ''}
+    </svg>`;
+}
+
+// ══════════════════════════════════════════
+//  START GAME
+// ══════════════════════════════════════════
+function startGame() {
+  if (AC.state === 'suspended') AC.resume();
+  initState();
+  showScreen('game-screen');
+  document.getElementById('hud').style.display = 'flex';
+  updateHUD();
+  updateRobotParts();
+  startBGMusic();
+  showRoundBanner(1, () => { showQuestion(); });
+}
+
+function restartGame() {
+  stopBGMusic();
+  bgPlaying = false;
+  showScreen('start-screen');
+  document.getElementById('hud').style.display = 'none';
+}
+</script>
+</body>
+</html>

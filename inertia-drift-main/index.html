@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inertia Drift — Physics Minigame</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep: #060818;
+    --bg-mid: #131A35;
+    --panel: rgba(244,241,234,0.06);
+    --panel-border: rgba(124,92,255,0.22);
+    --cream: #F4F1EA;
+    --cyan: #4DD0E1;
+    --cyan-dark: #1E6E7A;
+    --orange: #FF7A45;
+    --orange-dark: #8C3A1F;
+    --purple: #7C5CFF;
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: radial-gradient(circle at 50% 15%, var(--bg-mid), var(--bg-deep) 75%);
+    font-family: var(--font-body);
+    color: var(--cream);
+    overflow: hidden;
+    -webkit-user-select:none; user-select:none;
+  }
+
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      radial-gradient(rgba(124,92,255,0.05) 1px, transparent 1px);
+    background-size: 26px 26px;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .screen{
+    position:fixed; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    flex-direction:column;
+    text-align:center;
+    padding: 20px;
+    z-index:1;
+  }
+  .screen.active{ display:flex; }
+
+  h1{
+    font-family: var(--font-display);
+    font-weight:800;
+    letter-spacing: 0.06em;
+    font-size: clamp(1.8rem, 8vw, 3rem);
+    margin: 0 0 6px 0;
+    color: var(--cream);
+    text-transform: uppercase;
+  }
+  h1 span{ color: var(--cyan); }
+
+  .tagline{
+    font-size: 0.95rem;
+    color: rgba(244,241,234,0.6);
+    max-width: 380px;
+    margin: 0 0 28px 0;
+    line-height:1.5;
+  }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 24px 28px;
+    max-width: 440px;
+    width: 100%;
+    backdrop-filter: blur(6px);
+  }
+
+  .btn{
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    padding: 14px 28px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    margin: 8px;
+    text-transform: uppercase;
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  .btn:active{ transform: scale(0.96); }
+  .btn-primary{
+    background: var(--cyan);
+    color: #06262B;
+    box-shadow: 0 6px 0 var(--cyan-dark);
+  }
+  .btn-primary:active{ box-shadow: 0 2px 0 var(--cyan-dark); }
+  .btn-secondary{
+    background: transparent;
+    color: var(--cream);
+    border: 1px solid var(--panel-border);
+  }
+  .btn-secondary:hover{ border-color: var(--cream); }
+
+  /* ---------- Instructions ---------- */
+  #screen-instructions ul{
+    text-align:left;
+    list-style:none;
+    padding:0;
+    margin: 16px 0 22px 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  #screen-instructions li{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    margin-bottom: 12px;
+  }
+  .icon-dot{
+    flex-shrink:0;
+    width: 24px; height:24px;
+    border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 0.75rem;
+    font-weight:700;
+    margin-top:1px;
+    font-family: var(--font-display);
+  }
+  .icon-energy{ background: var(--cyan); color:#06262B; }
+  .icon-asteroid{ background: var(--orange); color:#3A1505; }
+  .icon-key{ background: rgba(244,241,234,0.12); color:var(--cream); border:1px solid var(--panel-border);}
+  .icon-clock{ background: var(--purple); color:#1A0F4A; }
+
+  /* ---------- Game screen ---------- */
+  #screen-game{ justify-content:flex-start; padding-top: 14px; }
+
+  .hud{
+    width: 100%;
+    max-width: 480px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-family: var(--font-display);
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+  .hud-block{
+    background: var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display:flex; align-items:center; gap:8px;
+    font-size: 0.95rem;
+    min-width: 0;
+  }
+  .hud-label{
+    font-size:0.6rem;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color: rgba(244,241,234,0.5);
+    display:block;
+    font-family: var(--font-body);
+  }
+  .hud-value{ font-size:1.05rem; font-weight:800; color: var(--cyan); }
+
+  .lives{ display:flex; gap:6px; align-items:center; height: 16px; }
+  .life-ship{
+    width:0; height:0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 13px solid var(--cyan);
+    transition: opacity 0.2s, transform 0.2s;
+    filter: drop-shadow(0 0 2px var(--cyan));
+  }
+  .life-ship.lost{
+    opacity:0.15;
+    border-bottom-color: rgba(244,241,234,0.2);
+    filter: none;
+    transform: scale(0.85);
+  }
+
+  #mute-btn{
+    background: var(--panel);
+    border:1px solid var(--panel-border);
+    color:var(--cream);
+    border-radius:10px;
+    width:42px; height:42px;
+    font-size:1.1rem;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+
+  /* the cockpit viewport */
+  .dish-wrap{
+    position:relative;
+    width: min(90vw, 480px);
+    aspect-ratio: 1/1;
+    overflow:hidden;
+    clip-path: polygon(22% 2%, 78% 2%, 100% 50%, 78% 98%, 22% 98%, 0% 50%);
+    box-shadow:
+      0 0 0 4px rgba(124,92,255,0.18),
+      0 12px 40px rgba(0,0,0,0.6);
+    background: radial-gradient(circle at 50% 45%, #1A2147, #04060F 85%);
+  }
+
+  #game-canvas{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    display:block;
+  }
+
+  .flash{
+    position:absolute; inset:0;
+    background: var(--orange);
+    opacity:0;
+    pointer-events:none;
+  }
+  .flash.active{
+    animation: flashAnim 0.35s ease-out;
+  }
+  @keyframes flashAnim{
+    0%{ opacity:0.5; }
+    100%{ opacity:0; }
+  }
+
+  .game-hint{
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: rgba(244,241,234,0.45);
+  }
+
+  /* ---------- End screen ---------- */
+  #end-title{ margin-bottom: 4px; }
+  #end-subtitle{
+    color: rgba(244,241,234,0.6);
+    margin-bottom: 18px;
+    font-size:0.95rem;
+  }
+  .stat-row{
+    display:flex;
+    justify-content:center;
+    gap: 28px;
+    margin: 18px 0 24px 0;
+  }
+  .stat{
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .stat-num{
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight:800;
+    color: var(--cyan);
+  }
+  .stat-label{
+    font-size: 0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color: rgba(244,241,234,0.5);
+    margin-top:2px;
+    font-family: var(--font-body);
+  }
+
+  @media (max-width:420px){
+    .hud-label{font-size:0.55rem;}
+    .hud-value{font-size:0.9rem;}
+    .panel{padding:18px 16px;}
+  }
+</style>
+</head>
+<body>
+
+  <!-- START SCREEN -->
+  <div id="screen-start" class="screen active">
+    <h1>INERTIA <span>DRIFT</span></h1>
+    <p class="tagline">A Physics Lab Mini-Game — fire your thrusters, ride your momentum, and learn how Newton's Laws feel from the cockpit.</p>
+    <div>
+      <button class="btn btn-primary" id="btn-start">Launch</button>
+      <button class="btn btn-secondary" id="btn-howto">How to Play</button>
+    </div>
+  </div>
+
+  <!-- INSTRUCTIONS SCREEN -->
+  <div id="screen-instructions" class="screen">
+    <div class="panel">
+      <h1 style="font-size:1.4rem;">Flight Briefing</h1>
+      <ul>
+        <li><span class="icon-dot icon-key">⌨</span><span>Use <b>arrow keys / WASD</b> to fire thrusters, or <b>press and hold</b> on the viewport to thrust toward your finger/cursor.</span></li>
+        <li><span class="icon-dot icon-key">↻</span><span>Your ship has <b>momentum</b> — it keeps drifting after you stop thrusting (Newton's 1st Law), and bounces off the walls.</span></li>
+        <li><span class="icon-dot icon-energy">E</span><span><b>Energy cells</b> (cyan hexagons) drift through space — collide with them to gain <b>+10 points</b>.</span></li>
+        <li><span class="icon-dot icon-asteroid">A</span><span><b>Asteroids</b> (orange rocks) will knock your ship off course and cost <b>1 life</b> on impact.</span></li>
+        <li><span class="icon-dot icon-clock">⏱</span><span>You have <b>3 lives</b> and <b>60 seconds</b>. Survive the run to complete the mission — debris gets faster over time!</span></li>
+      </ul>
+      <button class="btn btn-primary" id="btn-back-start">Ready</button>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="screen-game" class="screen">
+    <div class="hud">
+      <div class="hud-block">
+        <div>
+          <span class="hud-label">Score</span>
+          <span class="hud-value" id="hud-score">0</span>
+        </div>
+      </div>
+      <div class="hud-block">
+        <div>
+          <span class="hud-label">Time</span>
+          <span class="hud-value" id="hud-time">60</span>
+        </div>
+      </div>
+      <div class="hud-block">
+        <div>
+          <span class="hud-label">Lives</span>
+          <div class="lives" id="hud-lives">
+            <div class="life-ship"></div>
+            <div class="life-ship"></div>
+            <div class="life-ship"></div>
+          </div>
+        </div>
+      </div>
+      <button id="mute-btn" title="Toggle sound">🔊</button>
+    </div>
+
+    <div class="dish-wrap">
+      <canvas id="game-canvas" width="480" height="480"></canvas>
+      <div class="flash" id="flash"></div>
+    </div>
+    <p class="game-hint">Arrows/WASD or hold to thrust • collect cyan, dodge orange</p>
+  </div>
+
+  <!-- END SCREEN -->
+  <div id="screen-end" class="screen">
+    <div class="panel">
+      <h1 id="end-title">Mission Complete</h1>
+      <p id="end-subtitle">Your ship held its course.</p>
+      <div class="stat-row">
+        <div class="stat">
+          <div class="stat-num" id="end-score">0</div>
+          <div class="stat-label">Final Score</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="end-lives">0</div>
+          <div class="stat-label">Hulls Left</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-restart">Fly Again</button>
+      <button class="btn btn-secondary" id="btn-menu">Main Menu</button>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ---------- ELEMENT REFERENCES ----------
+  const screens = {
+    start: document.getElementById('screen-start'),
+    instructions: document.getElementById('screen-instructions'),
+    game: document.getElementById('screen-game'),
+    end: document.getElementById('screen-end')
+  };
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const hudScore = document.getElementById('hud-score');
+  const hudTime = document.getElementById('hud-time');
+  const lifeShips = document.querySelectorAll('.life-ship');
+  const flashEl = document.getElementById('flash');
+  const muteBtn = document.getElementById('mute-btn');
+
+  function showScreen(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ---------- AUDIO ----------
+  let audioCtx = null;
+  let muted = false;
+  let bgNodes = null;
+  let thrustNodes = null;
+
+  function ensureAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playTone(freq, duration, type, vol, delay){
+    if(muted || !audioCtx) return;
+    delay = delay || 0;
+    const start = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(start);
+    osc.stop(start + duration + 0.02);
+  }
+
+  function sfxCollect(){
+    playTone(880, 0.12, 'sine', 0.22);
+    playTone(1320, 0.16, 'sine', 0.18, 0.06);
+  }
+  function sfxHit(){
+    playTone(140, 0.3, 'sawtooth', 0.3);
+    playTone(70, 0.35, 'square', 0.2, 0.04);
+  }
+  function sfxEnd(win){
+    if(win){
+      [523,659,784,1046].forEach((f,i)=> playTone(f,0.22,'triangle',0.2, i*0.12));
+    } else {
+      [400,300,200,120].forEach((f,i)=> playTone(f,0.3,'sawtooth',0.22, i*0.12));
+    }
+  }
+
+  function startBgMusic(){
+    if(bgNodes || !audioCtx || muted) return;
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.045;
+    masterGain.connect(audioCtx.destination);
+
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    osc1.type = 'sine'; osc1.frequency.value = 82;
+    osc2.type = 'sine'; osc2.frequency.value = 82 * 1.5;
+
+    const lfo = audioCtx.createOscillator();
+    const lfoGain = audioCtx.createGain();
+    lfo.frequency.value = 0.1;
+    lfoGain.gain.value = 0.018;
+    lfo.connect(lfoGain);
+    lfoGain.connect(masterGain.gain);
+
+    osc1.connect(masterGain);
+    osc2.connect(masterGain);
+
+    osc1.start(); osc2.start(); lfo.start();
+    bgNodes = { osc1, osc2, lfo, masterGain };
+  }
+
+  function stopBgMusic(){
+    if(!bgNodes) return;
+    try{
+      bgNodes.osc1.stop(); bgNodes.osc2.stop(); bgNodes.lfo.stop();
+    }catch(e){}
+    bgNodes = null;
+  }
+
+  function startThrustSound(){
+    if(thrustNodes || !audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 60;
+    gain.gain.value = 0.0001;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    thrustNodes = { osc, gain };
+  }
+
+  function setThrustVolume(active){
+    if(!thrustNodes || !audioCtx) return;
+    const target = (active && !muted) ? 0.06 : 0.0001;
+    thrustNodes.gain.gain.setTargetAtTime(target, audioCtx.currentTime, 0.05);
+  }
+
+  function stopThrustSound(){
+    if(!thrustNodes) return;
+    try{ thrustNodes.osc.stop(); }catch(e){}
+    thrustNodes = null;
+  }
+
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    if(muted){
+      stopBgMusic();
+      setThrustVolume(false);
+    } else if(gameRunning){
+      startBgMusic();
+    }
+  });
+
+  // ---------- GAME STATE ----------
+  let player, items, particles, stars;
+  let score = 0, lives = 3, timeLeft = 60;
+  let gameRunning = false;
+  let lastTimestamp = 0;
+  let spawnAcc = 0;
+  let elapsed = 0;
+  let timerInterval = null;
+  let rafId = null;
+  let pointerActive = false;
+  let pointerPos = {x: W/2, y: H/2};
+
+  const THRUST = 0.22;
+  const DRAG = 0.99;
+  const MAX_SPEED = 5.5;
+
+  function resetState(){
+    player = { x: W/2, y: H/2, vx: 0, vy: 0, r: 17, angle: -Math.PI/2 };
+    items = [];
+    particles = [];
+    score = 0;
+    lives = 3;
+    timeLeft = 60;
+    elapsed = 0;
+    spawnAcc = 0;
+    pointerActive = false;
+    if(!stars) stars = makeStars();
+    updateHud();
+  }
+
+  function makeStars(){
+    const arr = [];
+    for(let i=0;i<70;i++){
+      arr.push({
+        x: Math.random()*W,
+        y: Math.random()*H,
+        r: 0.5 + Math.random()*1.6,
+        phase: Math.random()*Math.PI*2,
+        speed: 0.02 + Math.random()*0.03
+      });
+    }
+    return arr;
+  }
+
+  function updateHud(){
+    hudScore.textContent = score;
+    hudTime.textContent = timeLeft;
+    lifeShips.forEach((ship, i) => {
+      ship.classList.toggle('lost', i >= lives);
+    });
+  }
+
+  // ---------- SPAWNING ----------
+  function spawnItem(){
+    const difficulty = Math.min(elapsed / 45, 1);
+    const isAsteroid = Math.random() < (0.4 + difficulty * 0.15);
+    const r = isAsteroid ? 16 + Math.random()*10 : 12 + Math.random()*4;
+
+    // spawn from a random edge
+    const edge = Math.floor(Math.random()*4);
+    let x, y;
+    if(edge === 0){ x = -r; y = Math.random()*H; }
+    else if(edge === 1){ x = W+r; y = Math.random()*H; }
+    else if(edge === 2){ x = Math.random()*W; y = -r; }
+    else { x = Math.random()*W; y = H+r; }
+
+    // velocity roughly toward the opposite side, with spread
+    const cx = W/2 + (Math.random()-0.5)*W*0.5;
+    const cy = H/2 + (Math.random()-0.5)*H*0.5;
+    let dx = cx - x, dy = cy - y;
+    const len = Math.sqrt(dx*dx+dy*dy) || 1;
+    dx/=len; dy/=len;
+    const speed = (0.7 + Math.random()*0.8) + difficulty * 1.4;
+
+    const verts = [];
+    if(isAsteroid){
+      const n = 7 + Math.floor(Math.random()*3);
+      for(let i=0;i<n;i++){
+        verts.push(0.75 + Math.random()*0.45);
+      }
+    }
+
+    items.push({
+      x, y,
+      vx: dx*speed, vy: dy*speed,
+      r,
+      type: isAsteroid ? 'asteroid' : 'energy',
+      rotation: Math.random()*Math.PI*2,
+      rotSpeed: (Math.random()-0.5) * 0.03,
+      verts
+    });
+  }
+
+  // ---------- INPUT ----------
+  const keys = {};
+  window.addEventListener('keydown', e => {
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key)){
+      keys[e.key.toLowerCase()] = true;
+      e.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', e => {
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'].includes(e.key)){
+      keys[e.key.toLowerCase()] = false;
+    }
+  });
+
+  function dishPointerPos(clientX, clientY){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) / rect.width * W,
+      y: (clientY - rect.top) / rect.height * H
+    };
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    pointerActive = true;
+    pointerPos = dishPointerPos(e.clientX, e.clientY);
+  });
+  canvas.addEventListener('pointermove', e => {
+    if(pointerActive) pointerPos = dishPointerPos(e.clientX, e.clientY);
+  });
+  window.addEventListener('pointerup', () => { pointerActive = false; });
+  window.addEventListener('pointercancel', () => { pointerActive = false; });
+
+  // ---------- UPDATE & DRAW ----------
+  function update(dt){
+    const step = dt/16;
+
+    // thrust direction
+    let tx = 0, ty = 0;
+    if(keys['arrowleft'] || keys['a']) tx -= 1;
+    if(keys['arrowright'] || keys['d']) tx += 1;
+    if(keys['arrowup'] || keys['w']) ty -= 1;
+    if(keys['arrowdown'] || keys['s']) ty += 1;
+
+    let thrusting = false;
+    if(pointerActive){
+      const dx = pointerPos.x - player.x;
+      const dy = pointerPos.y - player.y;
+      const len = Math.sqrt(dx*dx+dy*dy);
+      if(len > 6){
+        tx = dx/len; ty = dy/len;
+        thrusting = true;
+      }
+    } else if(tx !== 0 || ty !== 0){
+      const len = Math.sqrt(tx*tx+ty*ty);
+      tx/=len; ty/=len;
+      thrusting = true;
+    }
+
+    if(thrusting){
+      player.vx += tx * THRUST * step;
+      player.vy += ty * THRUST * step;
+      player.angle = Math.atan2(ty, tx);
+    }
+    setThrustVolume(thrusting);
+
+    // drag
+    player.vx *= Math.pow(DRAG, step);
+    player.vy *= Math.pow(DRAG, step);
+
+    // cap speed
+    const speed = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
+    if(speed > MAX_SPEED){
+      player.vx = player.vx/speed * MAX_SPEED;
+      player.vy = player.vy/speed * MAX_SPEED;
+    }
+
+    player.x += player.vx * step;
+    player.y += player.vy * step;
+
+    // wall bounce
+    if(player.x - player.r < 0){ player.x = player.r; player.vx = -player.vx * 0.6; }
+    if(player.x + player.r > W){ player.x = W-player.r; player.vx = -player.vx * 0.6; }
+    if(player.y - player.r < 0){ player.y = player.r; player.vy = -player.vy * 0.6; }
+    if(player.y + player.r > H){ player.y = H-player.r; player.vy = -player.vy * 0.6; }
+
+    // spawn
+    spawnAcc += dt;
+    const spawnInterval = Math.max(450, 1100 - elapsed * 10);
+    if(spawnAcc > spawnInterval){
+      spawnAcc = 0;
+      spawnItem();
+    }
+
+    // items
+    for(let i = items.length - 1; i >= 0; i--){
+      const it = items[i];
+      it.x += it.vx * step;
+      it.y += it.vy * step;
+      it.rotation += it.rotSpeed * step;
+
+      const dx = it.x - player.x;
+      const dy = it.y - player.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if(dist < it.r + player.r * 0.85){
+        if(it.type === 'energy'){
+          score += 10;
+          sfxCollect();
+          spawnParticles(it.x, it.y, '#4DD0E1');
+          items.splice(i, 1);
+        } else {
+          lives -= 1;
+          sfxHit();
+          spawnParticles(it.x, it.y, '#FF7A45');
+          flashEl.classList.remove('active');
+          requestAnimationFrame(() => flashEl.classList.add('active'));
+
+          // knockback
+          const len = dist || 1;
+          player.vx += (-dx/len) * 2.5;
+          player.vy += (-dy/len) * 2.5;
+          items.splice(i, 1);
+        }
+        updateHud();
+        if(lives <= 0){
+          endGame(false);
+          return;
+        }
+        continue;
+      }
+
+      // remove if far off-screen
+      const margin = it.r + 60;
+      if(it.x < -margin || it.x > W+margin || it.y < -margin || it.y > H+margin){
+        items.splice(i, 1);
+      }
+    }
+
+    // particles
+    for(let i = particles.length - 1; i >= 0; i--){
+      const p = particles[i];
+      p.life -= dt;
+      p.x += p.vx * step;
+      p.y += p.vy * step;
+      if(p.life <= 0) particles.splice(i, 1);
+    }
+
+    // stars twinkle
+    stars.forEach(s => s.phase += s.speed * step);
+  }
+
+  function spawnParticles(x, y, color){
+    for(let i=0;i<10;i++){
+      particles.push({
+        x, y,
+        vx: (Math.random()-0.5)*4,
+        vy: (Math.random()-0.5)*4,
+        life: 400 + Math.random()*300,
+        maxLife: 700,
+        color
+      });
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // starfield
+    stars.forEach(s => {
+      const alpha = 0.4 + Math.sin(s.phase)*0.4;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(244,241,234,${Math.max(alpha,0.1)})`;
+      ctx.fill();
+    });
+
+    // radar rings
+    ctx.save();
+    ctx.globalAlpha = 0.07;
+    ctx.strokeStyle = '#7C5CFF';
+    ctx.lineWidth = 1;
+    for(let i=1;i<=3;i++){
+      ctx.beginPath();
+      ctx.arc(W/2, H/2, i*70, 0, Math.PI*2);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(W/2,0); ctx.lineTo(W/2,H);
+    ctx.moveTo(0,H/2); ctx.lineTo(W,H/2);
+    ctx.stroke();
+    ctx.restore();
+
+    // items
+    items.forEach(it => {
+      if(it.type === 'energy'){
+        ctx.save();
+        ctx.translate(it.x, it.y);
+        ctx.rotate(it.rotation);
+        ctx.shadowColor = '#4DD0E1';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        for(let s=0;s<6;s++){
+          const ang = (s/6)*Math.PI*2;
+          const px = Math.cos(ang)*it.r;
+          const py = Math.sin(ang)*it.r;
+          if(s===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
+        const grad = ctx.createLinearGradient(-it.r,-it.r,it.r,it.r);
+        grad.addColorStop(0,'#E0FFFB');
+        grad.addColorStop(1,'#4DD0E1');
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#1E6E7A';
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.translate(it.x, it.y);
+        ctx.rotate(it.rotation);
+        ctx.beginPath();
+        const n = it.verts.length;
+        for(let s=0;s<n;s++){
+          const ang = (s/n)*Math.PI*2;
+          const rr = it.r * it.verts[s];
+          const px = Math.cos(ang)*rr;
+          const py = Math.sin(ang)*rr;
+          if(s===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath();
+        const grad = ctx.createRadialGradient(-it.r*0.3,-it.r*0.3,2,0,0,it.r+6);
+        grad.addColorStop(0,'#FFC09E');
+        grad.addColorStop(1,'#A8431F');
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#5A2410';
+        ctx.stroke();
+        // craters
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.beginPath(); ctx.arc(it.r*0.2, -it.r*0.1, it.r*0.18, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-it.r*0.25, it.r*0.25, it.r*0.14, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+    });
+
+    // particles
+    particles.forEach(p => {
+      ctx.globalAlpha = Math.max(p.life / p.maxLife, 0);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    // engine trail
+    const speed = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
+    if(speed > 0.3){
+      const backAngle = player.angle + Math.PI;
+      for(let i=0;i<3;i++){
+        const dist = 14 + i*6 + Math.random()*4;
+        const spread = (Math.random()-0.5)*0.5;
+        const tx = player.x + Math.cos(backAngle+spread)*dist;
+        const ty = player.y + Math.sin(backAngle+spread)*dist;
+        ctx.beginPath();
+        ctx.arc(tx, ty, 3-i*0.7, 0, Math.PI*2);
+        ctx.fillStyle = i===0 ? '#FFD166' : 'rgba(255,122,69,0.5)';
+        ctx.fill();
+      }
+    }
+
+    // player ship (triangle)
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.angle);
+    ctx.beginPath();
+    ctx.moveTo(player.r, 0);
+    ctx.lineTo(-player.r*0.8, player.r*0.7);
+    ctx.lineTo(-player.r*0.4, 0);
+    ctx.lineTo(-player.r*0.8, -player.r*0.7);
+    ctx.closePath();
+    const sg = ctx.createLinearGradient(-player.r, 0, player.r, 0);
+    sg.addColorStop(0, '#D8D2C4');
+    sg.addColorStop(1, '#FFFFFF');
+    ctx.fillStyle = sg;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#7C5CFF';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---------- GAME LOOP ----------
+  function loop(timestamp){
+    if(!gameRunning) return;
+    const dt = lastTimestamp ? Math.min(timestamp - lastTimestamp, 50) : 16;
+    lastTimestamp = timestamp;
+    elapsed += dt/1000;
+
+    update(dt);
+    draw();
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function startTimer(){
+    timerInterval = setInterval(() => {
+      timeLeft -= 1;
+      updateHud();
+      if(timeLeft <= 0){
+        endGame(true);
+      }
+    }, 1000);
+  }
+
+  function startGame(){
+    ensureAudio();
+    resetState();
+    showScreen('game');
+    gameRunning = true;
+    lastTimestamp = 0;
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    if(!muted) startBgMusic();
+    startThrustSound();
+    startTimer();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function endGame(won){
+    if(!gameRunning) return;
+    gameRunning = false;
+    cancelAnimationFrame(rafId);
+    clearInterval(timerInterval);
+    stopBgMusic();
+    stopThrustSound();
+    sfxEnd(won);
+
+    const endTitle = document.getElementById('end-title');
+    const endSubtitle = document.getElementById('end-subtitle');
+    document.getElementById('end-score').textContent = score;
+    document.getElementById('end-lives').textContent = Math.max(lives, 0);
+
+    if(won){
+      endTitle.textContent = 'Mission Complete';
+      endSubtitle.textContent = 'Your ship held its course for the full 60 seconds!';
+    } else {
+      endTitle.textContent = 'Hull Breached';
+      endSubtitle.textContent = 'Too many collisions — your ship broke apart. Try again!';
+    }
+    showScreen('end');
+  }
+
+  // ---------- NAVIGATION ----------
+  document.getElementById('btn-start').addEventListener('click', () => {
+    ensureAudio();
+    startGame();
+  });
+  document.getElementById('btn-howto').addEventListener('click', () => {
+    showScreen('instructions');
+  });
+  document.getElementById('btn-back-start').addEventListener('click', () => {
+    showScreen('start');
+  });
+  document.getElementById('btn-restart').addEventListener('click', () => {
+    startGame();
+  });
+  document.getElementById('btn-menu').addEventListener('click', () => {
+    showScreen('start');
+  });
+
+  stars = makeStars();
+  updateHud();
+})();
+</script>
+</body>
+</html>

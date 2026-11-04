@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pH Lab — Acid·Base Sorter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #06121A;
+    --bg-mid:   #0A1F2E;
+    --bg-panel: rgba(15,45,54,0.75);
+    --acid:     #FF5C5C;
+    --acid-dk:  #8C1F1F;
+    --acid-glow:#FF5C5C;
+    --neut:     #4ECCA3;
+    --neut-dk:  #1A7A5E;
+    --neut-glow:#4ECCA3;
+    --base:     #A78BFA;
+    --base-dk:  #4C2DA8;
+    --base-glow:#A78BFA;
+    --gold:     #FFD166;
+    --gold-dk:  #B8862E;
+    --text:     #D8F0EC;
+    --text-dim: rgba(216,240,236,0.5);
+    --font-d:   'Rajdhani', sans-serif;
+    --font-b:   'Inter', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    font-family: var(--font-b);
+    color: var(--text);
+    -webkit-user-select: none; user-select: none;
+  }
+
+  /* ─── WRAP ─── */
+  #wrap {
+    position: relative;
+    width: 480px; height: 700px;
+    max-width: 100vw; max-height: 100svh;
+    background: var(--bg-mid);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(78,204,163,0.14),
+      0 0 50px rgba(78,204,163,0.08),
+      0 24px 60px rgba(0,0,0,0.75);
+  }
+
+  /* scanlines */
+  #wrap::after {
+    content:'';
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.05) 3px,rgba(0,0,0,0.05) 4px);
+    pointer-events:none; z-index:50; border-radius:20px;
+  }
+
+  /* ─── SCREENS ─── */
+  .screen {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:28px 22px; z-index:10;
+  }
+  .screen.hidden { display:none; }
+
+  /* ─── START ─── */
+  #start-screen {
+    background: radial-gradient(ellipse at 50% 5%, #0F3040 0%, #06121A 65%);
+  }
+
+  .logo-flask-row {
+    display:flex; gap:18px; justify-content:center;
+    margin-bottom:20px;
+  }
+  .logo-flask {
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .flask-svg {
+    width:40px; height:56px;
+    animation: flaskBob 2.4s ease-in-out infinite;
+  }
+  .logo-flask:nth-child(2) .flask-svg { animation-delay:0.6s; }
+  .logo-flask:nth-child(3) .flask-svg { animation-delay:1.2s; }
+  @keyframes flaskBob {
+    0%,100% { transform:translateY(0); }
+    50% { transform:translateY(-7px); }
+  }
+  .flask-label {
+    font-family:var(--font-d); font-size:0.72rem; font-weight:700;
+    letter-spacing:0.1em; text-transform:uppercase;
+  }
+
+  .game-logo {
+    font-family:var(--font-d); font-size:clamp(2rem,8vw,2.8rem);
+    font-weight:700; letter-spacing:0.05em; text-transform:uppercase;
+    line-height:1; color:var(--text);
+  }
+  .game-logo span {
+    display:block; font-size:0.5em; letter-spacing:0.25em;
+    color:var(--gold); font-weight:400; margin-bottom:6px;
+  }
+
+  .tagline {
+    color:var(--text-dim); font-size:0.92rem; line-height:1.55;
+    max-width:320px; margin:12px auto 26px;
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    font-family:var(--font-d); font-weight:700;
+    font-size:1rem; letter-spacing:0.08em; text-transform:uppercase;
+    padding:13px 32px; border:none; border-radius:10px;
+    cursor:pointer; margin:7px;
+    transition:transform 0.1s, box-shadow 0.1s;
+  }
+  .btn:active { transform:translateY(3px); }
+  .btn-primary {
+    background:var(--gold); color:#1A0F00;
+    box-shadow:0 5px 0 var(--gold-dk), 0 0 20px rgba(255,209,102,0.2);
+  }
+  .btn-primary:active { box-shadow:0 2px 0 var(--gold-dk); }
+  .btn-secondary {
+    background:transparent; color:var(--text);
+    border:1.5px solid rgba(78,204,163,0.3);
+    font-size:0.92rem;
+  }
+  .btn-secondary:hover { border-color:var(--neut); color:var(--neut); }
+
+  /* ─── INSTRUCTIONS ─── */
+  #instructions-screen { background:var(--bg-mid); }
+  #instructions-screen h2 {
+    font-family:var(--font-d); font-size:1.5rem; font-weight:700;
+    letter-spacing:0.06em; text-transform:uppercase; color:var(--gold);
+    margin-bottom:20px;
+  }
+  .instr-list { list-style:none; text-align:left; max-width:390px; margin:0 auto 22px; }
+  .instr-list li {
+    display:flex; gap:12px; align-items:flex-start;
+    margin-bottom:13px; font-size:0.9rem; line-height:1.5; color:var(--text-dim);
+  }
+  .instr-list li b { color:var(--text); }
+  .ii {
+    flex-shrink:0; width:28px; height:28px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.88rem; margin-top:1px;
+  }
+  .ph-legend {
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+    margin:12px 0 20px;
+  }
+  .ph-chip {
+    display:flex; align-items:center; gap:7px;
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+    border-radius:999px; padding:5px 12px 5px 8px; font-size:0.8rem;
+  }
+  .ph-dot { width:12px; height:12px; border-radius:50%; display:inline-block; }
+
+  /* ─── HUD ─── */
+  #hud {
+    position:absolute; top:0; left:0; width:100%;
+    padding:12px 14px 10px;
+    display:grid; grid-template-columns:1fr 1fr 1fr;
+    gap:8px; z-index:20;
+    background:linear-gradient(180deg, rgba(6,18,26,0.95) 0%, transparent 100%);
+  }
+  .hud-cell {
+    background:rgba(10,31,46,0.7); border:1px solid rgba(78,204,163,0.15);
+    border-radius:8px; padding:6px 8px;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .hud-lbl {
+    font-size:0.58rem; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--text-dim); font-family:var(--font-d); margin-bottom:3px;
+  }
+  .hud-val {
+    font-family:var(--font-d); font-size:1.1rem; font-weight:700;
+    color:var(--text); line-height:1;
+  }
+  #hud-score { color:var(--gold); }
+  #hud-time  { color:var(--neut); }
+  .lives-dots { display:flex; gap:5px; align-items:center; }
+  .ldot {
+    width:10px; height:10px; border-radius:50%;
+    background:var(--acid); box-shadow:0 0 6px var(--acid);
+    transition:opacity 0.2s, transform 0.2s;
+  }
+  .ldot.lost {
+    opacity:0.15; background:rgba(255,255,255,0.15);
+    box-shadow:none; transform:scale(0.8);
+  }
+
+  /* ─── PLAY AREA ─── */
+  #play-area {
+    position:absolute; inset:0;
+    overflow:hidden;
+    background:radial-gradient(ellipse at 50% 110%, #0D3040 0%, #06121A 55%);
+  }
+
+  /* grid lines for lab feel */
+  #play-area::before {
+    content:'';
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(78,204,163,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(78,204,163,0.04) 1px, transparent 1px);
+    background-size:40px 40px;
+    pointer-events:none;
+  }
+
+  /* ─── FALLING ITEM (test tube card) ─── */
+  .fall-item {
+    position:absolute;
+    width:106px;
+    border-radius:12px;
+    display:flex; flex-direction:column; align-items:center;
+    padding:8px 6px 10px;
+    cursor:pointer;
+    pointer-events:auto;
+    transition:filter 0.1s;
+  }
+  .fall-item:active { filter:brightness(1.3); }
+
+  .tube-top {
+    width:22px; height:10px; border-radius:3px 3px 0 0;
+    background:rgba(255,255,255,0.25);
+    border:2px solid rgba(255,255,255,0.35);
+    border-bottom:none;
+    margin-bottom:-1px;
+  }
+  .tube-body {
+    width:36px; height:54px; border-radius:2px 2px 18px 18px;
+    border:2px solid rgba(255,255,255,0.3);
+    position:relative; overflow:hidden;
+  }
+  .tube-liquid {
+    position:absolute; bottom:0; left:0; right:0;
+    border-radius:0 0 16px 16px;
+    transition:height 0.3s;
+  }
+  .tube-bubble {
+    position:absolute;
+    width:5px; height:5px; border-radius:50%;
+    background:rgba(255,255,255,0.45);
+    animation:bubbleRise 1.2s ease-in infinite;
+  }
+  .tube-bubble:nth-child(2) { animation-delay:0.5s; left:55%; }
+  .tube-bubble:nth-child(3) { animation-delay:0.9s; left:30%; }
+  @keyframes bubbleRise {
+    0%   { bottom:5%; opacity:0.8; transform:scale(1); }
+    100% { bottom:95%; opacity:0; transform:scale(0.5); }
+  }
+
+  .item-name {
+    font-family:var(--font-d); font-weight:700; font-size:0.82rem;
+    text-align:center; line-height:1.15; margin-top:8px; color:#fff;
+  }
+  .item-ph {
+    font-size:0.7rem; color:rgba(255,255,255,0.65);
+    margin-top:3px; font-family:var(--font-d); letter-spacing:0.04em;
+  }
+
+  /* acid item */
+  .item-acid   { background:rgba(255,92,92,0.14); border:1px solid rgba(255,92,92,0.4); box-shadow:0 0 14px rgba(255,92,92,0.25); }
+  .item-acid .tube-liquid { background:linear-gradient(180deg,rgba(255,150,150,0.6),rgba(200,30,30,0.85)); height:70%; }
+  .item-acid .tube-body   { border-color:rgba(255,92,92,0.5); }
+  /* neutral item */
+  .item-neutral { background:rgba(78,204,163,0.1); border:1px solid rgba(78,204,163,0.35); box-shadow:0 0 14px rgba(78,204,163,0.2); }
+  .item-neutral .tube-liquid { background:linear-gradient(180deg,rgba(130,230,210,0.6),rgba(20,130,110,0.85)); height:65%; }
+  .item-neutral .tube-body  { border-color:rgba(78,204,163,0.5); }
+  /* base item */
+  .item-base  { background:rgba(167,139,250,0.12); border:1px solid rgba(167,139,250,0.4); box-shadow:0 0 14px rgba(167,139,250,0.25); }
+  .item-base .tube-liquid { background:linear-gradient(180deg,rgba(200,180,255,0.6),rgba(80,40,180,0.85)); height:60%; }
+  .item-base .tube-body  { border-color:rgba(167,139,250,0.5); }
+
+  /* ─── BINS ─── */
+  #bin-row {
+    position:absolute; bottom:0; left:0; width:100%;
+    display:flex; justify-content:space-between;
+    padding:0 10px 14px;
+    z-index:15;
+  }
+  .bin {
+    width:31%; height:82px;
+    border-radius:14px 14px 8px 8px;
+    border:2px solid transparent;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:4px; cursor:pointer;
+    transition:transform 0.14s, box-shadow 0.14s, border-color 0.14s;
+    position:relative; overflow:hidden;
+  }
+  .bin::before {
+    content:''; position:absolute; inset:0;
+    background:rgba(255,255,255,0.04);
+    pointer-events:none;
+  }
+  .bin-icon { font-size:1.5rem; line-height:1; }
+  .bin-label {
+    font-family:var(--font-d); font-weight:700; font-size:0.95rem;
+    letter-spacing:0.06em; text-transform:uppercase;
+  }
+  .bin-ph {
+    font-size:0.65rem; opacity:0.65;
+    font-family:var(--font-d); letter-spacing:0.04em;
+  }
+
+  .bin-acid {
+    background:linear-gradient(180deg,rgba(255,92,92,0.22),rgba(140,31,31,0.55));
+    border-color:rgba(255,92,92,0.3);
+    color:#FFBABA;
+  }
+  .bin-neutral {
+    background:linear-gradient(180deg,rgba(78,204,163,0.2),rgba(26,122,94,0.5));
+    border-color:rgba(78,204,163,0.3);
+    color:#B4F5E4;
+  }
+  .bin-base {
+    background:linear-gradient(180deg,rgba(167,139,250,0.2),rgba(76,45,168,0.5));
+    border-color:rgba(167,139,250,0.3);
+    color:#D8CCFF;
+  }
+
+  .bin.selected {
+    transform:scale(1.07) translateY(-4px);
+    box-shadow:0 0 22px currentColor, 0 8px 18px rgba(0,0,0,0.4);
+  }
+  .bin-acid.selected   { border-color:var(--acid);  box-shadow:0 0 22px rgba(255,92,92,0.6); }
+  .bin-neutral.selected{ border-color:var(--neut);  box-shadow:0 0 22px rgba(78,204,163,0.6); }
+  .bin-base.selected   { border-color:var(--base);  box-shadow:0 0 22px rgba(167,139,250,0.6); }
+
+  /* ─── FEEDBACK FLOATER ─── */
+  .floater {
+    position:absolute; font-family:var(--font-d); font-weight:700;
+    font-size:1.1rem; pointer-events:none;
+    animation:floatUp 0.85s ease-out forwards; z-index:35;
+    text-shadow:0 0 8px currentColor;
+  }
+  @keyframes floatUp {
+    0%   { opacity:1; transform:translateY(0) scale(1); }
+    60%  { opacity:1; transform:translateY(-30px) scale(1.1); }
+    100% { opacity:0; transform:translateY(-58px) scale(0.9); }
+  }
+
+  /* ─── CATCH RING ─── */
+  .catch-ring {
+    position:absolute; width:50px; height:50px; border-radius:50%;
+    border:3px solid; pointer-events:none;
+    animation:ringExpand 0.4s ease-out forwards; z-index:30;
+  }
+  @keyframes ringExpand {
+    from { transform:scale(1); opacity:0.9; }
+    to   { transform:scale(2.4); opacity:0; }
+  }
+
+  /* ─── DMG FLASH ─── */
+  #dmg-flash {
+    position:absolute; inset:0; background:var(--acid);
+    opacity:0; pointer-events:none; z-index:45; border-radius:20px;
+  }
+  #dmg-flash.active { animation:dmgFlash 0.32s ease-out; }
+  @keyframes dmgFlash { 0%{opacity:0.38;} 100%{opacity:0;} }
+
+  /* ─── SELECTOR ARROW ─── */
+  #sel-arrow {
+    position:absolute; bottom:96px; left:0;
+    width:100%; display:flex; justify-content:space-between;
+    padding:0 10px; z-index:16; pointer-events:none;
+  }
+  .sel-slot {
+    width:31%; display:flex; justify-content:center;
+  }
+  .sel-triangle {
+    width:0; height:0;
+    border-left:9px solid transparent;
+    border-right:9px solid transparent;
+    border-top:11px solid rgba(255,255,255,0);
+    transition:border-top-color 0.15s, filter 0.15s;
+  }
+  .sel-triangle.vis {
+    border-top-color:rgba(255,255,255,0.75);
+    filter:drop-shadow(0 0 4px rgba(255,255,255,0.6));
+  }
+
+  /* ─── MUTE BTN ─── */
+  #mute-btn {
+    position:absolute; top:14px; right:14px;
+    width:34px; height:34px;
+    background:rgba(10,31,46,0.8); border:1px solid rgba(78,204,163,0.2);
+    border-radius:8px; color:var(--text); font-size:0.95rem;
+    cursor:pointer; z-index:60; display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ─── END SCREEN ─── */
+  #end-screen {
+    background:radial-gradient(ellipse at 50% 20%, #0F3040 0%, #06121A 70%);
+  }
+  #end-title {
+    font-family:var(--font-d); font-size:clamp(1.6rem,6vw,2.2rem);
+    font-weight:700; letter-spacing:0.04em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:4px;
+  }
+  #end-subtitle { color:var(--text-dim); font-size:0.9rem; margin-bottom:20px; }
+  .stars-row { display:flex; gap:14px; margin-bottom:22px; }
+  .end-star {
+    font-size:2.6rem; color:rgba(255,255,255,0.1);
+    transition:color 0.3s, filter 0.3s, transform 0.3s;
+  }
+  .end-star.lit {
+    color:var(--gold); filter:drop-shadow(0 0 10px var(--gold)); transform:scale(1.15);
+  }
+  .end-stat-grid {
+    display:grid; grid-template-columns:repeat(3,1fr);
+    gap:10px; width:100%; max-width:320px; margin-bottom:24px;
+  }
+  .end-stat {
+    background:rgba(10,31,46,0.65); border:1px solid rgba(78,204,163,0.15);
+    border-radius:10px; padding:10px 8px;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .esn { font-family:var(--font-d); font-size:1.55rem; font-weight:700; color:var(--gold); line-height:1; }
+  .esl { font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); margin-top:4px; }
+
+  /* ─── CTRL HINT ─── */
+  #ctrl-hint {
+    position:absolute; bottom:100px; left:0; width:100%;
+    text-align:center; font-size:0.7rem;
+    color:rgba(255,255,255,0.25); pointer-events:none; z-index:5; letter-spacing:0.05em;
+  }
+
+  @media(max-width:480px){ #wrap{ border-radius:0; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+
+  <button id="mute-btn">🔊</button>
+  <div id="dmg-flash"></div>
+
+  <!-- ══ START ══ -->
+  <div id="start-screen" class="screen">
+    <div class="logo-flask-row">
+      <!-- acid flask -->
+      <div class="logo-flask">
+        <svg class="flask-svg" viewBox="0 0 40 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="0" width="12" height="10" rx="3" fill="rgba(255,255,255,0.25)" stroke="rgba(255,92,92,0.6)" stroke-width="1.5"/>
+          <path d="M14 10 L4 46 Q4 52 20 52 Q36 52 36 46 L26 10 Z" fill="rgba(255,92,92,0.3)" stroke="rgba(255,92,92,0.7)" stroke-width="1.5"/>
+          <ellipse cx="20" cy="46" rx="12" ry="4" fill="rgba(255,92,92,0.55)"/>
+          <circle cx="13" cy="38" r="2.5" fill="rgba(255,255,255,0.4)"/>
+          <circle cx="22" cy="32" r="1.8" fill="rgba(255,255,255,0.35)"/>
+        </svg>
+        <span class="flask-label" style="color:var(--acid)">Acid</span>
+      </div>
+      <!-- neutral flask -->
+      <div class="logo-flask">
+        <svg class="flask-svg" viewBox="0 0 40 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="0" width="12" height="10" rx="3" fill="rgba(255,255,255,0.25)" stroke="rgba(78,204,163,0.6)" stroke-width="1.5"/>
+          <path d="M14 10 L4 46 Q4 52 20 52 Q36 52 36 46 L26 10 Z" fill="rgba(78,204,163,0.2)" stroke="rgba(78,204,163,0.7)" stroke-width="1.5"/>
+          <ellipse cx="20" cy="46" rx="12" ry="4" fill="rgba(78,204,163,0.5)"/>
+          <circle cx="13" cy="38" r="2.5" fill="rgba(255,255,255,0.4)"/>
+          <circle cx="24" cy="30" r="1.8" fill="rgba(255,255,255,0.35)"/>
+        </svg>
+        <span class="flask-label" style="color:var(--neut)">Neutral</span>
+      </div>
+      <!-- base flask -->
+      <div class="logo-flask">
+        <svg class="flask-svg" viewBox="0 0 40 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="0" width="12" height="10" rx="3" fill="rgba(255,255,255,0.25)" stroke="rgba(167,139,250,0.6)" stroke-width="1.5"/>
+          <path d="M14 10 L4 46 Q4 52 20 52 Q36 52 36 46 L26 10 Z" fill="rgba(167,139,250,0.2)" stroke="rgba(167,139,250,0.7)" stroke-width="1.5"/>
+          <ellipse cx="20" cy="46" rx="12" ry="4" fill="rgba(167,139,250,0.5)"/>
+          <circle cx="14" cy="36" r="2.5" fill="rgba(255,255,255,0.4)"/>
+          <circle cx="23" cy="28" r="1.8" fill="rgba(255,255,255,0.35)"/>
+        </svg>
+        <span class="flask-label" style="color:var(--base)">Base</span>
+      </div>
+    </div>
+
+    <div class="game-logo">
+      <span>Science Minigame</span>
+      pH Lab
+    </div>
+    <p class="tagline">Substances are dropping — sort them into the right bin before the lab overflows!</p>
+    <div>
+      <button class="btn btn-primary" id="btn-start">Begin Experiment</button><br>
+      <button class="btn btn-secondary" id="btn-howto">How to Play</button>
+    </div>
+  </div>
+
+  <!-- ══ INSTRUCTIONS ══ -->
+  <div id="instructions-screen" class="screen hidden">
+    <h2>Lab Procedure</h2>
+    <ul class="instr-list">
+      <li>
+        <div class="ii" style="background:rgba(255,209,102,0.15);color:var(--gold)">🧪</div>
+        <span>Substance cards fall from the top, each showing a <b>name and pH value</b>.</span>
+      </li>
+      <li>
+        <div class="ii" style="background:rgba(255,92,92,0.15);color:var(--acid)">⬅️</div>
+        <span>Switch the <b>active bin</b> with <b>← → / A D</b> keys, or <b>tap a bin</b> directly.</span>
+      </li>
+      <li>
+        <div class="ii" style="background:rgba(78,204,163,0.15);color:var(--neut)">✅</div>
+        <span>When the correct bin is selected, the falling item <b>auto-sorts</b> into it on collision. Or tap the item directly!</span>
+      </li>
+      <li>
+        <div class="ii" style="background:rgba(255,92,92,0.15);color:var(--acid)">❌</div>
+        <span>Wrong bin or missed item = <b>−1 life</b>. You start with <b>3 lives</b>.</span>
+      </li>
+      <li>
+        <div class="ii" style="background:rgba(167,139,250,0.15);color:var(--base)">⏱️</div>
+        <span>Sort as many as you can in <b>60 seconds</b> to maximise your score!</span>
+      </li>
+    </ul>
+    <div class="ph-legend">
+      <div class="ph-chip"><span class="ph-dot" style="background:var(--acid)"></span><span style="color:var(--acid)">Acid — pH &lt; 7</span></div>
+      <div class="ph-chip"><span class="ph-dot" style="background:var(--neut)"></span><span style="color:var(--neut)">Neutral — pH ≈ 7</span></div>
+      <div class="ph-chip"><span class="ph-dot" style="background:var(--base)"></span><span style="color:var(--base)">Base — pH &gt; 7</span></div>
+    </div>
+    <button class="btn btn-secondary" id="btn-back">← Back</button>
+  </div>
+
+  <!-- ══ GAME ══ -->
+  <div id="game-screen" class="screen hidden" style="padding:0">
+    <div id="hud">
+      <div class="hud-cell">
+        <span class="hud-lbl">Score</span>
+        <span class="hud-val" id="hud-score">0</span>
+      </div>
+      <div class="hud-cell">
+        <span class="hud-lbl">Time</span>
+        <span class="hud-val" id="hud-time">60</span>
+      </div>
+      <div class="hud-cell">
+        <span class="hud-lbl">Lives</span>
+        <div class="lives-dots" id="hud-lives">
+          <div class="ldot"></div>
+          <div class="ldot"></div>
+          <div class="ldot"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="play-area"></div>
+
+    <div id="sel-arrow">
+      <div class="sel-slot"><div class="sel-triangle" id="arr0"></div></div>
+      <div class="sel-slot"><div class="sel-triangle" id="arr1"></div></div>
+      <div class="sel-slot"><div class="sel-triangle" id="arr2"></div></div>
+    </div>
+
+    <div id="bin-row">
+      <div class="bin bin-acid" data-idx="0">
+        <span class="bin-icon">🧴</span>
+        <span class="bin-label">Acid</span>
+        <span class="bin-ph">pH &lt; 7</span>
+      </div>
+      <div class="bin bin-neutral" data-idx="1">
+        <span class="bin-icon">💧</span>
+        <span class="bin-label">Neutral</span>
+        <span class="bin-ph">pH ≈ 7</span>
+      </div>
+      <div class="bin bin-base" data-idx="2">
+        <span class="bin-icon">🧼</span>
+        <span class="bin-label">Base</span>
+        <span class="bin-ph">pH &gt; 7</span>
+      </div>
+    </div>
+
+    <p id="ctrl-hint">← → / A D to switch · tap a bin · tap an item</p>
+  </div>
+
+  <!-- ══ END ══ -->
+  <div id="end-screen" class="screen hidden">
+    <div id="end-title">Experiment Over</div>
+    <div id="end-subtitle">Results are in.</div>
+    <div class="stars-row">
+      <span class="end-star" id="star1">★</span>
+      <span class="end-star" id="star2">★</span>
+      <span class="end-star" id="star3">★</span>
+    </div>
+    <div class="end-stat-grid">
+      <div class="end-stat"><div class="esn" id="end-score">0</div><div class="esl">Score</div></div>
+      <div class="end-stat"><div class="esn" id="end-sorted">0</div><div class="esl">Sorted</div></div>
+      <div class="end-stat"><div class="esn" id="end-lives">0</div><div class="esl">Lives Left</div></div>
+    </div>
+    <button class="btn btn-primary" id="btn-restart">Run Again</button>
+    <button class="btn btn-secondary" id="btn-menu">Main Menu</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  /* ═══ AUDIO ═══ */
+  let actx=null, muted=false, bgRef=null, bgStep=0;
+  function aget(){ if(!actx) actx=new(window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended')actx.resume(); return actx; }
+  function tone(f,d,type='sine',vol=0.13,delay=0){
+    if(muted||!actx)return;
+    const t=actx.currentTime+delay;
+    const o=actx.createOscillator(), g=actx.createGain();
+    o.type=type; o.frequency.value=f;
+    g.gain.setValueAtTime(vol,t);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t+d+0.01);
+  }
+  const sfx={
+    correct:()=>{ tone(740,0.12,'triangle',0.18); tone(988,0.14,'triangle',0.14,0.07); },
+    wrong:  ()=>{ tone(150,0.28,'sawtooth',0.22); tone(100,0.22,'square',0.16,0.05); },
+    start:  ()=>{ [392,494,587].forEach((f,i)=>tone(f,0.15,'triangle',0.15,i*0.11)); },
+    win:    ()=>{ [523,659,784,1046].forEach((f,i)=>tone(f,0.2,'triangle',0.14,i*0.12)); },
+    lose:   ()=>{ tone(300,0.25,'sawtooth',0.2); tone(200,0.3,'sawtooth',0.18,0.18); },
+    star:   (i)=>tone(600+i*130,0.18,'triangle',0.14),
+  };
+
+  /* lab-themed BGM: slow minor descending with a pulse bass — different feel from Factor Catcher */
+  const bgMel  = [293.66, 261.63, 246.94, 220, 246.94, 261.63, 293.66, 329.63];
+  const bgBass = [73.42,  73.42,  73.42,  65.41, 73.42, 73.42, 82.41, 73.42];
+  function startBgm(){
+    stopBgm(); bgStep=0;
+    bgRef=setInterval(()=>{
+      if(muted||!actx)return;
+      tone(bgBass[bgStep%bgBass.length], 0.35,'triangle',0.045);
+      if(bgStep%2===0) tone(bgMel[bgStep%bgMel.length],0.22,'square',0.025,0.01);
+      bgStep++;
+    },280);
+  }
+  function stopBgm(){ clearInterval(bgRef); bgRef=null; }
+
+  document.getElementById('mute-btn').addEventListener('click',()=>{
+    muted=!muted;
+    document.getElementById('mute-btn').textContent=muted?'🔇':'🔊';
+    if(muted) stopBgm(); else if(gameActive) startBgm();
+  });
+
+  /* ═══ SUBSTANCES ═══ */
+  const SUBSTANCES=[
+    {name:"Lemon Juice",   ph:"pH 2",   type:"acid"},
+    {name:"Vinegar",       ph:"pH 3",   type:"acid"},
+    {name:"Stomach Acid",  ph:"pH 1.5", type:"acid"},
+    {name:"Soft Drink",    ph:"pH 3",   type:"acid"},
+    {name:"Black Coffee",  ph:"pH 5",   type:"acid"},
+    {name:"Tomato Juice",  ph:"pH 4",   type:"acid"},
+    {name:"Orange Juice",  ph:"pH 3.5", type:"acid"},
+    {name:"Battery Acid",  ph:"pH 0.5", type:"acid"},
+    {name:"Hydrochloric Acid",ph:"pH 1",type:"acid"},
+    {name:"Yogurt",        ph:"pH 4.5", type:"acid"},
+    {name:"Rainwater",     ph:"pH 5.6", type:"acid"},
+    {name:"Wine",          ph:"pH 3.5", type:"acid"},
+    {name:"Pure Water",    ph:"pH 7",   type:"neutral"},
+    {name:"Table Salt Sol.",ph:"pH 7",  type:"neutral"},
+    {name:"Milk",          ph:"pH 6.6", type:"neutral"},
+    {name:"Sugar Solution",ph:"pH 7",   type:"neutral"},
+    {name:"Blood",         ph:"pH 7.4", type:"neutral"},
+    {name:"Saliva",        ph:"pH 6.8", type:"neutral"},
+    {name:"Baking Soda",   ph:"pH 9",   type:"base"},
+    {name:"Soap",          ph:"pH 10",  type:"base"},
+    {name:"Toothpaste",    ph:"pH 9",   type:"base"},
+    {name:"Ammonia",       ph:"pH 11",  type:"base"},
+    {name:"Bleach",        ph:"pH 12",  type:"base"},
+    {name:"Antacid Tablet",ph:"pH 10",  type:"base"},
+    {name:"Egg White",     ph:"pH 8",   type:"base"},
+    {name:"Seawater",      ph:"pH 8",   type:"base"},
+    {name:"Drain Cleaner", ph:"pH 13",  type:"base"},
+    {name:"NaOH Solution", ph:"pH 14",  type:"base"},
+    {name:"Milk of Magnesia",ph:"pH 10.5",type:"base"},
+  ];
+  const TYPE_IDX={acid:0,neutral:1,base:2};
+
+  /* ═══ STATE ═══ */
+  const GAME_TIME=60, START_LIVES=3;
+  let score,lives,timeLeft,activeBin,gameActive,sorted;
+  let items=[],timerRef=null,spawnRef=null,rafRef=null;
+  let playW,playH;
+
+  /* ═══ DOM ═══ */
+  const $=id=>document.getElementById(id);
+  const ss=$('start-screen'),is=$('instructions-screen'),gs=$('game-screen'),es=$('end-screen');
+  const playArea=$('play-area'), dmgFlash=$('dmg-flash');
+  const bins=Array.from(document.querySelectorAll('.bin'));
+  const arrows=[0,1,2].map(i=>$('arr'+i));
+
+  function showScreen(el){ [ss,is,gs,es].forEach(s=>s.classList.add('hidden')); el.classList.remove('hidden'); }
+
+  function updateHud(){
+    $('hud-score').textContent=score;
+    $('hud-time').textContent=timeLeft;
+    const dots=document.querySelectorAll('.ldot');
+    dots.forEach((d,i)=>d.classList.toggle('lost',i>=lives));
+  }
+
+  function setActiveBin(idx){
+    activeBin=idx;
+    bins.forEach((b,i)=>b.classList.toggle('selected',i===idx));
+    arrows.forEach((a,i)=>a.classList.toggle('vis',i===idx));
+  }
+
+  /* ═══ NAV ═══ */
+  $('btn-start').onclick =()=>{ aget(); sfx.start(); startGame(); };
+  $('btn-howto').onclick =()=>showScreen(is);
+  $('btn-back').onclick  =()=>showScreen(ss);
+  $('btn-restart').onclick=()=>{ aget(); sfx.start(); startGame(); };
+  $('btn-menu').onclick  =()=>showScreen(ss);
+  bins.forEach((b,i)=>b.addEventListener('click',()=>setActiveBin(i)));
+
+  /* ═══ START ═══ */
+  function startGame(){
+    score=0; lives=START_LIVES; timeLeft=GAME_TIME;
+    sorted=0; gameActive=false;
+    items=[]; clearItems();
+    showScreen(gs);
+    requestAnimationFrame(()=>{
+      playW=playArea.clientWidth;
+      playH=playArea.clientHeight;
+      setActiveBin(1);
+      updateHud();
+      gameActive=true;
+      startBgm();
+      startTimer();
+      startSpawning();
+      startFall();
+    });
+  }
+
+  function clearItems(){ items.forEach(o=>o.el&&o.el.remove()); items=[]; }
+
+  /* ═══ TIMER ═══ */
+  function startTimer(){
+    clearInterval(timerRef);
+    timerRef=setInterval(()=>{
+      timeLeft--; updateHud();
+      if(timeLeft<=0) endGame(true);
+    },1000);
+  }
+
+  /* ═══ SPAWN ═══ */
+  function startSpawning(){
+    clearInterval(spawnRef);
+    spawnOne();
+    spawnRef=setInterval(spawnOne, Math.max(900,1400-sorted*8));
+  }
+
+  function spawnOne(){
+    if(!gameActive) return;
+    const data=SUBSTANCES[~~(Math.random()*SUBSTANCES.length)];
+    const el=document.createElement('div');
+    el.className=`fall-item item-${data.type}`;
+    el.innerHTML=`
+      <div class="tube-top"></div>
+      <div class="tube-body">
+        <div class="tube-liquid"></div>
+        <div class="tube-bubble" style="left:40%;bottom:5%"></div>
+        <div class="tube-bubble" style="left:60%;bottom:10%"></div>
+        <div class="tube-bubble" style="left:30%;bottom:8%"></div>
+      </div>
+      <div class="item-name">${data.name}</div>
+      <div class="item-ph">${data.ph}</div>
+    `;
+    const x=10+Math.random()*(playW-126);
+    el.style.cssText=`left:${x}px;top:-110px;`;
+    el.addEventListener('pointerdown',e=>{ e.stopPropagation(); handleClick(item); });
+    playArea.appendChild(el);
+    const item={el, data, x, y:-110, speed:0.9+Math.random()*0.7};
+    items.push(item);
+  }
+
+  /* ═══ FALL LOOP ═══ */
+  const BIN_ZONE_TOP=playH=>playH-96;
+  function startFall(){
+    cancelAnimationFrame(rafRef);
+    function tick(){
+      if(!gameActive) return;
+      const bzt=BIN_ZONE_TOP(playH);
+      items=items.filter(item=>{
+        item.y+=item.speed;
+        item.el.style.top=item.y+'px';
+        // auto-sort when hitting bin zone if active bin is correct
+        if(item.y+100>=bzt){
+          const correct=TYPE_IDX[item.data.type]===activeBin;
+          if(correct){
+            doSort(item,true);
+          } else {
+            // wrong active bin — miss
+            doMiss(item);
+          }
+          return false;
+        }
+        if(item.y>playH+10){ doMiss(item); return false; }
+        return true;
+      });
+      rafRef=requestAnimationFrame(tick);
+    }
+    rafRef=requestAnimationFrame(tick);
+  }
+
+  function handleClick(item){
+    if(!gameActive||!item.el.isConnected) return;
+    const correct=TYPE_IDX[item.data.type]===activeBin;
+    item.el.remove();
+    items=items.filter(o=>o!==item);
+    if(correct){ doSort(item,true,true); }
+    else { doWrong(item); }
+  }
+
+  function doSort(item,auto,fromClick){
+    const x=item.x, y=item.y;
+    score+=10; sorted++;
+    sfx.correct();
+    spawnRing(x+53,y+27,'var(--neut)');
+    spawnFloater(x+16,y,'+10','var(--neut)');
+    if(!fromClick) item.el.remove();
+    updateHud();
+    // refresh spawn interval with new sorted count
+    clearInterval(spawnRef);
+    spawnRef=setInterval(spawnOne, Math.max(800,1400-sorted*8));
+  }
+
+  function doWrong(item){
+    lives=Math.max(0,lives-1);
+    sfx.wrong();
+    spawnFloater(item.x+10,item.y,'Wrong!','var(--acid)');
+    triggerFlash();
+    updateHud();
+    if(lives<=0) endGame(false);
+  }
+
+  function doMiss(item){
+    if(!item.el.isConnected) return;
+    lives=Math.max(0,lives-1);
+    sfx.wrong();
+    spawnFloater(item.x+10,item.y,'Missed!','var(--acid)');
+    item.el.remove();
+    triggerFlash();
+    updateHud();
+    if(lives<=0) endGame(false);
+  }
+
+  function spawnRing(x,y,color){
+    const r=document.createElement('div');
+    r.className='catch-ring';
+    r.style.cssText=`left:${x}px;top:${y}px;border-color:${color};`;
+    playArea.appendChild(r);
+    setTimeout(()=>r.remove(),420);
+  }
+  function spawnFloater(x,y,text,color){
+    const f=document.createElement('div');
+    f.className='floater';
+    f.style.cssText=`left:${x}px;top:${y}px;color:${color};`;
+    f.textContent=text;
+    playArea.appendChild(f);
+    setTimeout(()=>f.remove(),900);
+  }
+  function triggerFlash(){
+    dmgFlash.classList.remove('active');
+    requestAnimationFrame(()=>dmgFlash.classList.add('active'));
+  }
+
+  /* ═══ END ═══ */
+  function endGame(timeUp){
+    gameActive=false;
+    clearInterval(timerRef); clearInterval(spawnRef);
+    cancelAnimationFrame(rafRef);
+    clearItems(); stopBgm();
+
+    const maxScore=sorted*10+lives*10;
+    let stars=0;
+    if(score>=200) stars=3;
+    else if(score>=100) stars=2;
+    else if(score>0) stars=1;
+
+    $('end-title').textContent=lives>0?'Experiment Done!':'Lab Failure!';
+    $('end-subtitle').textContent=lives>0?`You sorted ${sorted} substances correctly.`:'Out of lives — the lab is contaminated!';
+    $('end-score').textContent=score;
+    $('end-sorted').textContent=sorted;
+    $('end-lives').textContent=Math.max(lives,0);
+
+    [1,2,3].forEach(i=>$('star'+i).classList.remove('lit'));
+    lives>0? sfx.win() : sfx.lose();
+    showScreen(es);
+    for(let i=1;i<=stars;i++){
+      setTimeout(()=>{ $('star'+i).classList.add('lit'); sfx.star(i); },i*420);
+    }
+  }
+
+  /* ═══ KEYBOARD ═══ */
+  document.addEventListener('keydown',e=>{
+    if(!gameActive) return;
+    const k=e.key.toLowerCase();
+    if(k==='arrowleft'||k==='a'){ setActiveBin(Math.max(0,activeBin-1)); e.preventDefault(); }
+    if(k==='arrowright'||k==='d'){ setActiveBin(Math.min(2,activeBin+1)); e.preventDefault(); }
+  });
+
+  window.addEventListener('resize',()=>{
+    if(!gs.classList.contains('hidden')){
+      playW=playArea.clientWidth; playH=playArea.clientHeight;
+    }
+  });
+})();
+</script>
+</body>
+</html>

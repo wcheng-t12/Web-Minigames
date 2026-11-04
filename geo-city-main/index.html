@@ -1,0 +1,2325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoCity Builder 🏗️</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
+
+  :root {
+    --navy: #0a0e1a;
+    --navy2: #0f1628;
+    --panel: #111827;
+    --panel2: #1a2235;
+    --cyan: #00d4ff;
+    --cyan2: #00a8cc;
+    --gold: #ffd700;
+    --green: #00ff88;
+    --red: #ff4757;
+    --purple: #a855f7;
+    --orange: #ff6b35;
+    --white: #f0f4ff;
+    --muted: #6b7a9e;
+    --border: rgba(0,212,255,0.2);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    user-select: none;
+  }
+
+  /* ── BLUEPRINT GRID BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10;
+    transition: opacity 0.4s ease;
+  }
+  .screen.hidden { opacity: 0; pointer-events: none; }
+
+  /* ── START SCREEN ── */
+  #startScreen {
+    background: radial-gradient(ellipse at 50% 30%, rgba(0,212,255,0.12) 0%, var(--navy) 70%);
+  }
+  .start-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 600px;
+  }
+  .game-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-shadow: none;
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+  @keyframes logoPulse {
+    0%,100% { filter: drop-shadow(0 0 20px rgba(0,212,255,0.4)); }
+    50% { filter: drop-shadow(0 0 40px rgba(168,85,247,0.6)); }
+  }
+  .game-subtitle {
+    font-size: 1.1rem;
+    color: var(--muted);
+    margin: 12px 0 40px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 300;
+  }
+  .city-preview {
+    display: flex; justify-content: center; gap: 8px;
+    margin: 24px 0 36px;
+  }
+  .building-preview {
+    background: linear-gradient(to top, var(--cyan2), var(--purple));
+    border-radius: 4px 4px 0 0;
+    opacity: 0.7;
+    animation: buildingRise 2s ease-out forwards;
+  }
+  @keyframes buildingRise {
+    from { transform: scaleY(0); transform-origin: bottom; }
+    to { transform: scaleY(1); transform-origin: bottom; }
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 36px;
+    border: none; border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan), var(--cyan2));
+    color: var(--navy);
+    box-shadow: 0 0 30px rgba(0,212,255,0.4);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px rgba(0,212,255,0.7);
+  }
+  .btn-secondary {
+    background: transparent;
+    color: var(--cyan);
+    border: 1.5px solid var(--border);
+  }
+  .btn-secondary:hover {
+    background: rgba(0,212,255,0.08);
+    border-color: var(--cyan);
+  }
+  .btn-danger {
+    background: linear-gradient(135deg, var(--red), #c0392b);
+    color: white;
+  }
+  .btn-row { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+
+  /* ── HOW TO PLAY SLIDES ── */
+  #howScreen {
+    background: radial-gradient(ellipse at 50% 40%, rgba(0,212,255,0.08) 0%, var(--navy) 70%);
+  }
+  .how-shell {
+    width: 100%; max-width: 680px;
+    padding: 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+  }
+  /* top bar */
+  .how-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; margin-bottom: 16px;
+  }
+  .how-topbar-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem; letter-spacing: 0.18em;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .how-skip {
+    background: none; border: none;
+    color: var(--muted); font-size: 0.78rem;
+    cursor: pointer; padding: 4px 8px; border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    transition: color 0.2s;
+  }
+  .how-skip:hover { color: var(--white); }
+
+  /* slide card */
+  .how-slide-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(0,212,255,0.08);
+    position: relative;
+  }
+  /* illustration area */
+  .slide-visual {
+    width: 100%; height: 260px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide-visual svg { display: block; }
+
+  /* text area */
+  .slide-body {
+    padding: 24px 28px 28px;
+    text-align: center;
+  }
+  .slide-step-tag {
+    display: inline-block;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem; letter-spacing: 0.18em;
+    color: var(--cyan); margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .slide-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.25rem; font-weight: 900;
+    color: var(--white); margin-bottom: 10px; line-height: 1.2;
+  }
+  .slide-caption {
+    font-size: 0.88rem; color: var(--muted);
+    line-height: 1.65; max-width: 480px; margin: 0 auto;
+  }
+  .slide-caption strong { color: var(--white); }
+
+  /* nav row */
+  .how-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; margin-top: 20px; gap: 12px;
+  }
+  .how-nav-btn {
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--white); border-radius: 10px;
+    width: 44px; height: 44px; font-size: 1.1rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .how-nav-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .how-nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  /* dots */
+  .how-dots { display: flex; gap: 8px; align-items: center; }
+  .how-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); transition: all 0.3s; cursor: pointer;
+  }
+  .how-dot.active {
+    background: var(--cyan); width: 24px; border-radius: 4px;
+    box-shadow: 0 0 8px rgba(0,212,255,0.6);
+  }
+  /* next / start button */
+  .how-next-btn {
+    padding: 11px 28px;
+    background: linear-gradient(135deg, var(--cyan), var(--cyan2));
+    color: var(--navy); border: none; border-radius: 10px;
+    font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700;
+    letter-spacing: 0.08em; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .how-next-btn:hover { box-shadow: 0 0 24px rgba(0,212,255,0.5); transform: translateY(-1px); }
+
+  /* slide transition */
+  .how-slide-card { transition: opacity 0.25s ease; }
+  .how-slide-card.fading { opacity: 0; }
+
+  /* ── GAME SCREEN ── */
+  #gameScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    background: var(--navy);
+    position: fixed; inset: 0;
+    overflow: hidden;
+  }
+  #gameScreen.hidden { opacity: 0; pointer-events: none; }
+
+  /* HUD */
+  .hud {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .hud-item {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px;
+  }
+  .hud-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-family: 'Orbitron', sans-serif;
+  }
+  .hud-value {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--white);
+  }
+  .hud-value.cyan { color: var(--cyan); }
+  .hud-value.gold { color: var(--gold); }
+  .hud-value.green { color: var(--green); }
+  .lives-display { display: flex; gap: 4px; }
+  .life-icon { font-size: 1.2rem; transition: transform 0.3s; }
+  .life-icon.lost { opacity: 0.2; transform: scale(0.8); }
+  .timer-bar-wrap {
+    flex: 1; min-width: 100px; max-width: 200px;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .timer-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--cyan));
+    border-radius: 3px;
+    transition: width 0.5s linear, background-color 0.5s;
+  }
+  .timer-bar.urgent { background: linear-gradient(90deg, var(--red), var(--orange)); }
+
+  /* MAIN AREA */
+  .game-main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    gap: 0;
+  }
+
+  /* CITY PANEL */
+  .city-panel {
+    width: 200px;
+    min-width: 160px;
+    background: var(--panel2);
+    border-right: 1px solid var(--border);
+    padding: 16px 12px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .city-panel h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .city-skyline {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    min-height: 80px;
+    padding: 8px 4px 0;
+    border-bottom: 2px solid var(--cyan2);
+  }
+  .city-building {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    min-width: 12px;
+    transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+    background: linear-gradient(to top, var(--cyan2), var(--purple));
+  }
+  .city-building::after {
+    content: '';
+    position: absolute;
+    top: -4px; left: 50%; transform: translateX(-50%);
+    width: 3px; height: 4px;
+    background: var(--cyan);
+    border-radius: 1px;
+  }
+  .city-building.new-building {
+    animation: buildingAppear 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes buildingAppear {
+    from { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
+    to { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
+  }
+
+  .building-list { margin-top: 16px; }
+  .building-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 6px;
+    margin-bottom: 4px;
+    font-size: 0.75rem;
+    background: rgba(0,212,255,0.05);
+    border: 1px solid transparent;
+  }
+  .building-item.current {
+    background: rgba(0,212,255,0.12);
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+  .building-item.done {
+    opacity: 0.5;
+  }
+  .building-item .b-icon { font-size: 1rem; }
+  .building-item .b-name { font-weight: 600; font-size: 0.7rem; }
+  .building-item .b-area { color: var(--muted); font-size: 0.65rem; }
+
+  /* ── CANVAS ZONE: fills all remaining space ── */
+  .canvas-zone {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: crosshair;
+    background: var(--navy2);
+  }
+  #buildCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── CONTROLS PANEL: narrow right sidebar ── */
+  .controls-panel {
+    width: 220px;
+    min-width: 200px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .cp-section {
+    padding: 14px 14px;
+    border-bottom: 1px solid rgba(0,212,255,0.1);
+  }
+  .cp-label {
+    font-size: 0.58rem;
+    font-family: 'Orbitron', sans-serif;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* Building info */
+  .building-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    color: var(--white);
+    line-height: 1.2;
+  }
+  .building-emoji { font-size: 2rem; float: right; margin-top: -4px; }
+
+  /* Target area display */
+  .target-big {
+    text-align: center;
+    padding: 10px 0 4px;
+  }
+  .target-big .val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.6rem;
+    font-weight: 900;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .target-big .unit { font-size: 0.75rem; color: var(--muted); }
+  .tolerance-info { font-size: 0.68rem; color: var(--muted); text-align: center; margin-top: 4px; }
+  .tolerance-info span { color: var(--white); font-weight: 600; }
+
+  /* Required shape display */
+  .required-shape-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--navy2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    margin-bottom: 8px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .required-shape-display.rect-req  { border-color: var(--cyan);   box-shadow: 0 0 16px rgba(0,212,255,0.2); }
+  .required-shape-display.tri-req   { border-color: var(--gold);   box-shadow: 0 0 16px rgba(255,215,0,0.2); }
+  .required-shape-display.circ-req  { border-color: var(--purple); box-shadow: 0 0 16px rgba(168,85,247,0.2); }
+  .req-shape-icon svg { display: block; }
+  .req-shape-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .req-shape-name.rect-col  { color: var(--cyan); }
+  .req-shape-name.tri-col   { color: var(--gold); }
+  .req-shape-name.circ-col  { color: var(--purple); }
+  .shape-hint {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.4;
+    min-height: 18px;
+  }
+
+  /* Shape buttons */
+  .shape-selector { display: flex; flex-direction: column; gap: 6px; }
+  .shape-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--navy2);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--white);
+    width: 100%;
+  }
+  .shape-btn:hover { border-color: var(--cyan); background: rgba(0,212,255,0.08); }
+  .shape-btn.active {
+    border-color: var(--cyan);
+    background: rgba(0,212,255,0.15);
+    box-shadow: 0 0 16px rgba(0,212,255,0.25);
+  }
+  .shape-btn svg { flex-shrink: 0; }
+  .shape-btn .s-name {
+    font-size: 0.7rem;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .shape-btn.active .s-name { color: var(--cyan); }
+  .shape-btn .s-formula {
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* Live formula / area readout */
+  .live-area-box {
+    text-align: center;
+  }
+  .formula-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  .formula-text .highlight { color: var(--cyan); }
+  .formula-dims {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65rem;
+    color: var(--muted);
+    min-height: 16px;
+    margin-bottom: 8px;
+  }
+  .formula-dims .highlight { color: var(--cyan); }
+  .current-area {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 900;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .current-area.good { color: var(--green); }
+  .current-area.close { color: var(--gold); }
+  .current-area.off { color: var(--red); }
+  .accuracy-badge {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.68rem;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.06em;
+    min-height: 22px;
+  }
+  .accuracy-badge.perfect { background: rgba(0,255,136,0.2); color: var(--green); }
+  .accuracy-badge.great   { background: rgba(255,215,0,0.2);  color: var(--gold); }
+  .accuracy-badge.ok      { background: rgba(255,107,53,0.2); color: var(--orange); }
+  .accuracy-badge.bad     { background: rgba(255,71,87,0.2);  color: var(--red); }
+
+  /* Action buttons */
+  .btn-build {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, var(--green), #00cc6a);
+    color: var(--navy);
+    border: none; border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem; font-weight: 700;
+    letter-spacing: 0.07em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .btn-build:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,255,136,0.4); }
+  .btn-build:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-clear {
+    width: 100%; padding: 10px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-clear:hover { color: var(--red); border-color: var(--red); }
+
+  /* TOAST NOTIFICATIONS */
+  #toastArea {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 100;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    animation: toastIn 0.3s ease, toastOut 0.4s 2s ease forwards;
+    white-space: nowrap;
+  }
+  .toast.success { border-color: var(--green); color: var(--green); box-shadow: 0 0 20px rgba(0,255,136,0.3); }
+  .toast.error { border-color: var(--red); color: var(--red); box-shadow: 0 0 20px rgba(255,71,87,0.3); }
+  .toast.info { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 20px rgba(0,212,255,0.3); }
+  .toast.bonus { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-10px) scale(0.9); } to { opacity: 1; transform: none; } }
+  @keyframes toastOut { to { opacity: 0; transform: translateY(-10px); } }
+
+  /* ROUND TRANSITION */
+  #roundOverlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  #roundOverlay.show { opacity: 1; pointer-events: auto; }
+  .round-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    max-width: 400px;
+    box-shadow: 0 0 60px rgba(0,212,255,0.2);
+  }
+  .overlay-tag {
+    font-size: 0.75rem; letter-spacing: 0.15em;
+    font-family: 'Orbitron', sans-serif; margin-bottom: 8px;
+    text-transform: uppercase; font-weight: 700;
+  }
+  .round-number {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--cyan);
+    line-height: 1;
+  }
+  .round-subtitle { color: var(--muted); margin: 8px 0 24px; font-size: 0.9rem; }
+  .round-stats { display: flex; gap: 16px; justify-content: center; margin: 20px 0; }
+  .round-stat { text-align: center; }
+  .round-stat .val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .round-stat .lbl { font-size: 0.7rem; color: var(--muted); }
+
+  /* END SCREEN */
+  #endScreen {
+    background: radial-gradient(ellipse at 50% 50%, rgba(168,85,247,0.12) 0%, var(--navy) 70%);
+  }
+  .end-card {
+    background: var(--panel);
+    border: 1px solid rgba(168,85,247,0.35);
+    border-radius: 24px;
+    padding: 36px 36px 32px;
+    text-align: center;
+    max-width: 480px;
+    width: 92%;
+    box-shadow: 0 0 80px rgba(168,85,247,0.15);
+  }
+  .end-header { margin-bottom: 20px; }
+  .end-trophy { font-size: 4rem; margin-bottom: 8px; animation: trophyBounce 1.2s ease-in-out infinite; }
+  @keyframes trophyBounce {
+    0%,100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-8px) scale(1.05); }
+  }
+  .end-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.6rem; font-weight: 900;
+    background: linear-gradient(135deg, var(--gold), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 6px;
+  }
+  .end-title.gameover {
+    background: linear-gradient(135deg, var(--red), #c0392b);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .end-subtitle { color: var(--muted); font-size: 0.88rem; }
+
+  /* ── STARS ── */
+  .star-row {
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: 6px; margin: 18px 0 8px;
+  }
+  .star-wrap {
+    transition: transform 0.3s;
+    display: inline-flex;
+  }
+  .star-wrap.lit {
+    animation: starPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    filter: drop-shadow(0 0 10px rgba(255,215,0,0.9));
+  }
+  @keyframes starPop {
+    0%   { transform: scale(0.3) rotate(-25deg); opacity: 0; }
+    65%  { transform: scale(1.3) rotate(6deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .star-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem; letter-spacing: 0.15em;
+    color: var(--muted); text-transform: uppercase;
+    min-height: 20px; margin-bottom: 18px;
+  }
+  .star-label.s3 { color: var(--gold); }
+  .star-label.s2 { color: var(--cyan); }
+  .star-label.s1 { color: var(--orange); }
+  .star-label.s0 { color: var(--red); }
+
+  /* END STATS */
+  .end-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; margin-bottom: 16px;
+  }
+  .end-stat {
+    background: var(--navy2); border-radius: 10px;
+    padding: 14px 6px; border: 1px solid var(--border);
+  }
+  .end-stat .val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.3rem; font-weight: 700; color: var(--cyan);
+  }
+  .end-stat .lbl { font-size: 0.62rem; color: var(--muted); margin-top: 3px; letter-spacing: 0.08em; }
+
+  /* SCORE BAR */
+  .score-bar-wrap { margin-bottom: 20px; }
+  .score-bar-track {
+    position: relative; height: 10px; border-radius: 5px;
+    background: rgba(255,255,255,0.08); overflow: visible; margin-bottom: 6px;
+  }
+  .score-bar-fill {
+    height: 100%; border-radius: 5px; width: 0%;
+    background: linear-gradient(90deg, var(--red), var(--orange), var(--gold));
+    transition: width 1.2s cubic-bezier(0.25,1,0.5,1);
+    box-shadow: 0 0 12px rgba(255,215,0,0.4);
+  }
+  .score-threshold {
+    position: absolute; top: -4px;
+    width: 2px; height: 18px; border-radius: 1px;
+    background: rgba(255,255,255,0.25);
+  }
+  .score-bar-labels {
+    display: flex; justify-content: space-between;
+    font-size: 0.6rem; color: var(--muted);
+    font-family: 'Orbitron', sans-serif; letter-spacing: 0.04em;
+  }
+
+  /* PARTICLES */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    border-radius: 50%;
+    animation: particleFall 1.5s ease-out forwards;
+  }
+  @keyframes particleFall {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(100px) scale(0); opacity: 0; }
+  }
+
+  /* DIFFICULTY BADGE */
+  .diff-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .diff-badge.easy { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .diff-badge.medium { background: rgba(255,215,0,0.15); color: var(--gold); border: 1px solid rgba(255,215,0,0.3); }
+  .diff-badge.hard { background: rgba(255,107,53,0.15); color: var(--orange); border: 1px solid rgba(255,107,53,0.3); }
+  .diff-badge.extreme { background: rgba(255,71,87,0.15); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
+
+  /* TOLERANCE INDICATOR */
+  .tolerance-info {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+  .tolerance-info span { color: var(--white); font-weight: 600; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Mobile tweaks */
+  @media (max-width: 600px) {
+    .city-panel { display: none; }
+    .how-card { padding: 24px; }
+    .end-stats { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ START SCREEN ══════════════════════ -->
+<div class="screen" id="startScreen">
+  <div class="start-content">
+    <div class="game-logo">GEO<br>CITY</div>
+    <div class="game-subtitle">⚡ Shape Your Skyline ⚡</div>
+    <div class="city-preview" id="previewCity"></div>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:32px;line-height:1.6;">
+      Apply real geometry formulas to construct buildings.<br>
+      Every skyscraper you raise tells a mathematical story.
+    </p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showScreen('howScreen')">▶ START BUILDING</button>
+      <button class="btn btn-secondary" onclick="showScreen('howScreen')">📖 How to Play</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ HOW TO PLAY (SLIDES) ══════════════════════ -->
+<div class="screen hidden" id="howScreen">
+  <div class="how-shell">
+
+    <!-- top bar -->
+    <div class="how-topbar">
+      <div class="how-topbar-title">📖 How to Play</div>
+      <button class="how-skip" onclick="showScreen('startScreen')">✕ Close</button>
+    </div>
+
+    <!-- slide card -->
+    <div class="how-slide-card" id="howCard">
+      <div class="slide-visual" id="slideVisual"></div>
+      <div class="slide-body">
+        <div class="slide-step-tag" id="slideTag">STEP 1 OF 5</div>
+        <div class="slide-title" id="slideTitle"></div>
+        <div class="slide-caption" id="slideCaption"></div>
+      </div>
+    </div>
+
+    <!-- nav -->
+    <div class="how-nav">
+      <button class="how-nav-btn" id="howPrev" onclick="howNav(-1)">←</button>
+      <div class="how-dots" id="howDots"></div>
+      <button class="how-next-btn" id="howNextBtn" onclick="howNav(1)">NEXT →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════ GAME SCREEN ══════════════════════ -->
+<div class="screen hidden" id="gameScreen" style="position:fixed;flex-direction:column;">
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hud-item">
+      <div class="hud-label">Round</div>
+      <div class="hud-value cyan" id="hudRound">1/10</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Score</div>
+      <div class="hud-value gold" id="hudScore">0</div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Lives</div>
+      <div class="lives-display" id="hudLives"></div>
+    </div>
+    <div class="timer-bar-wrap">
+      <div class="timer-bar" id="timerBar"></div>
+    </div>
+    <div class="hud-item">
+      <div class="hud-label">Time</div>
+      <div class="hud-value" id="hudTimer">30</div>
+    </div>
+  </div>
+
+  <!-- MAIN: canvas fills left, controls on right -->
+  <div class="game-main">
+
+    <!-- CITY PANEL (left) -->
+    <div class="city-panel">
+      <h3>🏙️ Your City</h3>
+      <div class="city-skyline" id="citySkyline"></div>
+      <div class="building-list" id="buildingList"></div>
+    </div>
+
+    <!-- FULL CANVAS ZONE -->
+    <div class="canvas-zone" id="canvasWrap">
+      <canvas id="buildCanvas"></canvas>
+    </div>
+
+    <!-- CONTROLS PANEL (right) -->
+    <div class="controls-panel">
+
+      <!-- Building info -->
+      <div class="cp-section">
+        <div class="cp-label">Blueprint</div>
+        <span class="building-emoji" id="buildingEmoji">🏠</span>
+        <div class="building-title" id="buildingTitle">House</div>
+        <div style="margin-top:6px;" id="diffBadge"></div>
+      </div>
+
+      <!-- Target area -->
+      <div class="cp-section">
+        <div class="cp-label">Target Floor Area</div>
+        <div class="target-big">
+          <div class="val" id="targetVal">50</div>
+          <div class="unit">m²</div>
+        </div>
+        <div class="tolerance-info">Tolerance: <span id="toleranceInfo">±25%</span></div>
+      </div>
+
+      <!-- Required shape indicator -->
+      <div class="cp-section">
+        <div class="cp-label">Required Shape</div>
+        <div class="required-shape-display" id="requiredShapeDisplay">
+          <div class="req-shape-icon" id="reqShapeIcon"></div>
+          <div class="req-shape-name" id="reqShapeName"></div>
+        </div>
+        <div class="shape-hint" id="shapeHint"></div>
+      </div>
+
+      <!-- Shape buttons (locked to required) -->
+      <div class="cp-section">
+        <div class="cp-label">Shape Tools</div>
+        <div class="shape-selector">
+          <div class="shape-btn active" id="btnRect">
+            <svg width="28" height="20" viewBox="0 0 32 24"><rect x="2" y="4" width="28" height="16" fill="none" stroke="currentColor" stroke-width="2" rx="1"/></svg>
+            <div><div class="s-name">RECTANGLE</div><div class="s-formula">A = w × h</div></div>
+          </div>
+          <div class="shape-btn" id="btnTri">
+            <svg width="28" height="20" viewBox="0 0 32 24"><polygon points="16,2 30,22 2,22" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div><div class="s-name">TRIANGLE</div><div class="s-formula">A = ½ × b × h</div></div>
+          </div>
+          <div class="shape-btn" id="btnCirc">
+            <svg width="28" height="20" viewBox="0 0 32 24"><circle cx="16" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div><div class="s-name">CIRCLE</div><div class="s-formula">A = π × r²</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live readout -->
+      <div class="cp-section" id="formulaSection">
+        <div class="cp-label">Live Calculation</div>
+        <div class="live-area-box">
+          <div class="formula-text" id="formulaText">A = <span class="highlight">w</span> × <span class="highlight">h</span></div>
+          <div class="formula-dims" id="formulaDims"></div>
+          <div class="current-area off" id="currentArea">0 m²</div>
+          <div class="accuracy-badge" id="accuracyBadge"></div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="cp-section" style="margin-top:auto;">
+        <button class="btn-build" id="buildBtn" onclick="submitBuild()" disabled>🏗️ BUILD IT!</button>
+        <button class="btn-clear" onclick="clearCanvas()">✕ CLEAR</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ROUND OVERLAY -->
+<div id="roundOverlay">
+  <div class="round-card">
+    <!-- SUCCESS mode -->
+    <div id="overlaySuccess">
+      <div class="overlay-tag" style="color:var(--green)">✅ ROUND COMPLETE</div>
+      <div class="round-number" id="overlayRound">ROUND 1</div>
+      <div class="round-subtitle" id="overlayBuilding">House Built!</div>
+      <div class="round-stats">
+        <div class="round-stat">
+          <div class="val" id="overlayPoints" style="color:var(--gold)">+100</div>
+          <div class="lbl">POINTS</div>
+        </div>
+        <div class="round-stat">
+          <div class="val" id="overlayAccuracy" style="color:var(--cyan)">98%</div>
+          <div class="lbl">ACCURACY</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="nextRound()">NEXT ROUND →</button>
+    </div>
+    <!-- FAILURE mode -->
+    <div id="overlayFailure" style="display:none">
+      <div class="overlay-tag" style="color:var(--red)">❌ MISSED!</div>
+      <div class="round-number" style="color:var(--red)" id="overlayFailRound">ROUND 1</div>
+      <div class="round-subtitle" id="overlayFailMsg">Too far off — life lost!</div>
+      <div class="lives-display" style="justify-content:center;margin:16px 0;" id="overlayLives"></div>
+      <button class="btn btn-primary" onclick="retryRound()">🔄 RETRY ROUND</button>
+    </div>
+  </div>
+</div>
+
+<!-- END SCREEN -->
+<div class="screen hidden" id="endScreen">
+  <div class="end-card">
+    <!-- header changes based on outcome -->
+    <div class="end-header">
+      <div class="end-trophy" id="endTrophy">🏆</div>
+      <div class="end-title" id="endTitle">CITY COMPLETE!</div>
+      <div class="end-subtitle" id="endSubtitle">Your city stands tall!</div>
+    </div>
+
+    <!-- star rating -->
+    <div class="star-row" id="starRow">
+      <div class="star-wrap" id="star1"><svg viewBox="0 0 40 38" width="56" height="53"><polygon id="starPoly1" points="20,2 25,14 38,14 28,22 32,35 20,27 8,35 12,22 2,14 15,14" fill="#2a2f3e" stroke="#3a4050" stroke-width="1.5"/></svg></div>
+      <div class="star-wrap" id="star2"><svg viewBox="0 0 40 38" width="64" height="61"><polygon id="starPoly2" points="20,2 25,14 38,14 28,22 32,35 20,27 8,35 12,22 2,14 15,14" fill="#2a2f3e" stroke="#3a4050" stroke-width="1.5"/></svg></div>
+      <div class="star-wrap" id="star3"><svg viewBox="0 0 40 38" width="56" height="53"><polygon id="starPoly3" points="20,2 25,14 38,14 28,22 32,35 20,27 8,35 12,22 2,14 15,14" fill="#2a2f3e" stroke="#3a4050" stroke-width="1.5"/></svg></div>
+    </div>
+    <div class="star-label" id="starLabel">—</div>
+
+    <!-- stats grid -->
+    <div class="end-stats">
+      <div class="end-stat">
+        <div class="val" id="endScore">0</div>
+        <div class="lbl">FINAL SCORE</div>
+      </div>
+      <div class="end-stat">
+        <div class="val" id="endRounds">0/10</div>
+        <div class="lbl">ROUNDS DONE</div>
+      </div>
+      <div class="end-stat">
+        <div class="val" id="endAccuracy">0%</div>
+        <div class="lbl">AVG ACCURACY</div>
+      </div>
+    </div>
+
+    <!-- score bar -->
+    <div class="score-bar-wrap">
+      <div class="score-bar-track">
+        <div class="score-bar-fill" id="scoreBarFill"></div>
+        <!-- threshold markers -->
+        <div class="score-threshold" style="left:40%" title="2 stars"></div>
+        <div class="score-threshold" style="left:70%" title="3 stars"></div>
+      </div>
+      <div class="score-bar-labels">
+        <span>0</span><span style="margin-left:32%">⭐⭐ 400</span><span>⭐⭐⭐ 700</span>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:4px;">
+      <button class="btn btn-primary" onclick="startGame()">🔄 PLAY AGAIN</button>
+      <button class="btn btn-secondary" onclick="showScreen('startScreen')">🏠 Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST AREA -->
+<div id="toastArea"></div>
+
+<!-- ══════════════════════ AUDIO ENGINE ══════════════════════ -->
+<script>
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let ctx;
+
+function getCtx() {
+  if (!ctx) ctx = new AudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  return ctx;
+}
+
+function playTone(freq, type, dur, vol=0.3, delay=0) {
+  try {
+    const c = getCtx();
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type = type; o.frequency.value = freq;
+    const start = c.currentTime + delay;
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(vol, start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+    o.start(start); o.stop(start + dur + 0.05);
+  } catch(e){}
+}
+
+function playSuccess() {
+  playTone(523, 'sine', 0.15, 0.3);
+  playTone(659, 'sine', 0.15, 0.3, 0.1);
+  playTone(784, 'sine', 0.3, 0.35, 0.2);
+}
+function playPerfect() {
+  [523,659,784,1047].forEach((f,i) => playTone(f,'sine',0.2,0.3,i*0.08));
+}
+function playFail() {
+  playTone(300,'sawtooth',0.1,0.25);
+  playTone(220,'sawtooth',0.2,0.25,0.12);
+}
+function playClick() { playTone(800,'sine',0.05,0.15); }
+function playDraw() { playTone(440,'sine',0.02,0.08); }
+function playTimer() { playTone(880,'square',0.03,0.1); }
+
+// BG Music
+let bgNode, bgGain;
+function startBGMusic() {
+  try {
+    const c = getCtx();
+    bgGain = c.createGain();
+    bgGain.gain.value = 0.08;
+    bgGain.connect(c.destination);
+    const melody = [
+      [261,0.3],[294,0.3],[330,0.3],[349,0.3],
+      [392,0.6],[330,0.3],[349,0.3],[330,0.6],
+      [294,0.3],[262,0.3],[220,0.3],[262,0.3],[220,0.6]
+    ];
+    let t = c.currentTime + 0.5;
+    function scheduleMelody() {
+      melody.forEach(([f,d]) => {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.connect(g); g.connect(bgGain);
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.5, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t+d-0.03);
+        o.start(t); o.stop(t+d);
+        t += d;
+      });
+    }
+    scheduleMelody();
+    setInterval(scheduleMelody, 5000);
+  } catch(e){}
+}
+function stopBGMusic() { if(bgGain) bgGain.gain.setTargetAtTime(0, getCtx().currentTime, 0.5); }
+</script>
+
+<!-- ══════════════════════ GAME ENGINE ══════════════════════ -->
+<script>
+// ── BUILDINGS DATA ──
+// requiredShape: 'rect' | 'tri' | 'circ'
+// ghostVisible: show the dashed target outline on canvas
+// formulaVisible: show the live formula readout in sidebar
+const BUILDINGS = [
+  { name:'Cottage',        emoji:'🏡', area:50,  diff:'easy',    time:35, tolerance:0.25, requiredShape:'rect', shapeHint:'Rectangular floor plan — easy start!',         ghostVisible:true,  formulaVisible:true  },
+  { name:'Circus Tent',    emoji:'🎪', area:90,  diff:'easy',    time:32, tolerance:0.22, requiredShape:'circ', shapeHint:'Circular base — drag corner to corner',        ghostVisible:true,  formulaVisible:true  },
+  { name:'Ski Chalet',     emoji:'🏔️', area:70,  diff:'easy',    time:30, tolerance:0.20, requiredShape:'tri',  shapeHint:'Triangular gabled footprint',                  ghostVisible:true,  formulaVisible:true  },
+  { name:'Office Block',   emoji:'🏢', area:160, diff:'medium',  time:26, tolerance:0.15, requiredShape:'rect', shapeHint:'Wide rectangular floor plate',                 ghostVisible:true,  formulaVisible:true  },
+  { name:'Observatory',    emoji:'🔭', area:200, diff:'medium',  time:24, tolerance:0.13, requiredShape:'circ', shapeHint:'Circular dome — ghost fading soon!',           ghostVisible:true,  formulaVisible:false },
+  { name:'Pyramid Museum', emoji:'🏛️', area:160, diff:'medium',  time:22, tolerance:0.12, requiredShape:'tri',  shapeHint:'Triangular pyramid footprint',                 ghostVisible:true,  formulaVisible:false },
+  { name:'Hospital',       emoji:'🏥', area:250, diff:'hard',    time:20, tolerance:0.10, requiredShape:'rect', shapeHint:'No ghost — use the grid to measure!',          ghostVisible:false, formulaVisible:false },
+  { name:'Water Tower',    emoji:'🗼', area:280, diff:'hard',    time:18, tolerance:0.08, requiredShape:'circ', shapeHint:'No ghost — remember A = πr²',                  ghostVisible:false, formulaVisible:false },
+  { name:'Skyscraper',     emoji:'🌆', area:320, diff:'extreme', time:16, tolerance:0.05, requiredShape:'tri',  shapeHint:'No ghost, no formula — pure memory!',          ghostVisible:false, formulaVisible:false },
+  { name:'City Hall',      emoji:'🏛️', area:350, diff:'extreme', time:14, tolerance:0.04, requiredShape:'rect', shapeHint:'Grand finale — no aids whatsoever!',           ghostVisible:false, formulaVisible:false },
+];
+
+// ── STATE ──
+let score = 0, lives = 3, round = 0, totalAccuracy = 0;
+let timerVal, timerMax, timerInterval;
+let currentShape = 'rect';
+let drawing = false, startX, startY, curX, curY;
+let shapeDrawn = false;
+let roundScores = [];
+
+// ── CANVAS SETUP ──
+const canvas = document.getElementById('buildCanvas');
+const canvasWrap = document.getElementById('canvasWrap');
+let ctx2 = canvas.getContext('2d');
+
+// Dynamic scale: set per round so the ghost guide fills ~65% of the canvas
+let PX_PER_M = 10;
+
+function calcPxPerM(targetArea, shape) {
+  const rect = canvasWrap.getBoundingClientRect();
+  const W = (rect.width  || window.innerWidth  - 400);
+  const H = (rect.height || window.innerHeight - 60);
+
+  // Usable canvas area with padding (40px each side horizontally, 50px top/bottom for labels)
+  const uw = W - 80;
+  const uh = H - 100;
+
+  // Bounding box in metres for a ghost of this shape at area = targetArea
+  let bbW, bbH;
+  if (shape === 'tri') {
+    // We draw: apex at top-centre, base at bottom.
+    // base = sqrt(2*area), height = sqrt(2*area)  → A = ½ × base × height = area ✓
+    const side = Math.sqrt(2 * targetArea);
+    bbW = side;
+    bbH = side; // full height of the triangle
+  } else if (shape === 'circ') {
+    const r = Math.sqrt(targetArea / Math.PI);
+    bbW = 2 * r;
+    bbH = 2 * r;
+  } else {
+    const side = Math.sqrt(targetArea);
+    bbW = side;
+    bbH = side;
+  }
+
+  // Choose the ppm that makes the bounding box fit within usable area
+  const ppm = Math.min(uw / bbW, uh / bbH);
+  return Math.min(80, Math.max(4, ppm));
+}
+
+function resizeCanvas() {
+  const rect = canvasWrap.getBoundingClientRect();
+  canvas.width  = rect.width  || 600;
+  canvas.height = rect.height || 400;
+  const b = BUILDINGS[Math.min(round, BUILDINGS.length - 1)];
+  PX_PER_M = calcPxPerM(b.area, b.requiredShape || 'rect');
+  redrawCanvas();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// ── SCREEN MANAGEMENT ──
+function showScreen(id) {
+  playClick();
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ── CITY SKYLINE ──
+let cityBuildings = [];
+function updateSkyline() {
+  const skyline = document.getElementById('citySkyline');
+  skyline.innerHTML = '';
+  cityBuildings.forEach((b, i) => {
+    const el = document.createElement('div');
+    el.className = 'city-building' + (i === cityBuildings.length-1 ? ' new-building' : '');
+    const maxH = 80;
+    const h = Math.min(maxH, 10 + (b.area / 400) * 70);
+    el.style.height = h + 'px';
+    const hue = (i * 37) % 360;
+    el.style.background = `linear-gradient(to top, hsl(${hue},70%,35%), hsl(${hue+40},70%,55%))`;
+    skyline.appendChild(el);
+  });
+}
+
+function updateBuildingList() {
+  const list = document.getElementById('buildingList');
+  list.innerHTML = '';
+  BUILDINGS.forEach((b, i) => {
+    const shapeIcon = b.requiredShape === 'tri' ? '△' : b.requiredShape === 'circ' ? '○' : '□';
+    const el = document.createElement('div');
+    el.className = 'building-item' + (i === round ? ' current' : '') + (i < round ? ' done' : '');
+    el.innerHTML = `<span class="b-icon">${i < round ? '✅' : (i === round ? '🔨' : '🔒')}</span>
+      <div>
+        <div class="b-name">${b.name}</div>
+        <div class="b-area">${b.area} m² &nbsp;<span style="opacity:0.7">${shapeIcon}</span></div>
+      </div>`;
+    list.appendChild(el);
+  });
+}
+
+// ── GAME START ──
+function startGame() {
+  playClick();
+  score = 0; lives = 3; round = 0;
+  totalAccuracy = 0; roundScores = [];
+  cityBuildings = [];
+  updateSkyline();
+  showScreen('gameScreen');
+  startBGMusic();
+  // wait for screen to be visible before measuring canvas
+  requestAnimationFrame(() => requestAnimationFrame(() => loadRound()));
+}
+
+function loadRound() {
+  const b = BUILDINGS[round];
+  shapeDrawn = false;
+
+  // Lock to the required shape for this round
+  const req = b.requiredShape || 'rect';
+  currentShape = req;
+  selectShape(req, false);
+  clearCanvas();
+
+  // HUD
+  document.getElementById('hudRound').textContent = `${round+1}/10`;
+  document.getElementById('hudScore').textContent = score;
+  updateLivesDisplay();
+
+  // Blueprint
+  document.getElementById('buildingTitle').textContent = b.name;
+  document.getElementById('buildingEmoji').textContent = b.emoji;
+  document.getElementById('targetVal').textContent = b.area;
+  document.getElementById('toleranceInfo').textContent = `±${Math.round(b.tolerance*100)}%`;
+
+  // Shape hint text
+  const hintEl = document.getElementById('shapeHint');
+  if (hintEl) hintEl.textContent = b.shapeHint || '';
+
+  const diffEl = document.getElementById('diffBadge');
+  const colors = { easy:'easy', medium:'medium', hard:'hard', extreme:'extreme' };
+  let badgeHTML = `<span class="diff-badge ${colors[b.diff]}">${b.diff.toUpperCase()}</span>`;
+  if (!b.ghostVisible)    badgeHTML += ` <span class="diff-badge extreme">NO GHOST</span>`;
+  if (!b.formulaVisible)  badgeHTML += ` <span class="diff-badge hard">NO FORMULA</span>`;
+  diffEl.innerHTML = badgeHTML;
+
+  // Show/hide the live formula section
+  const formulaSection = document.getElementById('formulaSection');
+  if (formulaSection) formulaSection.style.display = b.formulaVisible ? '' : 'none';
+
+  // Required shape indicator
+  const reqDisplay = document.getElementById('requiredShapeDisplay');
+  const reqIcon    = document.getElementById('reqShapeIcon');
+  const reqName    = document.getElementById('reqShapeName');
+  const shapeClass = req === 'rect' ? 'rect-req' : req === 'tri' ? 'tri-req' : 'circ-req';
+  const nameClass  = req === 'rect' ? 'rect-col' : req === 'tri' ? 'tri-col'  : 'circ-col';
+  reqDisplay.className = 'required-shape-display ' + shapeClass;
+  reqName.className    = 'req-shape-name ' + nameClass;
+  reqName.textContent  = shapeLabel(req).toUpperCase();
+  const iconColor = req === 'rect' ? '#00d4ff' : req === 'tri' ? '#ffd700' : '#a855f7';
+  if (req === 'rect') {
+    reqIcon.innerHTML = `<svg width="44" height="34" viewBox="0 0 44 34"><rect x="2" y="4" width="40" height="26" fill="${iconColor}22" stroke="${iconColor}" stroke-width="2.5" rx="2"/></svg>`;
+  } else if (req === 'tri') {
+    reqIcon.innerHTML = `<svg width="44" height="38" viewBox="0 0 44 38"><polygon points="22,3 41,35 3,35" fill="${iconColor}22" stroke="${iconColor}" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+  } else {
+    reqIcon.innerHTML = `<svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="${iconColor}22" stroke="${iconColor}" stroke-width="2.5"/></svg>`;
+  }
+
+  // Lock/unlock shape buttons — only the required one is selectable
+  lockShapeButtons(req);
+
+  // Update list
+  updateBuildingList();
+
+  // Recalculate canvas scale for this round's target area, then resize
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    PX_PER_M = calcPxPerM(b.area, b.requiredShape || 'rect');
+    resizeCanvas();
+  }));
+
+  // Timer
+  timerMax = b.time;
+  timerVal = b.time;
+  clearInterval(timerInterval);
+  updateTimerDisplay();
+  timerInterval = setInterval(tickTimer, 1000);
+
+  // Formula
+  updateFormulaDisplay();
+}
+
+function lockShapeButtons(requiredShape) {
+  ['rect','tri','circ'].forEach(t => {
+    const id = 'btn' + t.charAt(0).toUpperCase() + t.slice(1);
+    const btn = document.getElementById(id);
+    const isRequired = (t === requiredShape);
+    btn.classList.toggle('active', isRequired);
+    btn.classList.toggle('locked', !isRequired);
+    btn.style.opacity = isRequired ? '1' : '0.35';
+    btn.style.cursor  = isRequired ? 'default' : 'not-allowed';
+    btn.onclick = isRequired ? () => selectShape(t) : () => showToast(`⚠️ This building needs a ${shapeLabel(requiredShape)}!`, 'error');
+  });
+}
+
+function shapeLabel(s) {
+  return s === 'rect' ? 'Rectangle' : s === 'tri' ? 'Triangle' : 'Circle';
+}
+
+function updateLivesDisplay() {
+  const el = document.getElementById('hudLives');
+  el.innerHTML = '';
+  for(let i=0;i<3;i++){
+    const ic = document.createElement('span');
+    ic.className = 'life-icon' + (i >= lives ? ' lost' : '');
+    ic.textContent = '❤️';
+    el.appendChild(ic);
+  }
+}
+
+function tickTimer() {
+  timerVal--;
+  updateTimerDisplay();
+  if(timerVal <= 5) playTimer();
+  if(timerVal <= 0) {
+    clearInterval(timerInterval);
+    timeOut();
+  }
+}
+
+function updateTimerDisplay() {
+  document.getElementById('hudTimer').textContent = timerVal;
+  const pct = (timerVal / timerMax) * 100;
+  const bar = document.getElementById('timerBar');
+  bar.style.width = pct + '%';
+  bar.classList.toggle('urgent', pct < 30);
+}
+
+function timeOut() {
+  if (!shapeDrawn) {
+    loseLife();
+    showToast("⏰ Time's up! Life lost!", 'error');
+    if (lives > 0) {
+      setTimeout(() => showFailureOverlay(), 900);
+    }
+  } else {
+    submitBuild();
+  }
+}
+
+function loseLife() {
+  lives = Math.max(0, lives - 1);
+  updateLivesDisplay();
+  playFail();
+  spawnParticles(document.getElementById('hudLives'), '💥', 5);
+  if (lives <= 0) {
+    setTimeout(() => gameOver(), 900);
+  }
+}
+
+// ── SHAPE SELECTION ──
+function selectShape(type, sound=true) {
+  currentShape = type;
+  if(sound) playClick();
+  ['rect','tri','circ'].forEach(t => {
+    document.getElementById('btn' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === type);
+  });
+  updateFormulaDisplay();
+  clearCanvas();
+}
+
+function updateFormulaDisplay() {
+  const ft = document.getElementById('formulaText');
+  if(currentShape === 'rect') ft.innerHTML = 'A = <span class="highlight">w</span> × <span class="highlight">h</span>';
+  else if(currentShape === 'tri') ft.innerHTML = 'A = ½ × <span class="highlight">b</span> × <span class="highlight">h</span>';
+  else ft.innerHTML = 'A = π × <span class="highlight">r</span>²';
+}
+
+// ── CANVAS DRAWING ──
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return {
+    x: src.clientX - rect.left,
+    y: src.clientY - rect.top
+  };
+}
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', moveDraw);
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e); }, {passive:false});
+canvas.addEventListener('touchmove', e => { e.preventDefault(); moveDraw(e); }, {passive:false});
+canvas.addEventListener('touchend', e => { e.preventDefault(); endDraw(e); }, {passive:false});
+
+function startDraw(e) {
+  const p = getPos(e);
+  drawing = true;
+  startX = p.x; startY = p.y;
+  curX = p.x; curY = p.y;
+  shapeDrawn = false;
+  document.getElementById('buildBtn').disabled = true;
+  playDraw();
+}
+
+function moveDraw(e) {
+  if(!drawing) return;
+  const p = getPos(e);
+  curX = p.x; curY = p.y;
+  redrawCanvas();
+  updateAreaDisplay();
+}
+
+function endDraw(e) {
+  if(!drawing) return;
+  drawing = false;
+  const area = calcArea();
+  if(area > 0) {
+    shapeDrawn = true;
+    document.getElementById('buildBtn').disabled = false;
+  }
+  redrawCanvas();
+  updateAreaDisplay();
+}
+
+function clearCanvas() {
+  shapeDrawn = false;
+  startX = startY = curX = curY = 0;
+  drawing = false;
+  document.getElementById('buildBtn').disabled = true;
+  document.getElementById('currentArea').textContent = '0 m²';
+  document.getElementById('currentArea').className = 'current-area off';
+  document.getElementById('accuracyBadge').textContent = '';
+  document.getElementById('formulaDims').textContent = '';
+  redrawCanvas();
+}
+
+function drawGrid() {
+  // Grid lines every PX_PER_M pixels = 1 metre per cell
+  const gs = Math.max(8, Math.round(PX_PER_M));
+  ctx2.strokeStyle = 'rgba(0,212,255,0.07)';
+  ctx2.lineWidth = 0.5;
+  for(let x=0;x<canvas.width;x+=gs) { ctx2.beginPath(); ctx2.moveTo(x,0); ctx2.lineTo(x,canvas.height); ctx2.stroke(); }
+  for(let y=0;y<canvas.height;y+=gs) { ctx2.beginPath(); ctx2.moveTo(0,y); ctx2.lineTo(canvas.width,y); ctx2.stroke(); }
+  // Draw a subtle scale indicator bottom-right
+  ctx2.save();
+  ctx2.fillStyle = 'rgba(0,212,255,0.35)';
+  ctx2.font = '10px Inter';
+  ctx2.textAlign = 'right';
+  ctx2.fillText(`1 cell = 1 m²`, canvas.width - 6, canvas.height - 5);
+  ctx2.restore();
+}
+
+function redrawCanvas() {
+  ctx2.clearRect(0,0,canvas.width,canvas.height);
+  drawGrid();
+
+  const b      = (round < BUILDINGS.length) ? BUILDINGS[round] : BUILDINGS[0];
+  const target = b.area;
+  const req    = b.requiredShape || 'rect';
+  const showGhost = b.ghostVisible !== false;
+
+  if (showGhost) {
+    // ── GHOST TARGET GUIDE ──
+    const ghostStroke = req === 'rect' ? 'rgba(0,212,255,0.40)'
+                      : req === 'tri'  ? 'rgba(255,215,0,0.40)'
+                      :                  'rgba(168,85,247,0.40)';
+    const ghostFill   = req === 'rect' ? 'rgba(0,212,255,0.07)'
+                      : req === 'tri'  ? 'rgba(255,215,0,0.07)'
+                      :                  'rgba(168,85,247,0.07)';
+
+    ctx2.save();
+    ctx2.setLineDash([7, 5]);
+    ctx2.strokeStyle = ghostStroke;
+    ctx2.fillStyle   = ghostFill;
+    ctx2.lineWidth   = 2;
+
+    const cx = canvas.width  / 2;
+    const cy = canvas.height / 2;
+
+    if (req === 'rect') {
+      const side = Math.sqrt(target) * PX_PER_M;
+      ctx2.beginPath();
+      ctx2.roundRect(cx - side/2, cy - side/2, side, side, 4);
+      ctx2.fill(); ctx2.stroke();
+
+      // label below
+      ctx2.setLineDash([]);
+      ctx2.fillStyle = ghostStroke;
+      ctx2.font = '11px Inter';
+      ctx2.textAlign = 'center';
+      ctx2.fillText(`Target: ${target} m²`, cx, cy + side/2 + 16);
+
+    } else if (req === 'tri') {
+      // base = height = √(2×area) so that ½ × base × height = area
+      const triBase = Math.sqrt(2 * target) * PX_PER_M; // px
+      const triH    = Math.sqrt(2 * target) * PX_PER_M; // px
+      // Position bounding box centred in the canvas with equal margins
+      const bboxTop  = (canvas.height - triH) / 2;
+      const bboxLeft = (canvas.width  - triBase) / 2;
+      // apex = top-centre of bounding box, base corners = bottom of bounding box
+      const apexX = bboxLeft + triBase / 2;
+      const apexY = bboxTop;
+      const baseY = bboxTop + triH;
+      ctx2.beginPath();
+      ctx2.moveTo(apexX,              apexY);
+      ctx2.lineTo(bboxLeft + triBase, baseY);
+      ctx2.lineTo(bboxLeft,           baseY);
+      ctx2.closePath();
+      ctx2.fill(); ctx2.stroke();
+
+      // label below base, clamped inside canvas
+      ctx2.setLineDash([]);
+      ctx2.fillStyle = ghostStroke;
+      ctx2.font = '11px Inter';
+      ctx2.textAlign = 'center';
+      ctx2.fillText(`Target: ${target} m²`, cx, Math.min(canvas.height - 4, baseY + 16));
+
+    } else {
+      const r = Math.sqrt(target / Math.PI) * PX_PER_M;
+      ctx2.beginPath();
+      ctx2.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx2.fill(); ctx2.stroke();
+
+      ctx2.setLineDash([]);
+      ctx2.fillStyle = ghostStroke;
+      ctx2.font = '11px Inter';
+      ctx2.textAlign = 'center';
+      ctx2.fillText(`Target: ${target} m²`, cx, cy + r + 16);
+    }
+
+    ctx2.restore();
+  } else {
+    // No ghost — show a subtle "figure it out!" watermark
+    ctx2.save();
+    ctx2.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx2.font = 'bold 18px Orbitron, sans-serif';
+    ctx2.textAlign = 'center';
+    ctx2.fillText('NO BLUEPRINT — USE THE GRID', canvas.width/2, canvas.height/2);
+    ctx2.restore();
+  }
+
+  if(!drawing && !shapeDrawn) return;
+
+  // ── DRAW THE PLAYER'S SHAPE ──
+  const dx = curX - startX, dy = curY - startY;
+  const accuracy = getAccuracyPct();
+  let color = '#ff4757';
+  if(accuracy >= 90) color = '#00ff88';
+  else if(accuracy >= 80) color = '#ffd700';
+  else if(accuracy >= 60) color = '#ff6b35';
+
+  ctx2.save();
+  ctx2.strokeStyle = color;
+  ctx2.fillStyle = color + '33';
+  ctx2.lineWidth = 2.5;
+  ctx2.shadowColor = color;
+  ctx2.shadowBlur = 12;
+  ctx2.lineCap = 'round';
+  ctx2.lineJoin = 'round';
+
+  if(currentShape === 'rect') {
+    const w = Math.abs(dx), h = Math.abs(dy);
+    const x = dx < 0 ? curX : startX;
+    const y = dy < 0 ? curY : startY;
+    ctx2.beginPath();
+    ctx2.roundRect(x, y, w, h, 4);
+    ctx2.fill(); ctx2.stroke();
+    if(w > 30 && h > 20) {
+      ctx2.shadowBlur = 0;
+      ctx2.fillStyle = color;
+      ctx2.font = '11px Inter';
+      ctx2.textAlign = 'center';
+      ctx2.fillText(`${pixToM(w).toFixed(1)}m × ${pixToM(h).toFixed(1)}m`, x+w/2, y+h/2);
+    }
+  } else if(currentShape === 'tri') {
+    const base   = Math.abs(dx);
+    const height = Math.abs(dy);
+    const x = dx < 0 ? curX : startX;
+    const y = dy < 0 ? curY : startY;
+    ctx2.beginPath();
+    ctx2.moveTo(x + base/2, y);
+    ctx2.lineTo(x + base,   y + height);
+    ctx2.lineTo(x,          y + height);
+    ctx2.closePath();
+    ctx2.fill(); ctx2.stroke();
+  } else {
+    // Circle: radius = half the diagonal of the drag box
+    const r  = Math.sqrt(dx*dx + dy*dy) / 2;
+    const ccx = startX + dx/2;
+    const ccy = startY + dy/2;
+    ctx2.beginPath();
+    ctx2.arc(ccx, ccy, r, 0, Math.PI * 2);
+    ctx2.fill(); ctx2.stroke();
+  }
+  ctx2.restore();
+}
+
+// ── AREA CALCULATION ──
+// PX_PER_M is set dynamically per round in resizeCanvas/loadRound
+function pixToM(px) { return px / PX_PER_M; }
+function pxAreaToM2(pxArea) { return pxArea / (PX_PER_M * PX_PER_M); }
+
+function calcArea() {
+  const dx = Math.abs(curX - startX), dy = Math.abs(curY - startY);
+  if(currentShape === 'rect') return pxAreaToM2(dx * dy);
+  if(currentShape === 'tri') return pxAreaToM2(0.5 * dx * dy);
+  if(currentShape === 'circ') {
+    const r = Math.sqrt(dx*dx + dy*dy)/2;
+    return pxAreaToM2(Math.PI * r * r);
+  }
+  return 0;
+}
+
+function getAccuracyPct() {
+  const target = BUILDINGS[round].area;
+  const area = calcArea();
+  if(area <= 0) return 0;
+  const diff = Math.abs(area - target) / target;
+  return Math.max(0, Math.round((1 - diff)*100));
+}
+
+function updateAreaDisplay() {
+  const area = calcArea();
+  const target = BUILDINGS[round].area;
+  const diff = Math.abs(area - target) / target;
+  const pct = getAccuracyPct();
+
+  document.getElementById('currentArea').textContent = area.toFixed(1) + ' m²';
+
+  const dx = Math.abs(curX - startX), dy = Math.abs(curY - startY);
+  const fd = document.getElementById('formulaDims');
+  if(currentShape === 'rect') {
+    const w = pixToM(dx).toFixed(1), h = pixToM(dy).toFixed(1);
+    fd.innerHTML = `<span class="highlight">${w}</span>m × <span class="highlight">${h}</span>m`;
+  } else if(currentShape === 'tri') {
+    const b = pixToM(dx).toFixed(1), h = pixToM(dy).toFixed(1);
+    fd.innerHTML = `½ × <span class="highlight">${b}</span>m × <span class="highlight">${h}</span>m`;
+  } else {
+    const r = pixToM(Math.sqrt(dx*dx+dy*dy)/2).toFixed(1);
+    fd.innerHTML = `π × <span class="highlight">${r}</span>m²`;
+  }
+
+  const el = document.getElementById('currentArea');
+  el.className = 'current-area ' + (pct >= 90 ? 'good' : pct >= 70 ? 'close' : 'off');
+
+  const badge = document.getElementById('accuracyBadge');
+  if(area <= 0) { badge.textContent = ''; return; }
+  if(pct >= 98) { badge.className='accuracy-badge perfect'; badge.textContent='PERFECT'; }
+  else if(pct >= 90) { badge.className='accuracy-badge great'; badge.textContent='GREAT'; }
+  else if(pct >= 80) { badge.className='accuracy-badge ok'; badge.textContent='GOOD'; }
+  else { badge.className='accuracy-badge bad'; badge.textContent=pct+'%'; }
+}
+
+// ── SUBMIT ──
+function submitBuild() {
+  clearInterval(timerInterval);
+  const b = BUILDINGS[round];
+  const area = calcArea();
+  const diff = Math.abs(area - b.area) / b.area;
+  const pct = getAccuracyPct();
+  const timeBonus = Math.floor(timerVal * 2);
+  const tolerance = b.tolerance;
+
+  const missed = diff > tolerance;
+  let pts = 0, msg = '', type = 'info';
+
+  if (!missed) {
+    if (diff <= 0.02) {
+      pts = 100 + timeBonus;
+      msg = `🎯 PERFECT! +${pts} pts`; type = 'bonus';
+      playPerfect();
+      spawnParticles(canvas, '⭐', 12);
+    } else if (diff <= 0.10) {
+      pts = 75 + Math.floor(timeBonus * 0.7);
+      msg = `🏆 GREAT! +${pts} pts`; type = 'success';
+      playSuccess();
+      spawnParticles(canvas, '✨', 8);
+    } else if (diff <= 0.20) {
+      pts = 50;
+      msg = `👍 GOOD! +${pts} pts`; type = 'success';
+      playSuccess();
+    } else {
+      pts = 25;
+      msg = `✅ Accepted! +${pts} pts`; type = 'info';
+      playTone(440,'sine',0.2,0.2);
+    }
+
+    score += pts;
+    totalAccuracy += pct;
+    roundScores.push({ pts, pct, area: area.toFixed(1) });
+    document.getElementById('hudScore').textContent = score;
+    showToast(msg, type);
+    cityBuildings.push(b);
+    updateSkyline();
+    setTimeout(() => showRoundOverlay(pts, pct), 600);
+
+  } else {
+    // ── MISS: lose life, show retry overlay ──
+    loseLife();
+    showToast(`❌ Too far off! Life lost!`, 'error');
+    if (lives > 0) {
+      setTimeout(() => showFailureOverlay(), 900);
+    }
+    // if lives === 0, gameOver() is already scheduled by loseLife()
+  }
+}
+
+function showRoundOverlay(pts, pct) {
+  const b = BUILDINGS[round];
+  document.getElementById('overlaySuccess').style.display = '';
+  document.getElementById('overlayFailure').style.display = 'none';
+  document.getElementById('overlayRound').textContent = `ROUND ${round+1}`;
+  document.getElementById('overlayBuilding').textContent = b.name + ' Built!';
+  document.getElementById('overlayPoints').textContent = '+' + pts;
+  document.getElementById('overlayAccuracy').textContent = pct + '%';
+  document.getElementById('roundOverlay').classList.add('show');
+}
+
+function showFailureOverlay() {
+  document.getElementById('overlaySuccess').style.display = 'none';
+  document.getElementById('overlayFailure').style.display = '';
+  document.getElementById('overlayFailRound').textContent = `ROUND ${round+1}`;
+  document.getElementById('overlayFailMsg').textContent =
+    `${BUILDINGS[round].name} — try again!`;
+  // rebuild lives display inside overlay
+  const livesEl = document.getElementById('overlayLives');
+  livesEl.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const ic = document.createElement('span');
+    ic.className = 'life-icon' + (i >= lives ? ' lost' : '');
+    ic.textContent = '❤️';
+    livesEl.appendChild(ic);
+  }
+  document.getElementById('roundOverlay').classList.add('show');
+}
+
+function retryRound() {
+  document.getElementById('roundOverlay').classList.remove('show');
+  // reload the same round (don't increment)
+  loadRound();
+}
+
+function nextRound() {
+  document.getElementById('roundOverlay').classList.remove('show');
+  round++;
+  if (round >= 10) {
+    endGame();
+  } else {
+    loadRound();
+  }
+}
+
+function gameOver() {
+  clearInterval(timerInterval);
+  stopBGMusic();
+  document.getElementById('roundOverlay').classList.remove('show');
+  // descending failure jingle
+  [440, 370, 311, 220].forEach((f, i) => playTone(f, 'sawtooth', 0.18, 0.25, i * 0.12));
+  showEndScreen(false);
+}
+
+function endGame() {
+  stopBGMusic();
+  if (score >= 700) playPerfect();
+  else playSuccess();
+  showEndScreen(true);
+}
+
+// ── STAR RATING ──
+// Stars based purely on score — game over or not
+// 0 stars: score < 250
+// 1 star : score 250–399
+// 2 stars: score 400–699
+// 3 stars: score 700+
+function calcStars(completed, finalScore) {
+  if (finalScore >= 700) return 3;
+  if (finalScore >= 400) return 2;
+  if (finalScore >= 250) return 1;
+  return 0;
+}
+
+function showEndScreen(completed) {
+  const roundsDone = completed ? 10 : round;
+  const avgAcc     = roundsDone > 0 ? Math.round(totalAccuracy / roundsDone) : 0;
+  const stars      = calcStars(completed, score);
+
+  const starLabels  = ['No Stars — Score 250 to earn one!', '⭐ Bronze Builder', '⭐⭐ Silver Architect', '⭐⭐⭐ Gold Master!'];
+  const starClasses = ['s0', 's1', 's2', 's3'];
+  const trophies = stars === 3 ? '🏆' : stars === 2 ? '🥈' : stars === 1 ? '🥉' : '💀';
+
+  // trophy & title
+  document.getElementById('endTrophy').textContent = trophies;
+  const titleEl = document.getElementById('endTitle');
+  if (!completed) {
+    titleEl.textContent = 'CITY COLLAPSED!';
+    titleEl.className = 'end-title gameover';
+  } else {
+    titleEl.textContent = stars === 3 ? 'LEGENDARY ARCHITECT!' : 'CITY COMPLETE!';
+    titleEl.className = 'end-title';
+  }
+  document.getElementById('endSubtitle').textContent = !completed
+    ? (stars >= 1
+        ? `Ran out of lives on Round ${round + 1} — but you still earned ${stars} star${stars > 1 ? 's' : ''}!`
+        : `Ran out of lives on Round ${round + 1}. Keep practising!`)
+    : (stars === 3 ? 'Flawless geometry mastery! 🎉'
+      : stars === 2 ? 'Solid work — push for 3 stars!'
+      : stars === 1 ? 'Good start — keep practising!'
+      : 'Completed — accuracy needs more work!');
+
+  // stats
+  document.getElementById('endScore').textContent    = score;
+  document.getElementById('endRounds').textContent   = `${roundsDone}/10`;
+  document.getElementById('endAccuracy').textContent = avgAcc + '%';
+
+  // score bar (max 1000 for display)
+  setTimeout(() => {
+    document.getElementById('scoreBarFill').style.width = Math.min(100, Math.round(score / 10)) + '%';
+  }, 350);
+
+  // star label
+  const labelEl = document.getElementById('starLabel');
+  labelEl.textContent = starLabels[stars];
+  labelEl.className   = 'star-label ' + starClasses[stars];
+
+  // reset all stars to unlit first
+  ['star1','star2','star3'].forEach((id, i) => {
+    const wrap = document.getElementById(id);
+    wrap.classList.remove('lit');
+    wrap.style.filter = '';
+    const poly = document.getElementById('starPoly' + (i+1));
+    if (poly) { poly.setAttribute('fill', '#2a2f3e'); poly.setAttribute('stroke', '#3a4050'); }
+  });
+
+  // animate stars in with stagger — set fill directly on the polygon
+  for (let i = 0; i < stars; i++) {
+    const wrapId = ['star1','star2','star3'][i];
+    const polyId = ['starPoly1','starPoly2','starPoly3'][i];
+    setTimeout(() => {
+      const poly = document.getElementById(polyId);
+      if (poly) { poly.setAttribute('fill', '#ffd700'); poly.setAttribute('stroke', '#ffec6e'); }
+      document.getElementById(wrapId).classList.add('lit');
+      playTone([523, 659, 784][i], 'sine', 0.18, 0.28);
+      if (i === stars - 1 && stars === 3) {
+        setTimeout(() => spawnParticles(document.getElementById('starRow'), '⭐', 14), 100);
+      }
+    }, 500 + i * 240);
+  }
+
+  showScreen('endScreen');
+}
+
+// ── TOAST ──
+function showToast(msg, type='info') {
+  const area = document.getElementById('toastArea');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  area.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// ── PARTICLES ──
+function spawnParticles(el, emoji, count) {
+  const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : { left: 200, top: 200, width: 100, height: 50 };
+  for(let i=0; i<count; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.textContent = emoji;
+    p.style.left = (rect.left + rect.width/2 + (Math.random()-0.5)*80) + 'px';
+    p.style.top = (rect.top + rect.height/2 + (Math.random()-0.5)*40) + 'px';
+    p.style.fontSize = (0.8 + Math.random()*0.8) + 'rem';
+    p.style.animationDuration = (0.8 + Math.random()*0.7) + 's';
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1600);
+  }
+}
+
+// ── START PREVIEW CITY ──
+function buildPreviewCity() {
+  const c = document.getElementById('previewCity');
+  const heights = [40,55,30,70,45,60,35,50,65,38];
+  const colors = ['#00d4ff','#a855f7','#00ff88','#ffd700','#ff6b35','#00a8cc'];
+  heights.forEach((h, i) => {
+    const b = document.createElement('div');
+    b.className = 'building-preview';
+    b.style.width = '18px';
+    b.style.height = h + 'px';
+    b.style.background = `linear-gradient(to top, ${colors[i%colors.length]}, ${colors[(i+2)%colors.length]})`;
+    b.style.animationDelay = (i * 0.1) + 's';
+    c.appendChild(b);
+  });
+}
+// ── HOW TO PLAY SLIDES ──
+const HOW_SLIDES = [
+  {
+    tag: 'STEP 1 OF 5',
+    title: 'Get Your Blueprint',
+    caption: 'Each round gives you a <strong>building</strong> with a target floor area in m². The right panel shows the building name, emoji, and the exact area you need to match.',
+    bg: 'linear-gradient(160deg, #0f1628 0%, #1a2235 100%)',
+    svg: () => `
+      <svg width="560" height="260" viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg">
+        <!-- grid bg -->
+        <defs>
+          <pattern id="sg1" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0L0 0 0 20" fill="none" stroke="rgba(0,212,255,0.07)" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="560" height="260" fill="url(#sg1)"/>
+        <!-- panel outline -->
+        <rect x="330" y="20" width="200" height="220" rx="12" fill="#111827" stroke="rgba(0,212,255,0.25)" stroke-width="1.5"/>
+        <!-- label -->
+        <text x="430" y="48" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9" letter-spacing="2">BLUEPRINT</text>
+        <!-- building emoji box -->
+        <rect x="350" y="58" width="160" height="50" rx="8" fill="#0a0e1a" stroke="rgba(0,212,255,0.15)" stroke-width="1"/>
+        <text x="370" y="91" font-size="28">🏢</text>
+        <text x="408" y="80" fill="#f0f4ff" font-family="monospace" font-size="12" font-weight="bold">Office Block</text>
+        <text x="408" y="96" fill="#6b7a9e" font-family="monospace" font-size="9">MEDIUM</text>
+        <!-- target area box -->
+        <rect x="350" y="118" width="160" height="60" rx="8" fill="#0a0e1a" stroke="rgba(0,212,255,0.15)" stroke-width="1"/>
+        <text x="430" y="136" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="8" letter-spacing="1.5">TARGET FLOOR AREA</text>
+        <text x="430" y="162" text-anchor="middle" fill="#ffd700" font-family="monospace" font-size="32" font-weight="900">150</text>
+        <text x="430" y="174" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9">m²</text>
+        <!-- tolerance -->
+        <text x="430" y="198" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9">Tolerance: ±15%</text>
+        <!-- arrow pointing to panel -->
+        <path d="M300 130 L335 130" stroke="#00d4ff" stroke-width="2" marker-end="url(#arr1)" opacity="0.7"/>
+        <defs><marker id="arr1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00d4ff"/></marker></defs>
+        <!-- annotation -->
+        <rect x="30" y="90" width="250" height="80" rx="10" fill="#111827" stroke="rgba(255,215,0,0.3)" stroke-width="1.5"/>
+        <text x="155" y="114" text-anchor="middle" fill="#ffd700" font-family="monospace" font-size="11" font-weight="bold">Your Mission</text>
+        <text x="155" y="133" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="10">Draw a shape with an area</text>
+        <text x="155" y="149" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="10">as close to <tspan fill="#ffd700" font-weight="bold">150 m²</tspan> as you can!</text>
+        <text x="155" y="165" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9">Closer = more points 🎯</text>
+        <!-- connector dot -->
+        <circle cx="300" cy="130" r="4" fill="#ffd700"/>
+      </svg>`
+  },
+  {
+    tag: 'STEP 2 OF 5',
+    title: 'Pick Your Shape & Draw',
+    caption: 'Each building <strong>requires a specific shape</strong> — Rectangle, Triangle, or Circle. The others are locked. Click and drag on the big canvas to draw your shape!',
+    bg: 'linear-gradient(160deg, #0f1628 0%, #1a1030 100%)',
+    svg: () => `
+      <svg width="560" height="260" viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="sg2" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0L0 0 0 20" fill="none" stroke="rgba(0,212,255,0.07)" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="560" height="260" fill="url(#sg2)"/>
+
+        <!-- Rectangle shape button (active) -->
+        <rect x="30" y="30" width="140" height="52" rx="8" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="1.5"/>
+        <rect x="48" y="44" width="36" height="24" rx="2" fill="none" stroke="#00d4ff" stroke-width="2"/>
+        <text x="94" y="56" fill="#00d4ff" font-family="monospace" font-size="10" font-weight="bold">RECTANGLE</text>
+        <text x="94" y="70" fill="#6b7a9e" font-family="monospace" font-size="8">A = w × h</text>
+        <text x="20" y="100" fill="#00d4ff" font-family="monospace" font-size="8">✓ REQUIRED</text>
+
+        <!-- Triangle shape button (locked) -->
+        <rect x="30" y="115" width="140" height="52" rx="8" fill="rgba(255,255,255,0.02)" stroke="rgba(0,212,255,0.15)" stroke-width="1" opacity="0.4"/>
+        <polygon points="65,126 80,157 50,157" fill="none" stroke="#6b7a9e" stroke-width="2"/>
+        <text x="94" y="140" fill="#6b7a9e" font-family="monospace" font-size="10">TRIANGLE</text>
+        <text x="94" y="154" fill="#6b7a9e" font-family="monospace" font-size="8">A = ½ × b × h</text>
+        <text x="20" y="183" fill="#ff4757" font-family="monospace" font-size="8">🔒 LOCKED</text>
+
+        <!-- Circle shape button (locked) -->
+        <rect x="30" y="193" width="140" height="52" rx="8" fill="rgba(255,255,255,0.02)" stroke="rgba(0,212,255,0.15)" stroke-width="1" opacity="0.4"/>
+        <circle cx="65" cy="219" r="14" fill="none" stroke="#6b7a9e" stroke-width="2"/>
+        <text x="94" y="215" fill="#6b7a9e" font-family="monospace" font-size="10">CIRCLE</text>
+        <text x="94" y="230" fill="#6b7a9e" font-family="monospace" font-size="8">A = π × r²</text>
+
+        <!-- Canvas area -->
+        <rect x="200" y="20" width="340" height="220" rx="10" fill="#0a0e1a" stroke="rgba(0,212,255,0.2)" stroke-width="1.5"/>
+        <!-- grid inside canvas -->
+        <defs>
+          <pattern id="cg2" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0L0 0 0 20" fill="none" stroke="rgba(0,212,255,0.08)" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <clipPath id="cc2"><rect x="200" y="20" width="340" height="220" rx="10"/></clipPath>
+        <rect x="200" y="20" width="340" height="220" fill="url(#cg2)" clip-path="url(#cc2)"/>
+        <!-- ghost outline (dashed rect) -->
+        <rect x="230" y="50" width="150" height="100" rx="3" fill="rgba(0,212,255,0.06)" stroke="rgba(0,212,255,0.35)" stroke-width="1.5" stroke-dasharray="6,4"/>
+        <text x="305" y="108" text-anchor="middle" fill="rgba(0,212,255,0.5)" font-family="monospace" font-size="9">Target: 150 m²</text>
+        <!-- player drawn rect (slightly off) -->
+        <rect x="235" y="55" width="130" height="90" rx="3" fill="rgba(255,215,0,0.12)" stroke="#ffd700" stroke-width="2.5"/>
+        <text x="300" y="105" text-anchor="middle" fill="#ffd700" font-family="monospace" font-size="9">13m × 9m</text>
+        <!-- cursor indicator -->
+        <circle cx="365" cy="145" r="5" fill="none" stroke="#ffd700" stroke-width="2"/>
+        <line x1="365" y1="135" x2="365" y2="155" stroke="#ffd700" stroke-width="1.5"/>
+        <line x1="355" y1="145" x2="375" y2="145" stroke="#ffd700" stroke-width="1.5"/>
+        <!-- drag arrow -->
+        <path d="M235,55 L365,145" stroke="rgba(255,215,0,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+        <text x="420" y="110" fill="#00d4ff" font-family="monospace" font-size="9">← drag to draw</text>
+      </svg>`
+  },
+  {
+    tag: 'STEP 3 OF 5',
+    title: 'The 3 Area Formulas',
+    caption: 'The game teaches you all three formulas by making you <strong>apply them live</strong>. The sidebar shows the calculation updating as you draw.',
+    bg: 'linear-gradient(160deg, #0f1628 0%, #0a1420 100%)',
+    svg: () => `
+      <svg width="560" height="260" viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="sg3" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0L0 0 0 20" fill="none" stroke="rgba(0,212,255,0.06)" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="560" height="260" fill="url(#sg3)"/>
+
+        <!-- RECTANGLE card -->
+        <rect x="20" y="30" width="160" height="195" rx="14" fill="#111827" stroke="rgba(0,212,255,0.3)" stroke-width="1.5"/>
+        <rect x="40" y="55" width="120" height="70" rx="4" fill="rgba(0,212,255,0.12)" stroke="#00d4ff" stroke-width="2"/>
+        <!-- dimension labels -->
+        <text x="100" y="94" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="10">w = 10m</text>
+        <line x1="40" y1="105" x2="160" y2="105" stroke="#00d4ff" stroke-width="1" opacity="0.4"/>
+        <text x="25" y="85" fill="#00d4ff" font-family="monospace" font-size="9" transform="rotate(-90,25,85)">h=7m</text>
+        <!-- formula -->
+        <text x="100" y="148" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9">A = w × h</text>
+        <text x="100" y="165" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="13" font-weight="bold">= 70 m²</text>
+        <!-- label -->
+        <rect x="55" y="35" width="90" height="18" rx="9" fill="rgba(0,212,255,0.2)"/>
+        <text x="100" y="47" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="9" letter-spacing="1">RECTANGLE</text>
+        <!-- accuracy -->
+        <rect x="40" y="178" width="120" height="28" rx="6" fill="rgba(0,255,136,0.15)" stroke="rgba(0,255,136,0.4)" stroke-width="1"/>
+        <text x="100" y="196" text-anchor="middle" fill="#00ff88" font-family="monospace" font-size="10" font-weight="bold">PERFECT ⭐</text>
+
+        <!-- TRIANGLE card -->
+        <rect x="200" y="30" width="160" height="195" rx="14" fill="#111827" stroke="rgba(255,215,0,0.3)" stroke-width="1.5"/>
+        <polygon points="280,58 350,145 210,145" fill="rgba(255,215,0,0.12)" stroke="#ffd700" stroke-width="2"/>
+        <!-- labels -->
+        <text x="280" y="170" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9">A = ½ × b × h</text>
+        <text x="280" y="186" text-anchor="middle" fill="#ffd700" font-family="monospace" font-size="13" font-weight="bold">= 62.5 m²</text>
+        <rect x="230" y="35" width="100" height="18" rx="9" fill="rgba(255,215,0,0.2)"/>
+        <text x="280" y="47" text-anchor="middle" fill="#ffd700" font-family="monospace" font-size="9" letter-spacing="1">TRIANGLE</text>
+        <!-- base & height labels -->
+        <text x="280" y="158" text-anchor="middle" fill="rgba(255,215,0,0.6)" font-family="monospace" font-size="8">base=10m</text>
+        <line x1="352" y1="58" x2="352" y2="145" stroke="rgba(255,215,0,0.4)" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="362" y="105" fill="rgba(255,215,0,0.7)" font-family="monospace" font-size="8">h=12.5m</text>
+        <!-- accuracy -->
+        <rect x="220" y="200" width="120" height="18" rx="6" fill="rgba(255,215,0,0.15)" stroke="rgba(255,215,0,0.4)" stroke-width="1"/>
+        <text x="280" y="213" text-anchor="middle" fill="#ffd700" font-family="monospace" font-size="9" font-weight="bold">GREAT 🏆</text>
+
+        <!-- CIRCLE card -->
+        <rect x="380" y="30" width="160" height="195" rx="14" fill="#111827" stroke="rgba(168,85,247,0.3)" stroke-width="1.5"/>
+        <circle cx="460" cy="105" r="48" fill="rgba(168,85,247,0.12)" stroke="#a855f7" stroke-width="2"/>
+        <!-- radius line -->
+        <line x1="460" y1="105" x2="508" y2="105" stroke="rgba(168,85,247,0.7)" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <text x="484" y="99" fill="rgba(168,85,247,0.9)" font-family="monospace" font-size="9">r=4m</text>
+        <!-- formula -->
+        <text x="460" y="168" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9">A = π × r²</text>
+        <text x="460" y="185" text-anchor="middle" fill="#a855f7" font-family="monospace" font-size="13" font-weight="bold">= 50 m²</text>
+        <rect x="415" y="35" width="90" height="18" rx="9" fill="rgba(168,85,247,0.2)"/>
+        <text x="460" y="47" text-anchor="middle" fill="#a855f7" font-family="monospace" font-size="9" letter-spacing="1">CIRCLE</text>
+        <!-- accuracy -->
+        <rect x="400" y="200" width="120" height="18" rx="6" fill="rgba(255,107,53,0.15)" stroke="rgba(255,107,53,0.4)" stroke-width="1"/>
+        <text x="460" y="213" text-anchor="middle" fill="#ff6b35" font-family="monospace" font-size="9" font-weight="bold">GOOD 👍</text>
+      </svg>`
+  },
+  {
+    tag: 'STEP 4 OF 5',
+    title: 'Blueprints Disappear!',
+    caption: 'As rounds get harder, <strong>aids are removed</strong>. Early rounds show a ghost outline and live formula. Later rounds remove them — you must rely on memory alone!',
+    bg: 'linear-gradient(160deg, #0f1628 0%, #1a0f10 100%)',
+    svg: () => `
+      <svg width="560" height="260" viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="sg4" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0L0 0 0 20" fill="none" stroke="rgba(0,212,255,0.07)" stroke-width="0.5"/>
+          </pattern>
+          <pattern id="cg4" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0L0 0 0 20" fill="none" stroke="rgba(0,212,255,0.09)" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="560" height="260" fill="url(#sg4)"/>
+
+        <!-- round 1 (easy) -->
+        <rect x="15" y="20" width="155" height="210" rx="10" fill="#111827" stroke="rgba(0,255,136,0.3)" stroke-width="1.5"/>
+        <text x="92" y="42" text-anchor="middle" fill="#00ff88" font-family="monospace" font-size="9" letter-spacing="1">ROUND 1-4 · EASY</text>
+        <rect x="25" y="50" width="135" height="90" rx="6" fill="#0a0e1a"/>
+        <rect x="25" y="50" width="135" height="90" fill="url(#cg4)"/>
+        <!-- ghost rect visible -->
+        <rect x="45" y="65" width="90" height="60" rx="2" fill="rgba(0,212,255,0.06)" stroke="rgba(0,212,255,0.4)" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <!-- player rect -->
+        <rect x="50" y="68" width="82" height="54" rx="2" fill="rgba(0,255,136,0.15)" stroke="#00ff88" stroke-width="2"/>
+        <!-- formula visible badge -->
+        <rect x="25" y="150" width="135" height="30" rx="6" fill="rgba(0,212,255,0.1)" stroke="rgba(0,212,255,0.2)" stroke-width="1"/>
+        <text x="92" y="163" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="8">A = w × h</text>
+        <text x="92" y="175" text-anchor="middle" fill="#00ff88" font-family="monospace" font-size="9">= 82 m²</text>
+        <rect x="35" y="190" width="50" height="16" rx="4" fill="rgba(0,212,255,0.2)"/>
+        <text x="60" y="201" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="7">👁 GHOST</text>
+        <rect x="95" y="190" width="55" height="16" rx="4" fill="rgba(0,212,255,0.2)"/>
+        <text x="122" y="201" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="7">📐 FORMULA</text>
+
+        <!-- round 5-6 (medium) -->
+        <rect x="198" y="20" width="155" height="210" rx="10" fill="#111827" stroke="rgba(255,215,0,0.3)" stroke-width="1.5"/>
+        <text x="276" y="42" text-anchor="middle" fill="#ffd700" font-family="monospace" font-size="9" letter-spacing="1">ROUND 5-6 · MEDIUM</text>
+        <rect x="208" y="50" width="135" height="90" rx="6" fill="#0a0e1a"/>
+        <rect x="208" y="50" width="135" height="90" fill="url(#cg4)"/>
+        <!-- ghost still visible -->
+        <circle cx="276" cy="95" r="38" fill="rgba(168,85,247,0.06)" stroke="rgba(168,85,247,0.4)" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <!-- player circle -->
+        <circle cx="276" cy="95" r="32" fill="rgba(255,215,0,0.12)" stroke="#ffd700" stroke-width="2"/>
+        <!-- formula HIDDEN -->
+        <rect x="208" y="150" width="135" height="30" rx="6" fill="rgba(255,71,87,0.08)" stroke="rgba(255,71,87,0.2)" stroke-width="1"/>
+        <text x="276" y="170" text-anchor="middle" fill="#ff4757" font-family="monospace" font-size="9">Formula hidden! 🚫</text>
+        <rect x="218" y="190" width="50" height="16" rx="4" fill="rgba(168,85,247,0.2)"/>
+        <text x="243" y="201" text-anchor="middle" fill="#a855f7" font-family="monospace" font-size="7">👁 GHOST</text>
+        <rect x="278" y="190" width="55" height="16" rx="4" fill="rgba(255,71,87,0.15)"/>
+        <text x="305" y="201" text-anchor="middle" fill="#ff4757" font-family="monospace" font-size="7">📐 GONE</text>
+
+        <!-- round 7-10 (extreme) -->
+        <rect x="381" y="20" width="155" height="210" rx="10" fill="#111827" stroke="rgba(255,71,87,0.3)" stroke-width="1.5"/>
+        <text x="458" y="42" text-anchor="middle" fill="#ff4757" font-family="monospace" font-size="9" letter-spacing="1">ROUND 7-10 · EXTREME</text>
+        <rect x="391" y="50" width="135" height="90" rx="6" fill="#0a0e1a"/>
+        <rect x="391" y="50" width="135" height="90" fill="url(#cg4)"/>
+        <!-- NO GHOST — watermark text -->
+        <text x="458" y="91" text-anchor="middle" fill="rgba(255,255,255,0.06)" font-family="monospace" font-size="9">NO BLUEPRINT</text>
+        <text x="458" y="105" text-anchor="middle" fill="rgba(255,255,255,0.06)" font-family="monospace" font-size="9">USE THE GRID</text>
+        <!-- player triangle (no ghost to compare) -->
+        <polygon points="458,58 510,128 406,128" fill="rgba(255,71,87,0.12)" stroke="#ff4757" stroke-width="2"/>
+        <!-- both hidden -->
+        <rect x="391" y="150" width="135" height="30" rx="6" fill="rgba(255,71,87,0.08)" stroke="rgba(255,71,87,0.2)" stroke-width="1"/>
+        <text x="458" y="170" text-anchor="middle" fill="#ff4757" font-family="monospace" font-size="9">Both aids removed! 💀</text>
+        <rect x="401" y="190" width="50" height="16" rx="4" fill="rgba(255,71,87,0.15)"/>
+        <text x="426" y="201" text-anchor="middle" fill="#ff4757" font-family="monospace" font-size="7">👁 GONE</text>
+        <rect x="461" y="190" width="55" height="16" rx="4" fill="rgba(255,71,87,0.15)"/>
+        <text x="488" y="201" text-anchor="middle" fill="#ff4757" font-family="monospace" font-size="7">📐 GONE</text>
+
+        <!-- progression arrow -->
+        <path d="M172,125 L196,125" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#arrhow)"/>
+        <path d="M355,125 L379,125" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#arrhow)"/>
+        <defs><marker id="arrhow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="rgba(255,255,255,0.3)"/></marker></defs>
+      </svg>`
+  },
+  {
+    tag: 'STEP 5 OF 5',
+    title: 'Score & Lives',
+    caption: 'Match precisely for big points. Miss by more than the tolerance and you <strong>lose a life</strong> (3 total). All 10 rounds must be completed — keep building!',
+    bg: 'linear-gradient(160deg, #0f1628 0%, #101a10 100%)',
+    svg: () => `
+      <svg width="560" height="260" viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="sg5" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0L0 0 0 20" fill="none" stroke="rgba(0,212,255,0.06)" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="560" height="260" fill="url(#sg5)"/>
+
+        <!-- score tiers -->
+        <!-- PERFECT -->
+        <rect x="20" y="20" width="240" height="52" rx="10" fill="rgba(0,255,136,0.08)" stroke="rgba(0,255,136,0.4)" stroke-width="1.5"/>
+        <text x="44" y="42" fill="#00ff88" font-size="20">⭐</text>
+        <text x="72" y="38" fill="#00ff88" font-family="monospace" font-size="11" font-weight="bold">PERFECT  ≤2% off</text>
+        <text x="72" y="56" fill="#6b7a9e" font-family="monospace" font-size="10">100 pts + time bonus</text>
+        <text x="235" y="50" text-anchor="end" fill="#00ff88" font-family="monospace" font-size="18" font-weight="bold">+120</text>
+
+        <!-- GREAT -->
+        <rect x="20" y="82" width="240" height="52" rx="10" fill="rgba(255,215,0,0.08)" stroke="rgba(255,215,0,0.4)" stroke-width="1.5"/>
+        <text x="44" y="104" fill="#ffd700" font-size="20">🏆</text>
+        <text x="72" y="100" fill="#ffd700" font-family="monospace" font-size="11" font-weight="bold">GREAT  ≤10% off</text>
+        <text x="72" y="118" fill="#6b7a9e" font-family="monospace" font-size="10">75 pts + partial time bonus</text>
+        <text x="235" y="112" text-anchor="end" fill="#ffd700" font-family="monospace" font-size="18" font-weight="bold">+90</text>
+
+        <!-- GOOD -->
+        <rect x="20" y="144" width="240" height="52" rx="10" fill="rgba(255,107,53,0.08)" stroke="rgba(255,107,53,0.35)" stroke-width="1.5"/>
+        <text x="44" y="166" fill="#ff6b35" font-size="20">👍</text>
+        <text x="72" y="162" fill="#ff6b35" font-family="monospace" font-size="11" font-weight="bold">GOOD  ≤20% off</text>
+        <text x="72" y="180" fill="#6b7a9e" font-family="monospace" font-size="10">50 pts</text>
+        <text x="235" y="174" text-anchor="end" fill="#ff6b35" font-family="monospace" font-size="18" font-weight="bold">+50</text>
+
+        <!-- MISS -->
+        <rect x="20" y="206" width="240" height="42" rx="10" fill="rgba(255,71,87,0.08)" stroke="rgba(255,71,87,0.4)" stroke-width="1.5"/>
+        <text x="44" y="232" fill="#ff4757" font-size="16">💔</text>
+        <text x="68" y="226" fill="#ff4757" font-family="monospace" font-size="10" font-weight="bold">TOO FAR OFF</text>
+        <text x="68" y="242" fill="#6b7a9e" font-family="monospace" font-size="9">0 pts · lose a life · game continues</text>
+
+        <!-- lives panel -->
+        <rect x="290" y="20" width="250" height="110" rx="12" fill="#111827" stroke="rgba(0,212,255,0.2)" stroke-width="1.5"/>
+        <text x="415" y="46" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9" letter-spacing="1.5">LIVES</text>
+        <text x="340" y="82" font-size="36">❤️</text>
+        <text x="380" y="82" font-size="36">❤️</text>
+        <text x="420" y="82" font-size="36">❤️</text>
+        <text x="415" y="110" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9">3 lives per game</text>
+
+        <!-- HUD preview -->
+        <rect x="290" y="145" width="250" height="100" rx="12" fill="#111827" stroke="rgba(0,212,255,0.2)" stroke-width="1.5"/>
+        <text x="415" y="168" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="9" letter-spacing="1.5">HEADS-UP DISPLAY</text>
+        <!-- hud items -->
+        <rect x="304" y="178" width="50" height="30" rx="5" fill="#0a0e1a"/>
+        <text x="329" y="190" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="7">ROUND</text>
+        <text x="329" y="204" text-anchor="middle" fill="#00d4ff" font-family="monospace" font-size="12" font-weight="bold">3/10</text>
+        <rect x="364" y="178" width="50" height="30" rx="5" fill="#0a0e1a"/>
+        <text x="389" y="190" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="7">SCORE</text>
+        <text x="389" y="204" text-anchor="middle" fill="#ffd700" font-family="monospace" font-size="12" font-weight="bold">340</text>
+        <rect x="424" y="178" width="50" height="30" rx="5" fill="#0a0e1a"/>
+        <text x="449" y="190" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="7">TIME</text>
+        <text x="449" y="204" text-anchor="middle" fill="#f0f4ff" font-family="monospace" font-size="12" font-weight="bold">22s</text>
+        <rect x="484" y="178" width="42" height="30" rx="5" fill="#0a0e1a"/>
+        <text x="505" y="190" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="7">LIVES</text>
+        <text x="505" y="204" text-anchor="middle" fill="#f0f4ff" font-family="monospace" font-size="11">❤️❤️</text>
+        <!-- timer bar -->
+        <rect x="304" y="215" width="222" height="6" rx="3" fill="rgba(255,255,255,0.08)"/>
+        <rect x="304" y="215" width="130" height="6" rx="3" fill="url(#timerGrad)"/>
+        <defs><linearGradient id="timerGrad" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#00ff88"/><stop offset="100%" stop-color="#00d4ff"/></linearGradient></defs>
+        <text x="415" y="236" text-anchor="middle" fill="#6b7a9e" font-family="monospace" font-size="8">timer bar</text>
+      </svg>`
+  }
+];
+
+let howSlide = 0;
+
+function renderHowSlide(idx) {
+  const card = document.getElementById('howCard');
+  card.classList.add('fading');
+  setTimeout(() => {
+    const s = HOW_SLIDES[idx];
+    document.getElementById('slideVisual').innerHTML = s.svg();
+    document.getElementById('slideTag').textContent   = s.tag;
+    document.getElementById('slideTitle').textContent = s.title;
+    document.getElementById('slideCaption').innerHTML = s.caption;
+    document.getElementById('slideVisual').style.background = s.bg;
+
+    // dots
+    const dots = document.getElementById('howDots');
+    dots.innerHTML = HOW_SLIDES.map((_, i) =>
+      `<div class="how-dot${i===idx?' active':''}" onclick="howGoto(${i})"></div>`
+    ).join('');
+
+    // prev button
+    document.getElementById('howPrev').disabled = (idx === 0);
+
+    // next/start button
+    const nb = document.getElementById('howNextBtn');
+    if (idx === HOW_SLIDES.length - 1) {
+      nb.textContent = '🚀 START!';
+      nb.onclick = () => { playClick(); startGame(); };
+    } else {
+      nb.textContent = 'NEXT →';
+      nb.onclick = () => howNav(1);
+    }
+
+    card.classList.remove('fading');
+  }, 200);
+}
+
+function howNav(dir) {
+  playClick();
+  howSlide = Math.max(0, Math.min(HOW_SLIDES.length - 1, howSlide + dir));
+  renderHowSlide(howSlide);
+}
+
+function howGoto(idx) {
+  playClick();
+  howSlide = idx;
+  renderHowSlide(howSlide);
+}
+
+// Patch showScreen to reset slides when opening howScreen
+const _origShowScreen = showScreen;
+window.showScreen = function(id) {
+  if (id === 'howScreen') {
+    howSlide = 0;
+    _origShowScreen(id);
+    renderHowSlide(0);
+  } else {
+    _origShowScreen(id);
+  }
+};
+buildPreviewCity();
+</script>
+</body>
+</html>
