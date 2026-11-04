@@ -54,7 +54,7 @@ footer a{color:var(--accent)}
 <header class="hero">
   <div class="wrap">
     <h1>Web Minigames</h1>
-    <p>Short educational games built during my internship. Pick a subject, choose a game and play in your browser.</p>
+    <p>Short educational games I built during my internship. Pick a subject, choose a game and play in your browser.</p>
     <span class="count" id="count"></span>
   </div>
 </header>
@@ -87,42 +87,42 @@ const SUBJECTS = {
   Biology:    "var(--bio)",
   Maths:      "var(--math)",
   Computing:  "var(--comp)",
-  "Humanities & Language": "var(--hum)"
+  Others: "var(--hum)"
 };
 
 const GAMES = [
   ["Acid Base Sorter","acid-base-sorter-main","Chemistry","🧪"],
   ["Atom Builder","atom-builder-main","Chemistry","⚛️"],
   ["Chem Maze Runner","chem-maze-runner-main","Chemistry","🧫"],
+  ["Lab Balance","lab-balance-main","Chemistry","⚖️"],
   ["Periodic Table Adventure","periodic-table-adventure-main","Chemistry","🗺️"],
 
   ["Circuit Builder","circuit-builder-main","Physics","🔌"],
   ["Force Puzzle Box","force-puzzle-box-main","Physics","📦"],
   ["Inertia Drift","inertia-drift-main","Physics","🏎️"],
-  ["Lab Balance","lab-balance-main","Physics","⚖️"],
-  ["Mass and Temperature","mass-and-temp-main","Physics","🌡️"],
-  ["Capacity","capacity-main","Physics","🥛"],
 
   ["Cell Defender","cell-defender-main","Biology","🦠"],
   ["Farm Tycoon","farm-tycoon-main","Biology","🌾"],
 
+  ["Capacity","capacity-main","Maths","🥛"],
   ["Cash Register","cash-register-main","Maths","💵"],
   ["Cosmic Math Defender","cosmic-math-defender-main","Maths","🚀"],
   ["Fraction Fortress","fraction-fortress-main","Maths","🏰"],
+  ["Geo City","geo-city-main","Maths","🌍"],
   ["Grid Strike","grid-strike-main","Maths","🎯"],
+  ["Mass and Temperature","mass-and-temp-main","Maths","🌡️"],
   ["Number Pipe Flow","number-pipe-flow-main","Maths","🔢"],
   ["Pattern and Probability","pattern-and-probability-main","Maths","🔷"],
   ["Probability Casino","probability-casino-main","Maths","🎲"],
+  ["Robot Factory","robot-factory-main","Maths","🤖"],
   ["Target Number Catcher","target-number-catcher-main","Maths","🧲"],
 
   ["Algorithm Maze","algorithm-maze-main","Computing","🌀"],
   ["Debug Detectives","debug-detectives-main","Computing","🐞"],
-  ["Robot Factory","robot-factory-main","Computing","🤖"],
 
-  ["Geo City","geo-city-main","Humanities & Language","🌍"],
-  ["Hallway Hustle","hallway-hustle-main","Humanities & Language","🏫"],
-  ["Timeline Tactician","timeline-tactician-main","Humanities & Language","⏳"],
-  ["Word Warrior","word-warrior-main","Humanities & Language","⚔️"]
+  ["Hallway Hustle","hallway-hustle-main","Others","🏫"],
+  ["Timeline Tactician","timeline-tactician-main","Others","⏳"],
+  ["Word Warrior","word-warrior-main","Others","⚔️"]
 ].map(([name, folder, subject, icon]) => ({name, folder, subject, icon}));
 
 const grid = document.getElementById("grid");
