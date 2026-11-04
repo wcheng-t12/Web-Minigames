@@ -1,224 +1,173 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Internship Web Minigames</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Minigames</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1f6; --surface:#fff; --ink:#14213d; --muted:#5b6679; --line:#d9deea;
+  --accent:#2447d8; --focus:#ff9f1c;
+  --chem:#0d9488; --phys:#7c3aed; --bio:#16a34a; --math:#2563eb; --comp:#db2777; --hum:#d97706;
+  --display:"Bricolage Grotesque","Trebuchet MS",Arial,sans-serif;
+  --body:"Figtree",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f1526;--surface:#18203a;--ink:#e8ecf8;--muted:#9aa5c0;--line:#2a3558;--accent:#7b96ff}
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:90px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+.hero{padding:64px 0 36px}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,8vw,5.5rem);line-height:.95;margin:0 0 20px;letter-spacing:-.03em}
+.hero p{max-width:52ch;font-size:1.1rem;color:var(--muted);margin:0}
+.hero .count{display:inline-block;margin-top:20px;font-weight:600;color:var(--ink)}
 
-        body {
-            margin: 0;
-            padding: 40px 20px;
-            font-family: Arial, sans-serif;
-            background: #f4f6fa;
-            color: #222;
-        }
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 0;border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.search{flex:1 1 240px;padding:11px 14px;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:.92rem;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.search:focus-visible,.chip:focus-visible,.card:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 
-        .container {
-            max-width: 1100px;
-            margin: auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        header h1 {
-            font-size: 36px;
-        }
-
-        header p {
-            color: #666;
-        }
-
-        .games {
-            display: grid;
-            grid-template-columns:
-                repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-        }
-
-        .game {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.06);
-        }
-
-        .game h3 {
-            margin-top: 0;
-        }
-
-        .game a {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 10px 16px;
-            background: #2563eb;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-        }
-
-        .game a:hover {
-            background: #1d4ed8;
-        }
-    </style>
+main{padding:28px 0 64px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.card{display:flex;flex-direction:column;gap:6px;padding:20px 20px 18px;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;color:inherit;text-decoration:none;min-height:150px}
+.card:hover{border-color:var(--c);transform:translateY(-2px);transition:transform .15s}
+.card .icon{font-size:1.9rem;line-height:1}
+.card h2{font-family:var(--display);font-size:1.2rem;font-weight:500;margin:6px 0 0;line-height:1.2}
+.card .tag{margin-top:auto;font-size:.85rem;font-weight:600;color:var(--c)}
+.empty{display:none;padding:48px 0;text-align:center;color:var(--muted)}
+footer{padding:28px 0 48px;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
+footer a{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.card:hover{transform:none;transition:none}}
+</style>
 </head>
-
 <body>
-<div class="container">
 
-    <header>
-        <h1>Web Minigames</h1>
-        <p>A collection of interactive web minigames
-        developed during my internship.</p>
-        <p>Explore, learn and have fun!</p>
-    </header>
+<header class="hero">
+  <div class="wrap">
+    <h1>Web Minigames</h1>
+    <p>Short educational games built during my internship at Kidocode. Pick a subject, choose a game and play in your browser.</p>
+    <span class="count" id="count"></span>
+  </div>
+</header>
 
-    <div class="games">
-
-        <div class="game">
-            <h3>Acid Base Sorter</h3>
-            <a href="./acid-base-sorter-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Algorithm Maze</h3>
-            <a href="./algorithm-maze-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Atom Builder</h3>
-            <a href="./atom-builder-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Capacity</h3>
-            <a href="./capacity-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Cash Register</h3>
-            <a href="./cash-register-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Cell Defender</h3>
-            <a href="./cell-defender-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Chem Maze Runner</h3>
-            <a href="./chem-maze-runner-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Circuit Builder</h3>
-            <a href="./circuit-builder-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Cosmic Math Defender</h3>
-            <a href="./cosmic-math-defender-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Debug Detectives</h3>
-            <a href="./debug-detectives-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Farm Tycoon</h3>
-            <a href="./farm-tycoon-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Force Puzzle Box</h3>
-            <a href="./force-puzzle-box-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Fraction Fortress</h3>
-            <a href="./fraction-fortress-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Geo City</h3>
-            <a href="./geo-city-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Grid Strike</h3>
-            <a href="./grid-strike-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Hallway Hustle</h3>
-            <a href="./hallway-hustle-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Inertia Drift</h3>
-            <a href="./inertia-drift-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Lab Balance</h3>
-            <a href="./lab-balance-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Mass and Temperature</h3>
-            <a href="./mass-and-temp-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Number Pipe Flow</h3>
-            <a href="./number-pipe-flow-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Pattern and Probability</h3>
-            <a href="./pattern-and-probability-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Periodic Table Adventure</h3>
-            <a href="./periodic-table-adventure-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Probability Casino</h3>
-            <a href="./probability-casino-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Robot Factory</h3>
-            <a href="./robot-factory-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Target Number Catcher</h3>
-            <a href="./target-number-catcher-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Timeline Tactician</h3>
-            <a href="./timeline-tactician-main/">Play Game</a>
-        </div>
-
-        <div class="game">
-            <h3>Word Warrior</h3>
-            <a href="./word-warrior-main/">Play Game</a>
-        </div>
-
-    </div>
+<div class="bar">
+  <div class="wrap">
+    <input class="search" id="search" type="search" placeholder="Search games" aria-label="Search games">
+    <div class="chips" id="chips" role="group" aria-label="Filter by subject"></div>
+  </div>
 </div>
+
+<main>
+  <div class="wrap">
+    <div class="grid" id="grid"></div>
+    <p class="empty" id="empty">No games match. Clear the search or choose another subject.</p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    Source code on <a href="https://github.com/wcheng-t12/Web-Minigames">GitHub</a>.
+  </div>
+</footer>
+
+<script>
+// Edit this list to add or recategorise games. "folder" is the game's directory name.
+const SUBJECTS = {
+  Chemistry:  "var(--chem)",
+  Physics:    "var(--phys)",
+  Biology:    "var(--bio)",
+  Maths:      "var(--math)",
+  Computing:  "var(--comp)",
+  "Humanities & Language": "var(--hum)"
+};
+
+const GAMES = [
+  ["Acid Base Sorter","acid-base-sorter-main","Chemistry","🧪"],
+  ["Atom Builder","atom-builder-main","Chemistry","⚛️"],
+  ["Chem Maze Runner","chem-maze-runner-main","Chemistry","🧫"],
+  ["Periodic Table Adventure","periodic-table-adventure-main","Chemistry","🗺️"],
+
+  ["Circuit Builder","circuit-builder-main","Physics","🔌"],
+  ["Force Puzzle Box","force-puzzle-box-main","Physics","📦"],
+  ["Inertia Drift","inertia-drift-main","Physics","🏎️"],
+  ["Lab Balance","lab-balance-main","Physics","⚖️"],
+  ["Mass and Temperature","mass-and-temp-main","Physics","🌡️"],
+  ["Capacity","capacity-main","Physics","🥛"],
+
+  ["Cell Defender","cell-defender-main","Biology","🦠"],
+  ["Farm Tycoon","farm-tycoon-main","Biology","🌾"],
+
+  ["Cash Register","cash-register-main","Maths","💵"],
+  ["Cosmic Math Defender","cosmic-math-defender-main","Maths","🚀"],
+  ["Fraction Fortress","fraction-fortress-main","Maths","🏰"],
+  ["Grid Strike","grid-strike-main","Maths","🎯"],
+  ["Number Pipe Flow","number-pipe-flow-main","Maths","🔢"],
+  ["Pattern and Probability","pattern-and-probability-main","Maths","🔷"],
+  ["Probability Casino","probability-casino-main","Maths","🎲"],
+  ["Target Number Catcher","target-number-catcher-main","Maths","🧲"],
+
+  ["Algorithm Maze","algorithm-maze-main","Computing","🌀"],
+  ["Debug Detectives","debug-detectives-main","Computing","🐞"],
+  ["Robot Factory","robot-factory-main","Computing","🤖"],
+
+  ["Geo City","geo-city-main","Humanities & Language","🌍"],
+  ["Hallway Hustle","hallway-hustle-main","Humanities & Language","🏫"],
+  ["Timeline Tactician","timeline-tactician-main","Humanities & Language","⏳"],
+  ["Word Warrior","word-warrior-main","Humanities & Language","⚔️"]
+].map(([name, folder, subject, icon]) => ({name, folder, subject, icon}));
+
+const grid = document.getElementById("grid");
+const chips = document.getElementById("chips");
+const search = document.getElementById("search");
+const count = document.getElementById("count");
+const empty = document.getElementById("empty");
+let active = "All";
+
+function render() {
+  const q = search.value.trim().toLowerCase();
+  const list = GAMES.filter(g =>
+    (active === "All" || g.subject === active) && g.name.toLowerCase().includes(q));
+  grid.innerHTML = "";
+  list.forEach(g => {
+    const a = document.createElement("a");
+    a.className = "card";
+    a.href = "./" + g.folder + "/";
+    a.style.setProperty("--c", SUBJECTS[g.subject]);
+    const icon = document.createElement("span");
+    icon.className = "icon"; icon.textContent = g.icon; icon.setAttribute("aria-hidden", "true");
+    const h = document.createElement("h2"); h.textContent = g.name;
+    const t = document.createElement("span"); t.className = "tag"; t.textContent = g.subject;
+    a.append(icon, h, t);
+    grid.appendChild(a);
+  });
+  empty.style.display = list.length ? "none" : "block";
+  count.textContent = list.length === GAMES.length
+    ? GAMES.length + " games"
+    : list.length + " of " + GAMES.length + " games";
+}
+
+["All", ...Object.keys(SUBJECTS)].forEach(s => {
+  const b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.textContent = s;
+  b.setAttribute("aria-pressed", s === "All");
+  b.addEventListener("click", () => {
+    active = s;
+    chips.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b));
+    render();
+  });
+  chips.appendChild(b);
+});
+search.addEventListener("input", render);
+render();
+</script>
 </body>
 </html>
